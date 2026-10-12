@@ -31,3 +31,40 @@ describe("DBスキーマ", () => {
     }
   });
 });
+
+// アカウント削除（auth.users の行を消す）で、そのユーザーの全データが消えること（CLAUDE.md の必須要件）
+describe("外部キー：アカウント削除で全データが消える", () => {
+  const fks = allTables.flatMap((t) =>
+    getTableConfig(t).foreignKeys.map((fk) => {
+      const ref = fk.reference();
+      return {
+        table: getTableConfig(t).name,
+        columns: ref.columns.map((c) => c.name),
+        foreignTable: getTableConfig(ref.foreignTable).name,
+        onDelete: fk.onDelete,
+      };
+    }),
+  );
+
+  it.each(tables.map((t) => getTableConfig(t).name))(
+    "%s.user_id は auth.users を参照し、cascade で消える",
+    (name) => {
+      expect(fks).toContainEqual({
+        table: name,
+        columns: ["user_id"],
+        foreignTable: "users",
+        onDelete: "cascade",
+      });
+    },
+  );
+
+  it("曲・タグなどへの参照は cascade（親を消すと紐づけも消える）", () => {
+    const children = fks.filter((f) => f.foreignTable !== "users");
+    expect(children.length).toBeGreaterThan(0);
+    for (const f of children) {
+      // タグのグループだけは、グループを消してもタグを残す（マイタグに移る）
+      if (f.table === "tags" && f.columns[0] === "group_id") expect(f.onDelete).toBe("set null");
+      else expect(f, `${f.table}.${f.columns}`).toMatchObject({ onDelete: "cascade" });
+    }
+  });
+});

@@ -25,7 +25,9 @@ comment:
 
 ignore:
   - "src/**/*.test.ts"
+  - "src/**/*.test.tsx"
   - "src/**/*.d.ts"
+  - "src/test/**"
 
 # コンポーネント別（見る単位）。純粋関数は高く保ち、画面・サーバー処理はこれから増やす
 component_management:
