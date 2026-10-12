@@ -10,13 +10,20 @@ import type { SongDraft } from "@/lib/songs/types";
 import { normalizeTagName } from "@/lib/tags/normalize";
 import { lookupFromUrl, saveSongAction } from "./actions";
 import { BulkAdd } from "./BulkAdd";
-import { lookupErrorMessage } from "./messages";
+import { lookupErrorMessage, SERVICE_NAMES } from "./messages";
 import { SearchPanel } from "./SearchPanel";
 import { FieldInputs } from "@/components/FieldInputs";
 import { KeyStepper } from "@/components/KeyStepper";
 import { TagPicker } from "@/components/TagPicker";
 import type { NewTag } from "@/lib/tags/types";
-import type { DuplicateInfo, GroupOption, LookupError, TagOption } from "./types";
+import type {
+  Candidate,
+  DuplicateInfo,
+  ExternalInfo,
+  GroupOption,
+  LookupError,
+  TagOption,
+} from "./types";
 import styles from "./add.module.css";
 
 type Props = {
@@ -30,6 +37,12 @@ type Props = {
 };
 
 type Source = "url" | "search" | "manual";
+
+const RECOGNIZED: Record<string, string> = {
+  apple_music: "Apple Music",
+  spotify: "Spotify",
+  youtube_music: "YouTube Music",
+};
 
 const BLANK: SongDraft = {
   appleTrackId: null,
@@ -59,6 +72,8 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
   const [source, setSource] = useState<Source>("url");
   const [duplicate, setDuplicate] = useState<DuplicateInfo>(null);
   const [editing, setEditing] = useState(false);
+  /** Spotify / YouTube Music から取得したときの、候補と取得元の表記 */
+  const [external, setExternal] = useState<ExternalInfo | null>(null);
 
   const [selected, setSelected] = useState<Set<string>>(new Set(defaultTagIds));
   const [newTags, setNewTags] = useState<NewTag[]>([]);
@@ -73,11 +88,26 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
 
   const recognized = useMemo(() => parseMusicUrl(url), [url]);
 
-  function begin(d: SongDraft, from: Source, dup: DuplicateInfo = null) {
+  /** Apple Music のジャンルを、登録時に付けるタグの提案にする（既存タグがあればそれを選ぶ） */
+  function genreTag(d: SongDraft): { id: string } | { tag: NewTag } | null {
+    if (!d.genre) return null;
+    const key = normalizeTagName(d.genre);
+    const existing = tags.find((t) => normalizeTagName(t.name) === key);
+    return existing ? { id: existing.id } : { tag: { name: d.genre, group: "ジャンル" } };
+  }
+
+  function begin(
+    d: SongDraft,
+    from: Source,
+    dup: DuplicateInfo = null,
+    ext: ExternalInfo | null = null,
+  ) {
     setDraft(d);
     setSource(from);
     setDuplicate(dup);
-    setEditing(from === "manual");
+    setExternal(ext);
+    // 手入力と、Apple Music で見つからず取得元の表記を使うときは、最初から入力欄を出す
+    setEditing(from === "manual" || ext?.confidence === "not_found");
     setLookupError(null);
     setSaveError(null);
     setMessage(null);
@@ -88,21 +118,41 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
     // 登録時に付けるタグ ＋ Apple Music のジャンル（提案。外せる）
     const ids = new Set(defaultTagIds);
     const added: NewTag[] = [];
-    if (d.genre) {
-      const key = normalizeTagName(d.genre);
-      const existing = tags.find((t) => normalizeTagName(t.name) === key);
-      if (existing) ids.add(existing.id);
-      else added.push({ name: d.genre, group: "ジャンル" });
-    }
+    const g = genreTag(d);
+    if (g && "id" in g) ids.add(g.id);
+    else if (g) added.push(g.tag);
     setSelected(ids);
     setNewTags(added);
+  }
+
+  /** 要確認の候補・取得元の表記を選び直す。前の候補のジャンル提案は外し、新しい候補のものに差し替える */
+  function choose(c: Candidate, edit: boolean) {
+    if (!draft) return;
+    const before = genreTag(draft);
+    const after = genreTag(c.draft);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (before && "id" in before && !defaultTagIds.includes(before.id)) next.delete(before.id);
+      if (after && "id" in after) next.add(after.id);
+      return next;
+    });
+    setNewTags((prev) => {
+      const kept =
+        before && "tag" in before ? prev.filter((t) => t.name !== before.tag.name) : prev;
+      return after && "tag" in after && !kept.some((t) => t.name === after.tag.name)
+        ? [...kept, after.tag]
+        : kept;
+    });
+    setDraft(c.draft);
+    setDuplicate(c.duplicate);
+    setEditing(edit);
   }
 
   function fetchSong() {
     setMessage(null);
     start(async () => {
       const res = await lookupFromUrl(url);
-      if (res.status === "ok") begin(res.draft, "url", res.duplicate);
+      if (res.status === "ok") begin(res.draft, "url", res.duplicate, res.external ?? null);
       else setLookupError({ reason: res.reason, service: res.service });
     });
   }
@@ -120,6 +170,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
     setDraft(null);
     setUrl("");
     setDuplicate(null);
+    setExternal(null);
     setSelected(new Set(defaultTagIds));
     setNewTags([]);
     setSongKey(0);
@@ -298,7 +349,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                         setUrl(e.target.value);
                         setLookupError(null);
                       }}
-                      placeholder="https://music.apple.com/jp/album/…"
+                      placeholder="https://music.apple.com/jp/album/… や https://open.spotify.com/track/…"
                       inputMode="url"
                       autoCapitalize="none"
                       autoCorrect="off"
@@ -306,7 +357,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                     />
                     <div className={styles.urlRow}>
                       <span className={styles.recognized} aria-live="polite">
-                        {recognized.ok && "✓ Apple Music のURLを認識"}
+                        {recognized.ok && `✓ ${RECOGNIZED[recognized.service]} のURLを認識`}
                       </span>
                       <button type="button" className={styles.small} onClick={paste}>
                         ペースト
@@ -343,15 +394,15 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                       対応サービス
                     </h2>
                     <ul className={styles.services}>
-                      <li className={styles.service}>
-                        Apple Music<small>対応（MVP）</small>
-                      </li>
-                      {["Spotify", "YouTube Music", "Amazon Music"].map((s) => (
-                        <li key={s} className={styles.service} data-soon>
+                      {["Apple Music", "Spotify", "YouTube Music"].map((s) => (
+                        <li key={s} className={styles.service}>
                           {s}
-                          <small>検討中</small>
+                          <small>対応</small>
                         </li>
                       ))}
+                      <li className={styles.service} data-soon>
+                        Amazon Music<small>検討中</small>
+                      </li>
                     </ul>
                   </section>
                 </>
@@ -369,13 +420,15 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                 </p>
               ) : (
                 <>
+                  {external && (
+                    <ExternalChoice external={external} draft={draft} onChoose={choose} />
+                  )}
+
                   <div className={`${styles.card} ${styles.preview}`}>
                     <div className={styles.previewBody}>
                       {source !== "manual" && (
                         <span className={styles.fetched}>
-                          {source === "url"
-                            ? "Apple Music から取得"
-                            : "Apple Music の検索結果から選択"}
+                          {fetchedLabel(source, external, draft)}
                         </span>
                       )}
                       {!editing ? (
@@ -517,5 +570,97 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
         </>
       )}
     </div>
+  );
+}
+
+function fetchedLabel(source: Source, external: ExternalInfo | null, draft: SongDraft): string {
+  if (source === "search") return "Apple Music の検索結果から選択";
+  if (!external) return "Apple Music から取得";
+  const name = SERVICE_NAMES[external.service];
+  return draft.appleTrackId
+    ? `${name} から取得し、Apple Music の表記にそろえました`
+    : `${name} の表記のまま`;
+}
+
+/**
+ * Spotify / YouTube Music から取得したときの案内。
+ * - 確信あり：案内だけ（入力欄は Apple Music の表記で埋まっている）
+ * - 要確認：候補（最大3件）か、取得元の表記を選ぶ
+ * - 見つからず：取得元の表記で入力欄を埋めたことを伝える
+ */
+function ExternalChoice({
+  external,
+  draft,
+  onChoose,
+}: {
+  external: ExternalInfo;
+  draft: SongDraft;
+  onChoose: (c: Candidate, edit: boolean) => void;
+}) {
+  const name = SERVICE_NAMES[external.service];
+  const src = external.source.draft;
+
+  if (external.confidence === "not_found") {
+    return (
+      <p role="status" className={styles.warn}>
+        {external.itunesFailed
+          ? `Apple Music の曲情報を検索できなかったため、${name} の表記で入力しています。`
+          : `Apple Music で該当する曲が見つからなかったため、${name} の表記で入力しています。`}
+        内容を確認し、必要なら修正してください。
+      </p>
+    );
+  }
+  if (external.confidence === "confident") return null;
+
+  const isSource = draft.appleTrackId === null;
+  return (
+    <fieldset className={styles.choices}>
+      <legend className={styles.sectionTitle}>どの曲として登録しますか？</legend>
+      <p className={styles.hint}>
+        {name} の「{src.title}」{src.artist && ` ／ ${src.artist}`}
+        に近い曲が見つかりました。表記の違う同じ曲を選ぶか、{name} の表記のまま登録できます。
+      </p>
+      <ul className={styles.results}>
+        {external.candidates.map((c) => (
+          <li key={c.draft.appleTrackId}>
+            <label className={styles.choice}>
+              <input
+                type="radio"
+                name="candidate"
+                checked={draft.appleTrackId === c.draft.appleTrackId}
+                onChange={() => onChoose(c, false)}
+              />
+              <span>
+                <strong>{c.draft.title}</strong>
+                <br />
+                <span className={styles.songArtist}>
+                  {c.draft.artist}
+                  {c.draft.album ? ` ／ ${c.draft.album}` : ""}
+                </span>
+                {c.duplicate && <span className={styles.hint}>（登録済み）</span>}
+              </span>
+            </label>
+          </li>
+        ))}
+        <li>
+          <label className={styles.choice}>
+            <input
+              type="radio"
+              name="candidate"
+              checked={isSource}
+              onChange={() => onChoose(external.source, true)}
+            />
+            <span>
+              <strong>{name} の表記で登録する</strong>
+              <br />
+              <span className={styles.songArtist}>
+                {src.title}
+                {src.artist ? ` ／ ${src.artist}` : ""}（修正できます）
+              </span>
+            </span>
+          </label>
+        </li>
+      </ul>
+    </fieldset>
   );
 }

@@ -5,11 +5,35 @@ import { useState, useTransition } from "react";
 import { TagPicker } from "@/components/TagPicker";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { lookupManyAction, saveManyAction } from "./actions";
-import { lookupErrorMessage } from "./messages";
-import type { BulkItem, BulkSaveItem } from "./types";
+import { lookupErrorMessage, SERVICE_NAMES } from "./messages";
+import type { BulkItem, BulkSaveItem, LookupResult } from "./types";
 import styles from "./add.module.css";
 
 const MAX = 20;
+
+/** 保存できる結果か（アーティスト不明のまま取得元の表記を使うものは、1曲ずつ登録で直してもらう） */
+const savable = (r: LookupResult) =>
+  r.status === "ok" && r.duplicate === null && r.draft.artist.trim() !== "";
+
+/** 最初から選んでおくのは、Apple Music の曲として確実に見つかったものだけ */
+const preselect = (r: LookupResult) =>
+  savable(r) && r.status === "ok" && (!r.external || r.external.confidence === "confident");
+
+/** Spotify / YouTube Music の結果に添える注記 */
+function externalNote(r: LookupResult): string | null {
+  if (r.status !== "ok" || !r.external) return null;
+  const name = SERVICE_NAMES[r.external.service];
+  switch (r.external.confidence) {
+    case "confident":
+      return null;
+    case "needs_confirmation":
+      return `要確認：${name} では「${r.external.source.draft.title}」。表記の違う同じ曲か確かめてから選んでください`;
+    case "not_found":
+      return r.draft.artist.trim()
+        ? `Apple Music で見つからなかったため ${name} の表記のまま`
+        : `アーティストが分からないため、1曲ずつ登録で入力してください`;
+  }
+}
 
 type Props = {
   groups: GroupOption[];
@@ -37,11 +61,7 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
     start(async () => {
       const res = await lookupManyAction(urls.slice(0, MAX));
       setItems(res);
-      setChecked(
-        new Set(
-          res.flatMap((r, i) => (r.result.status === "ok" && !r.result.duplicate ? [i] : [])),
-        ),
-      );
+      setChecked(new Set(res.flatMap((r, i) => (preselect(r.result) ? [i] : []))));
     });
   }
 
@@ -72,7 +92,9 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
         rows={8}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={"https://music.apple.com/jp/album/…?i=…\nhttps://music.apple.com/jp/song/…"}
+        placeholder={
+          "https://music.apple.com/jp/album/…?i=…\nhttps://open.spotify.com/track/…\nhttps://music.youtube.com/watch?v=…"
+        }
       />
       <button
         type="button"
@@ -92,14 +114,14 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
         <>
           <ul className={styles.results}>
             {items.map((r, i) => {
-              const ok = r.result.status === "ok";
               const dup = r.result.status === "ok" && r.result.duplicate !== null;
+              const note = externalNote(r.result);
               return (
                 <li key={i}>
                   <label className={styles.bulkRow}>
                     <input
                       type="checkbox"
-                      disabled={!ok || dup}
+                      disabled={!savable(r.result)}
                       checked={checked.has(i)}
                       onChange={() =>
                         setChecked((prev) => {
@@ -116,6 +138,12 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
                           <br />
                           <span className={styles.songArtist}>{r.result.draft.artist}</span>
                           {dup && <span className={styles.hint}> ／ 登録済みのためスキップ</span>}
+                          {note && !dup && (
+                            <>
+                              <br />
+                              <span className={styles.hint}>{note}</span>
+                            </>
+                          )}
                         </>
                       ) : (
                         <>

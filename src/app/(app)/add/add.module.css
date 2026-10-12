@@ -513,6 +513,42 @@
   cursor: not-allowed;
 }
 
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choices legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 44px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  background: var(--color-selected-row);
+}
+
+.choice input[type="radio"] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--color-ink);
+}
+
 .bulkRow {
   display: flex;
   gap: 10px;
