@@ -14,10 +14,28 @@ const klee = Klee_One({
   variable: "--font-klee",
 });
 
+const DESCRIPTION = "カラオケで歌える曲を登録・タグ付けして、店でその場で探せるセトリ管理アプリ";
+
+// OGP画像などを絶対URLにするための基準。Vercel では本番ドメイン（独自ドメインがあればそれ）が入る
+const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: "Setlistic", template: "%s | Setlistic" },
-  description: "カラオケで歌える曲を登録・タグ付けして、店でその場で探せるセトリ管理アプリ",
+  description: DESCRIPTION,
   applicationName: "Setlistic",
+  // 共有時のカード。各ページは title だけ上書きするので、カードの見出しは常に「Setlistic」になる。
+  // 画像は src/app/opengraph-image.png（scripts/generate-og-image.tsx で作る）
+  openGraph: {
+    type: "website",
+    siteName: "Setlistic",
+    title: "Setlistic",
+    description: DESCRIPTION,
+    locale: "ja_JP",
+  },
+  twitter: { card: "summary_large_image", title: "Setlistic", description: DESCRIPTION },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }],
     apple: "/icon-180.png",
