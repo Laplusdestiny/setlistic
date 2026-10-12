@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { conditionsToHref, EMPTY_CONDITIONS } from "@/lib/search/conditions";
-import { moveItem } from "@/lib/tags/manage";
+import { GROUP_NAME_MAX, moveItem } from "@/lib/tags/manage";
 import { normalizeTagName } from "@/lib/tags/normalize";
 import type { GroupOption } from "@/lib/tags/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -160,8 +160,12 @@ export function TagsScreen({ groups, tags }: Props) {
           }
           onCreateGroup={(name) =>
             run(
-              () => createGroupAction(name),
-              () => setCreating(false),
+              () => createGroupAction({ name }),
+              () => {
+                setCreating(false);
+                // 「タグから探す」ではタグのないグループを出さないので、作ったグループが見える管理へ
+                setMode("manage");
+              },
             )
           }
         />
@@ -222,7 +226,7 @@ export function TagsScreen({ groups, tags }: Props) {
                           id={`${id}-g-${s.group.id}`}
                           className={styles.input}
                           value={editingGroup.name}
-                          maxLength={20}
+                          maxLength={GROUP_NAME_MAX}
                           onChange={(e) =>
                             setEditingGroup({ ...editingGroup, name: e.target.value })
                           }
@@ -330,12 +334,38 @@ export function TagsScreen({ groups, tags }: Props) {
                       </li>
                     ))}
                   </ul>
+                  {!needle && (
+                    <InlineAdd
+                      buttonLabel="＋ タグを追加"
+                      inputLabel={`${s.group?.name ?? "マイタグ"}に追加するタグ名`}
+                      placeholder="例：高音つらい"
+                      maxLength={31}
+                      pending={pending}
+                      onSubmit={(name, done) =>
+                        run(() => createTagAction({ name, groupId: s.group?.id ?? null }), done)
+                      }
+                    />
+                  )}
                 </section>
               ))}
 
+          {mode === "manage" && !needle && (
+            <section className={styles.group} aria-label="グループの追加">
+              <InlineAdd
+                buttonLabel="＋ 新しいグループ"
+                inputLabel="新しいグループ名"
+                placeholder="例：カラオケ機種"
+                maxLength={GROUP_NAME_MAX}
+                pending={pending}
+                onSubmit={(name, done) => run(() => createGroupAction({ name }), done)}
+              />
+            </section>
+          )}
+
           {mode === "manage" && (
             <p className={styles.note}>
-              ↑↓ボタンで並べ替え、「編集」でグループの移動・名前変更・統合・削除ができます。タグを削除しても曲は消えません。
+              ↑↓ボタンで並べ替え、「＋
+              新しいグループ」でグループを作れます。タグの「編集」では、グループの移動（新しいグループを作って移すことも）・名前変更・統合・削除ができます。タグを削除しても曲は消えません。
             </p>
           )}
         </div>
@@ -427,7 +457,7 @@ function CreateForms({
             id={`${id}-n`}
             className={styles.input}
             value={gname}
-            maxLength={20}
+            maxLength={GROUP_NAME_MAX}
             onChange={(e) => setGname(e.target.value)}
             placeholder="例：カラオケ機種"
           />
@@ -437,5 +467,69 @@ function CreateForms({
         </div>
       </form>
     </div>
+  );
+}
+
+/** ボタンを押すと1行の入力欄に変わる追加フォーム（管理モードのグループ・タグの追加） */
+function InlineAdd({
+  buttonLabel,
+  inputLabel,
+  placeholder,
+  maxLength,
+  pending,
+  onSubmit,
+}: {
+  buttonLabel: string;
+  inputLabel: string;
+  placeholder: string;
+  maxLength: number;
+  pending: boolean;
+  onSubmit: (value: string, done: () => void) => void;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+
+  if (!open)
+    return (
+      <button type="button" className={styles.addButton} onClick={() => setOpen(true)}>
+        {buttonLabel}
+      </button>
+    );
+
+  const close = () => {
+    setValue("");
+    setOpen(false);
+  };
+  return (
+    <form
+      className={styles.inline}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(value, close);
+      }}
+    >
+      <label htmlFor={id} className="visually-hidden">
+        {inputLabel}
+      </label>
+      <input
+        id={id}
+        className={styles.input}
+        value={value}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        autoFocus
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") close();
+        }}
+      />
+      <button type="submit" className={styles.dark} disabled={pending || !value.trim()}>
+        追加
+      </button>
+      <button type="button" className={styles.text} onClick={close}>
+        やめる
+      </button>
+    </form>
   );
 }

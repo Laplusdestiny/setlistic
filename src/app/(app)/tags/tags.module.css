@@ -287,6 +287,23 @@
   padding-left: 14px !important;
 }
 
+.addButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: var(--color-selected-row);
+}
+
 .move {
   display: flex;
 }
