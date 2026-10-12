@@ -7,3 +7,7 @@ docs
 CLAUDE.md
 README.md
 AGENTS.md
+# APM（apm install）が配置するスキルとロックファイル。外部リポジトリの書式のまま管理する
+.claude/skills
+apm_modules
+apm.lock.yaml
