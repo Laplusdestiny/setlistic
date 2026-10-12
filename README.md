@@ -1,5 +1,8 @@
 # Setlistic 実装引き継ぎパッケージ
 
+[![CI](https://github.com/Laplusdestiny/setlistic/actions/workflows/ci.yml/badge.svg)](https://github.com/Laplusdestiny/setlistic/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Laplusdestiny/setlistic/graph/badge.svg)](https://codecov.io/gh/Laplusdestiny/setlistic)
+
 カラオケで歌える曲を登録・タグ付けし、店でその場で探せるWebアプリ「Setlistic」の、要件・デザイン・実装計画一式です。Claude Code に渡して実装を始めるためのものです。
 
 ## 使い方

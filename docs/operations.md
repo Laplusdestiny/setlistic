@@ -38,6 +38,15 @@ vercel logs --project setlistic --scope laplus-destiny --level error   # エラ�
 
 無料プランには自動バックアップがない。設定画面の「データ → JSONでエクスポート」を、月1回程度とっておく（再インポート可能）。
 
+## テストとカバレッジ（Codecov）
+
+CI（GitHub Actions）が、push と PR のたびに `npm run test:coverage` を実行し、結果（`coverage/lcov.info`）を **Codecov** に投稿する。PR には、カバレッジの差分とコンポーネント別の数字がコメントされる。
+
+- 設定：`codecov.yml`（コンポーネント：ロジック／DBスキーマ／サーバー処理／画面・部品）。今はステータスを参考表示にしてあり、CI は落とさない。目標を決めたら `informational` を外して `target` を設定する
+- Secrets：`CODECOV_TOKEN`（GitHub → Settings → Secrets and variables → Actions）。無い場合（フォークからのPRなど）は、投稿をスキップして CI は通る
+- 手元で見る：`npm run test:coverage`（DBのテストも含めるなら、`TEST_DATABASE_URL` を付けて実行。`coverage/lcov-report/index.html` にHTMLが出る）
+- 計測の対象は `src/` の全ファイル（未テストの画面も数字に出す）。純粋関数（`src/lib`）は高い水準を保つ方針
+
 ## DB マイグレーション
 
 1. `src/db/schema.ts` を変更して `npm run db:generate`（関数などは `npx drizzle-kit generate --custom --name <名前>` で空のSQLを作って書く）

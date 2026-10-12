@@ -1,0 +1,56 @@
+# Codecov の設定。当面は「数字を見える化する」ことが目的なので、ステータスは参考表示（CIを落とさない）。
+# 目標を決めて締めるときは、informational を外して target を設定する。
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 1
+  round: down
+  range: "60...90"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+        informational: true
+    patch:
+      default:
+        target: 70%
+        informational: true
+
+# PRへのコメント：変更があったときだけ、差分・コンポーネント別・ファイル別を出す
+comment:
+  layout: "condensed_header, diff, components, files"
+  require_changes: true
+
+ignore:
+  - "src/**/*.test.ts"
+  - "src/**/*.d.ts"
+
+# コンポーネント別（見る単位）。純粋関数は高く保ち、画面・サーバー処理はこれから増やす
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        informational: true
+  individual_components:
+    - component_id: logic
+      name: ロジック（純粋関数・検索条件・タグ・曲）
+      paths:
+        - src/lib/**
+    - component_id: db
+      name: DBスキーマ
+      paths:
+        - src/db/**
+    - component_id: server
+      name: サーバー処理（Server Actions・API・proxy）
+      paths:
+        - src/app/**/actions.ts
+        - src/app/api/**
+        - src/proxy.ts
+    - component_id: ui
+      name: 画面・部品
+      paths:
+        - src/components/**
+        - src/app/**/*.tsx

@@ -8,6 +8,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # if 条件で Secrets を直接参照できないため、環境変数に写して判定する
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     services:
       postgres:
         image: postgres:17
@@ -30,10 +33,24 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run format:check
-      - run: npm test
+      # テスト＋カバレッジの計測（coverage/lcov.info ができる）
+      - run: npm run test:coverage
         env:
           # 使い捨ての Postgres に対する RLS テスト（Supabase 本番には向けない）
           TEST_DATABASE_URL: postgres://postgres:pw@localhost:5432/postgres
+      # カバレッジを Codecov に投稿する。PR にはコメントとステータスが付く。
+      # フォークからの PR など、Secrets が使えないときは投稿を飛ばす（CI は落とさない）
+      - name: Upload coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: true
+      - name: Codecov をスキップ（CODECOV_TOKEN なし）
+        if: ${{ env.CODECOV_TOKEN == '' }}
+        run: echo "::notice::CODECOV_TOKEN が使えないため、カバレッジの投稿をスキップしました"
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
