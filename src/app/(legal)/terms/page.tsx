@@ -41,8 +41,11 @@ export default function TermsPage() {
       <h2>5. 曲の情報と外部サービス</h2>
       <p>
         曲名・アーティスト名などの曲の情報は、Apple Inc. が提供する公開API（iTunes Search
-        API）から、曲を登録するときに一度だけ取得して保存します。Apple Music、iTunes は Apple Inc.
-        の商標です。本サービスは Apple Inc. と提携・承認関係にありません。
+        API）から、曲を登録するときに一度だけ取得して保存します。Spotify・YouTube Music
+        の共有URLから登録するときは、それぞれの曲のページから曲名などを読み取り、Apple
+        の曲の情報と照らし合わせます。Apple Music、iTunes は Apple Inc. の商標、Spotify は Spotify
+        AB の商標、YouTube Music は Google LLC
+        の商標です。本サービスはこれらの事業者と提携・承認関係にありません。
       </p>
 
       <h2>6. 免責</h2>

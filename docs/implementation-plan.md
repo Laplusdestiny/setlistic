@@ -82,7 +82,7 @@ MVPのゴールは「Apple MusicのURLを貼って登録し、タグと項目で
 ## MVPの対象外（作らない）
 
 - ジャケット画像の表示、試聴
-- Spotify・YouTube Music・Amazon Music のURL対応（要件定義書に方針あり。MVP後）
+- Amazon Music のURL対応（要件定義書に方針あり。Spotify・YouTube Music は Issue #4 で対応済み）
 - Siriショートカット（ただし `/add?url=` は Phase 2 で用意する）
 - 友人との曲リスト共有
 - DAM・JOYSOUNDの配信有無の自動取得

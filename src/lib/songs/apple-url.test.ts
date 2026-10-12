@@ -4,6 +4,7 @@ import { parseMusicUrl } from "./apple-url";
 const ok = (input: string) => {
   const r = parseMusicUrl(input);
   if (!r.ok) throw new Error(`expected ok but got ${r.reason}`);
+  if (r.service !== "apple_music") throw new Error(`expected apple_music but got ${r.service}`);
   return r;
 };
 
@@ -102,14 +103,12 @@ describe("parseMusicUrl: 失敗ケース", () => {
     });
   });
 
-  it.each([
-    ["https://open.spotify.com/track/abc", "spotify"],
-    ["https://music.youtube.com/watch?v=abc", "youtube_music"],
-    ["https://www.youtube.com/watch?v=abc", "youtube_music"],
-    ["https://youtu.be/abc", "youtube_music"],
-    ["https://music.amazon.co.jp/albums/B0?trackAsin=B1", "amazon_music"],
-  ])("他サービス %s は unsupported_service として判別", (input, service) => {
-    expect(parseMusicUrl(input)).toEqual({ ok: false, reason: "unsupported_service", service });
+  it("Amazon Music は unsupported_service として判別", () => {
+    expect(parseMusicUrl("https://music.amazon.co.jp/albums/B0?trackAsin=B1")).toEqual({
+      ok: false,
+      reason: "unsupported_service",
+      service: "amazon_music",
+    });
   });
 
   it("無関係なドメイン", () => {
@@ -126,5 +125,66 @@ describe("parseMusicUrl: 失敗ケース", () => {
     expect(parseMusicUrl("https://example.com/?u=https://music.apple.com/jp/song/x/1").ok).toBe(
       false,
     );
+  });
+});
+
+describe("parseMusicUrl: Spotify", () => {
+  it.each([
+    "https://open.spotify.com/track/364JzOajs76bJymjHm3sVY",
+    "https://open.spotify.com/intl-ja/track/364JzOajs76bJymjHm3sVY?si=68f9cd1fa7074d05",
+    "共有テキスト https://open.spotify.com/intl-en/track/364JzOajs76bJymjHm3sVY/ です",
+  ])("%s から曲IDを取り出し、si と intl-xx を落とす", (input) => {
+    expect(parseMusicUrl(input)).toEqual({
+      ok: true,
+      service: "spotify",
+      id: "364JzOajs76bJymjHm3sVY",
+      canonicalUrl: "https://open.spotify.com/track/364JzOajs76bJymjHm3sVY",
+    });
+  });
+
+  it("spotify.link の短縮URLは ID 未確定のまま受け付ける", () => {
+    expect(parseMusicUrl("https://spotify.link/AbC123xyz?x=1")).toEqual({
+      ok: true,
+      service: "spotify",
+      id: null,
+      canonicalUrl: "https://spotify.link/AbC123xyz",
+    });
+  });
+
+  it.each([
+    ["https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3", "album_only"],
+    ["https://open.spotify.com/intl-ja/album/1DFixLWuPkv3KT3TnV35m3", "album_only"],
+    ["https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", "not_song"],
+    ["https://open.spotify.com/artist/1snhtMLeb2DYoMOcVbb8iB", "not_song"],
+    ["https://open.spotify.com/track/short", "not_song"],
+    ["https://spotify.link/", "not_song"],
+  ])("%s → %s", (input, reason) => {
+    expect(parseMusicUrl(input)).toEqual({ ok: false, reason });
+  });
+});
+
+describe("parseMusicUrl: YouTube Music", () => {
+  it.each([
+    "https://music.youtube.com/watch?v=S_XXx3yxx2U&si=tMa-189wNLpy3-r3",
+    "https://www.youtube.com/watch?v=S_XXx3yxx2U",
+    "https://m.youtube.com/watch?feature=share&v=S_XXx3yxx2U",
+    "https://youtu.be/S_XXx3yxx2U?si=x",
+  ])("%s から動画IDを取り出す", (input) => {
+    expect(parseMusicUrl(input)).toEqual({
+      ok: true,
+      service: "youtube_music",
+      id: "S_XXx3yxx2U",
+      canonicalUrl: "https://music.youtube.com/watch?v=S_XXx3yxx2U",
+    });
+  });
+
+  it.each([
+    ["https://music.youtube.com/playlist?list=PLxxx", "not_song"],
+    ["https://music.youtube.com/browse/MPREb_xxxxxxxx", "album_only"],
+    ["https://music.youtube.com/channel/UCxxxx", "not_song"],
+    ["https://music.youtube.com/watch?v=abc", "not_song"],
+    ["https://youtu.be/", "not_song"],
+  ])("%s → %s", (input, reason) => {
+    expect(parseMusicUrl(input)).toEqual({ ok: false, reason });
   });
 });
