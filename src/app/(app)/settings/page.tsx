@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import {
+  getSongQuota,
   getUserSettings,
   isAppAdmin,
   listCustomFields,
@@ -21,13 +22,14 @@ export default function SettingsPage() {
 
 async function SettingsLoader() {
   const { supabase, userId } = await requireUser();
-  const [settings, fields, tags, groups, claims, admin] = await Promise.all([
+  const [settings, fields, tags, groups, claims, admin, quota] = await Promise.all([
     getUserSettings(supabase, userId),
     listCustomFields(supabase),
     listTagsWithCount(supabase),
     supabase.from("tag_groups").select("id, name").order("sort_order"),
     supabase.auth.getClaims(),
     isAppAdmin(supabase),
+    getSongQuota(supabase),
   ]);
 
   return (
@@ -36,6 +38,7 @@ async function SettingsLoader() {
       email={typeof claims.data?.claims?.email === "string" ? claims.data.claims.email : ""}
       settings={settings}
       isAdmin={admin}
+      quota={quota}
       fields={fields}
       tags={tags.map(({ id, name, groupId }) => ({ id, name, groupId }))}
       groups={(groups.data ?? []).map((g) => ({ id: g.id, name: g.name }))}

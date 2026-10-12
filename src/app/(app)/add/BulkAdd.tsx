@@ -11,9 +11,15 @@ import styles from "./add.module.css";
 
 const MAX = 20;
 
-type Props = { groups: GroupOption[]; tags: TagOption[]; defaultTagIds: string[] };
+type Props = {
+  groups: GroupOption[];
+  tags: TagOption[];
+  defaultTagIds: string[];
+  /** あと何曲登録できるか（上限まで）。不明なら null */
+  remaining: number | null;
+};
 
-export function BulkAdd({ groups, tags, defaultTagIds }: Props) {
+export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
   const [text, setText] = useState("");
   const [items, setItems] = useState<BulkItem[] | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
@@ -23,6 +29,7 @@ export function BulkAdd({ groups, tags, defaultTagIds }: Props) {
   const [newTags, setNewTags] = useState<NewTag[]>([]);
   const [pending, start] = useTransition();
 
+  const overLimit = remaining !== null && checked.size > remaining;
   const urls = text.match(/https?:\/\/[^\s<>"']+/g) ?? [];
 
   function fetchAll() {
@@ -146,10 +153,15 @@ export function BulkAdd({ groups, tags, defaultTagIds }: Props) {
             onAddNew={(t) => setNewTags((prev) => [...prev, t])}
             onRemoveNew={(name) => setNewTags((prev) => prev.filter((t) => t.name !== name))}
           />
+          {overLimit && (
+            <p role="alert" className={styles.error}>
+              登録できる曲数の上限まで、あと{remaining}曲です。選ぶ曲を減らしてください。
+            </p>
+          )}
           <button
             type="button"
             className={styles.primary}
-            disabled={pending || checked.size === 0}
+            disabled={pending || checked.size === 0 || overLimit}
             onClick={saveChecked}
           >
             {pending ? "保存中…" : `選んだ${checked.size}曲をセトリに追加`}
@@ -161,7 +173,9 @@ export function BulkAdd({ groups, tags, defaultTagIds }: Props) {
         <div role="status" className={styles.notice}>
           {saved.filter((s) => s.status === "ok").length}曲を追加しました。
           {saved.some((s) => s.status !== "ok") &&
-            `（${saved.filter((s) => s.status !== "ok").length}曲は登録済み、または保存できませんでした）`}{" "}
+            `（${saved.filter((s) => s.status !== "ok").length}曲は登録済み、または保存できませんでした）`}
+          {saved.some((s) => s.status === "limit") &&
+            " 曲数の上限に達したため、残りは登録していません。"}{" "}
           <Link href="/">セトリを見る</Link>
           {saved.some((s) => s.id) && (
             <>

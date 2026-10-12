@@ -51,6 +51,10 @@ export default function LoginPage({
         </div>
         <h1 className={styles.title}>Setlistic</h1>
         <p className={styles.tagline}>歌える曲を、自分だけのセトリに。</p>
+        <p className={styles.invite}>
+          <strong>招待制</strong>
+          <span>招待された方のGoogleアカウントだけがログインできます。</span>
+        </p>
       </div>
 
       <Suspense fallback={<div className={styles.form} aria-busy="true" />}>

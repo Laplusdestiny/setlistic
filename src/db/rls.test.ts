@@ -1344,6 +1344,74 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  describe("曲数の上限（1人2,000曲）", () => {
+    const L1 = "f1f1f1f1-f1f1-4f1f-8f1f-f1f1f1f1f1f1";
+    const L2 = "f2f2f2f2-f2f2-4f2f-8f2f-f2f2f2f2f2f2";
+    const j = (v: unknown) => sql.json(v as never);
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${L1}, 'authenticated', 'authenticated', 'l1@test.invalid'),
+        (${L2}, 'authenticated', 'authenticated', 'l2@test.invalid')`;
+      await sql`insert into songs (user_id, title, artist) select ${L1}, 's' || g, 'a' from generate_series(1, 1999) g`;
+    });
+
+    it("上限は2,000曲。使用量と上限を song_quota で取れる", async () => {
+      await as(L1, async (tx) => {
+        const [q] = await tx`select song_quota() as q`;
+        expect(q.q).toEqual({ used: 1999, max: 2000 });
+      });
+    });
+
+    it("上限の手前までは登録でき、上限に達した次の1曲は拒否される（53400）", async () => {
+      await asCommit(L1, async (tx) => {
+        await tx`select register_song(${j({ title: "2000曲目", artist: "a" })})`;
+      });
+      await as(L1, async (tx) => {
+        await expect(
+          tx`select register_song(${j({ title: "2001曲目", artist: "a" })})`,
+        ).rejects.toMatchObject({ code: "53400" });
+      });
+      const [n] = await sql`select count(*)::int as n from songs where user_id = ${L1}`;
+      expect(n.n).toBe(2000);
+    });
+
+    it("直接のinsertでも超えられない（どの経路でも同じトリガーが止める）", async () => {
+      await as(L1, async (tx) => {
+        await expect(
+          tx`insert into songs (user_id, title, artist) values (${L1}, 'x', 'x')`,
+        ).rejects.toMatchObject({ code: "53400" });
+      });
+    });
+
+    it("インポートで上限を超えるときは、全体が取り消される（一部だけ入らない）", async () => {
+      const before = await sql`select count(*)::int as n from tags where user_id = ${L1}`;
+      await as(L1, async (tx) => {
+        await expect(
+          tx`select import_data(${j({ tags: [{ name: "上限テストのタグ" }], songs: [{ title: "超過", artist: "a" }] })})`,
+        ).rejects.toMatchObject({ code: "53400" });
+      });
+      const after = await sql`select count(*)::int as n from tags where user_id = ${L1}`;
+      expect(after[0].n).toBe(before[0].n);
+    });
+
+    it("曲を消すと、また登録できる。他のユーザーには影響しない", async () => {
+      await asCommit(L1, async (tx) => {
+        await tx`delete from songs where id = (select id from songs where user_id = ${L1} limit 1)`;
+        await tx`select register_song(${j({ title: "空いた枠", artist: "a" })})`;
+      });
+      await asCommit(L2, async (tx) => {
+        await tx`select register_song(${j({ title: "別ユーザーは自分の枠", artist: "a" })})`;
+      });
+      const [q] = await sql`select count(*)::int as n from songs where user_id = ${L2}`;
+      expect(q.n).toBe(1);
+    });
+
+    it("未ログイン(anon)は使量を取れない", async () => {
+      await as(null, (tx) => rejects(tx`select song_quota()`));
+    });
+  });
+
   it("health_ping は未ログイン(anon)でも呼べて、時刻だけを返す", async () => {
     await as(null, async (tx) => {
       const [r] = await tx`select health_ping() as t`;

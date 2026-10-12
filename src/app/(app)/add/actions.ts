@@ -17,6 +17,8 @@ import type {
 
 const MAX_BULK = 20;
 const UNIQUE_VIOLATION = "23505";
+/** 曲数の上限（DB の enforce_song_limit トリガー）：SQLSTATE 53400 */
+const LIMIT_EXCEEDED = "53400";
 
 type Client = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
@@ -106,6 +108,7 @@ async function register(supabase: Client, raw: unknown): Promise<SaveResult> {
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) return { status: "duplicate" };
+    if (error.code === LIMIT_EXCEEDED) return { status: "limit" };
     return { status: "error", message: "保存できませんでした。もう一度お試しください。" };
   }
   return { status: "ok", id: data as string };
@@ -159,9 +162,18 @@ export async function saveManyAction(
     const res = await register(supabase, { draft, songKey: 0, memo: "", tagIds, newTags });
     out.push({
       title,
-      status: res.status === "ok" ? "ok" : res.status === "duplicate" ? "duplicate" : "error",
+      status:
+        res.status === "ok"
+          ? "ok"
+          : res.status === "duplicate"
+            ? "duplicate"
+            : res.status === "limit"
+              ? "limit"
+              : "error",
       ...(res.status === "ok" ? { id: res.id } : {}),
     });
+    // 上限に達したら、残りは試さずに止める
+    if (res.status === "limit") break;
   }
   return out;
 }

@@ -6,6 +6,7 @@ import { useId, useState, useTransition } from "react";
 import { signOut } from "@/app/login/actions";
 import type { CustomField } from "@/lib/custom-fields";
 import type { UserSettings } from "@/lib/songs/queries";
+import { quotaStatus, type Quota } from "@/lib/songs/quota";
 import { SORT_KEYS, SORT_LABELS } from "@/lib/songs/sort";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
 import { DangerSection } from "./DangerSection";
@@ -22,6 +23,8 @@ type Props = {
   groups: GroupOption[];
   /** 招待の管理ができる管理者か */
   isAdmin: boolean;
+  /** 登録曲数と上限 */
+  quota: Quota | null;
 };
 
 const NAV = [
@@ -32,7 +35,7 @@ const NAV = [
   { href: "#danger", label: "アカウントの削除" },
 ] as const;
 
-export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin }: Props) {
+export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin, quota }: Props) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -74,6 +77,15 @@ export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin 
                 <dt>ログイン方法</dt>
                 <dd>Google</dd>
               </div>
+              {quota && (
+                <div>
+                  <dt>登録できる曲数</dt>
+                  <dd>
+                    {quota.used.toLocaleString("ja-JP")} / {quota.max.toLocaleString("ja-JP")}曲
+                    {quotaStatus(quota).level !== "ok" && "（上限に近づいています）"}
+                  </dd>
+                </div>
+              )}
             </dl>
             <form action={signOut}>
               <button type="submit" className={styles.secondary}>

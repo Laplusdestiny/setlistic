@@ -647,3 +647,30 @@
 .methods button:not([aria-pressed="true"]):hover {
   background: rgb(255 253 248 / 0.6);
 }
+
+/* 曲数の上限の案内 */
+.quotaNear,
+.quotaFull {
+  margin: 0 20px 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.quotaNear {
+  border: 1px solid #c9a227;
+  background: #fbf3d6;
+}
+
+.quotaFull {
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+}
+
+@media (min-width: 900px) {
+  .quotaNear,
+  .quotaFull {
+    margin: 0 32px 8px;
+  }
+}

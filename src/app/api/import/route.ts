@@ -36,11 +36,22 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return json({ ok: false, error: parsed.error }, 400);
 
   const { data, error } = await supabase.rpc("import_data", { p: parsed.payload });
-  if (error)
+  if (error) {
+    // 曲数の上限（DBトリガー）。取り込みは全体が取り消され、一部だけ入ることはない
+    if (error.code === "53400")
+      return json(
+        {
+          ok: false,
+          error:
+            "登録できる曲数の上限を超えるため、取り込めませんでした。不要な曲を削除してから、もう一度お試しください。",
+        },
+        400,
+      );
     return json(
       { ok: false, error: "取り込めませんでした。ファイルの内容を確認してください。" },
       400,
     );
+  }
 
   return json({ ok: true, result: data, warnings: parsed.warnings });
 }

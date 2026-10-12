@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { visibleFields, type CustomField } from "@/lib/custom-fields";
+import { quotaFullMessage, quotaStatus, type Quota } from "@/lib/songs/quota";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
 import type { SongDraft } from "@/lib/songs/types";
 import { normalizeTagName } from "@/lib/tags/normalize";
@@ -24,6 +25,8 @@ type Props = {
   tags: TagOption[];
   defaultTagIds: string[];
   fields: CustomField[];
+  /** 登録できる曲数（使用量と上限）。取得できなければ null */
+  quota: Quota | null;
 };
 
 type Source = "url" | "search" | "manual";
@@ -42,7 +45,7 @@ const BLANK: SongDraft = {
   sourceUrl: null,
 };
 
-export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Props) {
+export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [panel, setPanel] = useState<"url" | "search">("url");
@@ -145,6 +148,8 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Pro
           router.push("/");
           router.refresh();
         }
+      } else if (res.status === "limit") {
+        setSaveError(quotaFullMessage(quota?.max ?? 0));
       } else if (res.status === "duplicate") {
         setDuplicate({ id: "", title: draft.title });
       } else {
@@ -153,8 +158,10 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Pro
     });
   }
 
+  const qs = quota ? quotaStatus(quota) : null;
+  const full = qs?.level === "full";
   const canSave =
-    Boolean(draft && draft.title.trim() && draft.artist.trim() && !duplicate) && !pending;
+    Boolean(draft && draft.title.trim() && draft.artist.trim() && !duplicate) && !pending && !full;
   const step = draft ? "confirm" : "input";
 
   const toggle = (id: string) =>
@@ -228,9 +235,22 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Pro
         </div>
       </header>
 
+      {quota && qs && qs.level !== "ok" && (
+        <p role={full ? "alert" : "status"} className={full ? styles.quotaFull : styles.quotaNear}>
+          {full
+            ? quotaFullMessage(quota.max)
+            : `登録できる曲数の上限（${quota.max.toLocaleString("ja-JP")}曲）まで、あと${qs.remaining}曲です。`}
+        </p>
+      )}
+
       {mode === "bulk" ? (
         <div className={`${styles.body} ${styles.bulkBody}`}>
-          <BulkAdd groups={groups} tags={tags} defaultTagIds={defaultTagIds} />
+          <BulkAdd
+            groups={groups}
+            tags={tags}
+            defaultTagIds={defaultTagIds}
+            remaining={qs?.remaining ?? null}
+          />
         </div>
       ) : (
         <>

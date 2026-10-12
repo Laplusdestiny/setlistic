@@ -14,7 +14,10 @@ export type SearchResult =
   | { status: "error"; reason: "network" | "too_short" };
 
 export type SaveResult =
-  { status: "ok"; id: string } | { status: "duplicate" } | { status: "error"; message: string };
+  | { status: "ok"; id: string }
+  | { status: "duplicate" }
+  | { status: "limit" }
+  | { status: "error"; message: string };
 
 export type BulkItem = {
   input: string;
@@ -25,7 +28,7 @@ export type BulkItem = {
 
 export type BulkSaveItem = {
   title: string;
-  status: "ok" | "duplicate" | "error";
+  status: "ok" | "duplicate" | "error" | "limit";
   /** 登録できた曲のID（一括変更画面へ進むため） */
   id?: string;
 };

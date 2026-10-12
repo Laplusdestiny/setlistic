@@ -2,6 +2,7 @@ import type { createClient } from "@/lib/supabase/server";
 import { toRpcParams, type SearchConditions } from "../search/conditions";
 import { toSavedSearch, type SavedSearch } from "../search/saved";
 import { FIELD_TYPES, type CustomField } from "../custom-fields";
+import { parseQuota, type Quota } from "./quota";
 import { parseSort, type SortKey } from "./sort";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -209,6 +210,12 @@ export async function getUserSettings(supabase: Client, userId: string): Promise
       : ["key", "tags"],
     defaultTagIds: data?.default_tag_ids ?? [],
   };
+}
+
+/** 自分の登録曲数と上限（上限は DB の max_songs_per_user() が決める） */
+export async function getSongQuota(supabase: Client): Promise<Quota | null> {
+  const { data } = await supabase.rpc("song_quota");
+  return parseQuota(data);
 }
 
 /** 管理者か（招待の管理画面を出してよいか）。判定は DB 関数が行う */

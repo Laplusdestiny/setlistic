@@ -78,6 +78,13 @@
       "when": 1791784708681,
       "tag": "0010_admin_invite_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791785328047,
+      "tag": "0011_song_limit",
+      "breakpoints": true
     }
   ]
 }
