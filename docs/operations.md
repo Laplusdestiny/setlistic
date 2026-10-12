@@ -51,17 +51,38 @@ vercel logs --project setlistic --scope laplus-destiny --level error   # エラ�
 
 ## 招待（利用できる人の追加）
 
-許可リスト `allowed_emails` には、メールアドレスの **SHA-256 ハッシュ**だけを入れる（メールアドレスそのものは保存しない）。Supabase の「Before User Created」フック（`public.hook_before_user_created`）が、未許可のGoogleアカウントの作成を拒否する。
+### 事前に確認しておくこと（初回だけ）
 
-```bash
-printf '%s' 'friend@example.com' | tr 'A-Z' 'a-z' | sha256sum   # 小文字にしてからハッシュ
-```
+1. **Google の OAuth 同意画面が「テスト」状態でないか**：Google Cloud Console → Google Auth Platform（OAuth 同意画面）。「テスト」のままだと、登録したテストユーザー以外（最大100人）はログインできない。招待する人を、テストユーザーとして追加するか、公開ステータスを「本番環境」にする（メールとプロフィールだけの権限なら審査は不要）
+2. **「Before User Created」フックが有効か**：Supabase ダッシュボード → Authentication → Auth Hooks。許可していない Google アカウントでログインして、「招待制です」と出て拒否されることを一度確認する
+3. **利用規約・プライバシーポリシー（`/terms` `/privacy`）が確定しているか**（連絡先を含む）。招待した人は、これに同意して使う
+4. 独自ドメイン（`setlistic.laplusdestiny.com`）を使うなら、Supabase の Site URL / Redirect URLs にも追加してある
 
-```sql
-insert into public.allowed_emails (email_hash) values ('<上で出た64文字>');
-```
+### 1人を招待する手順
 
-フックが有効であること：Supabase ダッシュボード → Authentication → Auth Hooks → Before User Created → `public.hook_before_user_created`。
+1. 相手の **Google アカウントのメールアドレス**を聞く（ログインに使うもの。Gmail なら通常そのアドレス）
+2. 小文字にして SHA-256 を計算する：
+   ```bash
+   printf '%s' 'friend@example.com' | tr 'A-Z' 'a-z' | sha256sum
+   ```
+3. Supabase の SQL Editor で登録する（メールアドレスそのものは入れない）：
+   ```sql
+   insert into public.allowed_emails (email_hash) values ('<上で出た64文字>');
+   ```
+4. 相手に伝える：アプリのURLを開く → 「Googleでサインイン」（**登録したメールの Google アカウント**で）。iPhone は Safari の共有ボタン →「ホーム画面に追加」
+
+### 招待をやめる（アクセスを止める）
+
+許可リストから消すだけでは **止まらない**（フックは、アカウントを新しく作るときにだけ働くため。すでに作られたアカウントはそのままログインできる）。次の2つを行う。
+
+1. `delete from public.allowed_emails where email_hash = '<ハッシュ>';`
+2. Supabase ダッシュボード → Authentication → Users で、そのユーザーを削除（またはBan）。削除すると、そのユーザーのデータもすべて消える（相手に先にエクスポートしてもらうとよい）
+
+### 知っておくこと
+
+- 各ユーザーのデータは完全に分かれている（友人どうしで曲リストは共有されない。共有機能は GitHub Issue #6）
+- 運営者は、データベースの管理画面から技術的には全ユーザーのデータを見られる。プライバシーポリシーにそう書いてある範囲で、必要なとき以外は見ない
+- 無料プランの目安：Supabase Auth は月間5万人まで、データベースは500MB。数十人・数万曲の規模なら十分。Vercel Hobby は非商用が条件（友人との利用は問題ない範囲）
 
 ## 認証まわりの設定
 
