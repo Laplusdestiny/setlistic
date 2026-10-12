@@ -12,6 +12,7 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 20px 20px 8px;
@@ -38,19 +39,23 @@
   flex: 1;
 }
 
+/* 幅は中身に合わせる。スマホではタイトルの下の行に回す */
 .tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, auto);
   gap: 4px;
   padding: 4px;
   background: #e9e3d6;
   border-radius: var(--radius-control);
-  width: 280px;
+  width: fit-content;
   max-width: 100%;
+  flex: none;
+  order: 3;
 }
 
 .tab {
   min-height: 44px;
+  padding: 0 20px;
   border: 0;
   border-radius: 9px;
   background: transparent;
@@ -563,6 +568,12 @@
   }
   .title {
     font-size: 22px;
+  }
+  .tabs {
+    order: 0;
+  }
+  .tabs.onlyWide {
+    display: grid;
   }
   .body {
     grid-template-columns: repeat(2, minmax(0, 1fr));

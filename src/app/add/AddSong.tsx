@@ -56,7 +56,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
 
   const [selected, setSelected] = useState<Set<string>>(new Set(defaultTagIds));
   const [newTags, setNewTags] = useState<NewTag[]>([]);
-  const [songKey, setSongKey] = useState<number | null>(null);
+  const [songKey, setSongKey] = useState<number>(0);
   const [memo, setMemo] = useState("");
 
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
     setLookupError(null);
     setSaveError(null);
     setMessage(null);
-    setSongKey(null);
+    setSongKey(0);
     setMemo("");
 
     // 登録時に付けるタグ ＋ Apple Music のジャンル（提案。外せる）
@@ -113,7 +113,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
     setDuplicate(null);
     setSelected(new Set(defaultTagIds));
     setNewTags([]);
-    setSongKey(null);
+    setSongKey(0);
     setMemo("");
     setLookupError(null);
     setSaveError(null);
@@ -436,18 +436,18 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
                             type="button"
                             className={styles.step}
                             aria-label="キーを下げる"
-                            onClick={() => setSongKey(clampKey((songKey ?? 0) - 1))}
+                            onClick={() => setSongKey(clampKey(songKey - 1))}
                           >
                             −
                           </button>
                           <span className={styles.keyValue} aria-live="polite">
-                            {songKey === null ? "未設定" : formatKey(songKey)}
+                            {formatKey(songKey)}
                           </span>
                           <button
                             type="button"
                             className={styles.step}
                             aria-label="キーを上げる"
-                            onClick={() => setSongKey(clampKey((songKey ?? 0) + 1))}
+                            onClick={() => setSongKey(clampKey(songKey + 1))}
                           >
                             ＋
                           </button>
