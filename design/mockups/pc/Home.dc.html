@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>PC ホーム（曲一覧と絞り込み）</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-wrap: wrap">
+
+  <nav aria-label="メインメニュー" style="flex: 1 1 200px; max-width: 240px; box-sizing: border-box; padding: 28px 16px; border-right: 1px solid #D9D2C3; background: #FFFDF8; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 10px 22px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E1C18" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+      <span style="font-size: 20px; font-weight: 700">Setlistic</span>
+    </div>
+    <a href="Home.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #E6EAF5; color: #23397A; font-weight: 700; text-decoration: none; font-size: 14px">セトリ（曲一覧）</a>
+    <a href="Tags.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">タグ管理</a>
+    <a href="Settings.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">設定</a>
+    <a href="Add.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 16px; border-radius: 12px; background: #2747A0; color: #FFFFFF; font-weight: 700; text-decoration: none; font-size: 14px">＋ 曲を登録</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 24px 32px 16px">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 700; flex: 1 1 auto">セトリ <span style="font-size: 14px; font-weight: 400; color: #5E5A52">{{count}}曲</span></h1>
+      <label for="pcq" style="position: absolute; width: 1px; height: 1px; overflow: hidden">曲を検索</label>
+      <input id="pcq" placeholder="曲名・アーティスト・メモで検索　/" style="flex: 0 1 380px; min-width: 200px; height: 44px; padding: 0 14px; border: 1px solid #D9D2C3; border-radius: 12px; background: #FFFDF8; font-size: 14px; color: #1E1C18">
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; padding: 0 32px 32px; align-items: flex-start">
+      <aside aria-label="絞り込み" style="flex: 1 1 220px; max-width: 260px; display: flex; flex-direction: column; gap: 18px; padding: 18px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 14px; box-sizing: border-box">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 700">絞り込み</h2>
+          <button style="height: 32px; border: 0; background: transparent; color: #2747A0; font-size: 13px" onClick="{{reset}}">リセット</button>
+        </div>
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+          <section style="display: flex; flex-direction: column; gap: 6px">
+            <h3 style="margin: 0; font-size: 12px; color: #5E5A52; font-weight: 700">{{g.name}}</h3>
+            <sc-for list="{{g.tags}}" as="t" hint-placeholder-count="3">
+              <label style="display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; cursor: pointer">
+                <input type="checkbox" checked="{{t.on}}" onChange="{{t.toggle}}"> #{{t.label}}</label>
+            </sc-for>
+          </section>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #EFEADF; border-radius: 10px; padding: 3px; gap: 3px">
+          <button style="height: 34px; border: 0; border-radius: 8px; background: #FFFDF8; font-size: 12px; font-weight: 700; color: #1E1C18">AND</button>
+          <button style="height: 34px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; color: #5E5A52">OR</button>
+        </div>
+      </aside>
+
+      <div style="flex: 999 1 480px; min-width: 0; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+        <div style="flex: 999 1 420px; min-width: 0; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 14px; overflow-x: auto">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px">
+            <thead>
+              <tr style="text-align: left; color: #5E5A52; font-size: 12px">
+                <th style="padding: 12px 16px; border-bottom: 1px dashed #CFC7B6; font-weight: 500; width: 40px">No.</th>
+                <th style="padding: 12px 8px; border-bottom: 1px dashed #CFC7B6; font-weight: 500">曲名 / アーティスト</th>
+                <th style="padding: 12px 8px; border-bottom: 1px dashed #CFC7B6; font-weight: 500">タグ</th>
+                <th style="padding: 12px 16px 12px 8px; border-bottom: 1px dashed #CFC7B6; font-weight: 500; width: 60px">キー</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{songs}}" as="s" hint-placeholder-count="6">
+                <tr style="background: {{s.rowBg}}; cursor: pointer" onClick="{{s.select}}">
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #ECE6DA; font-family: 'Klee One', cursive; font-size: 18px; color: #2747A0">{{s.no}}</td>
+                  <td style="padding: 12px 8px; border-bottom: 1px solid #ECE6DA">
+                    <button style="border: 0; background: transparent; padding: 0; text-align: left; font-size: 15px; font-weight: 700; color: #1E1C18" onClick="{{s.select}}">{{s.title}}</button>
+                    <div style="font-size: 12px; color: #5E5A52; margin-top: 2px">{{s.artist}}</div></td>
+                  <td style="padding: 12px 8px; border-bottom: 1px solid #ECE6DA">
+                    <span style="display: flex; gap: 6px; flex-wrap: wrap">
+                      <sc-for list="{{s.tags}}" as="t" hint-placeholder-count="2">
+                        <span style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #E6EAF5; color: #23397A">#{{t}}</span>
+                      </sc-for></span></td>
+                  <td style="padding: 12px 16px 12px 8px; border-bottom: 1px solid #ECE6DA; font-size: 13px">{{s.key}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+
+        <aside aria-label="選択中の曲" style="flex: 1 1 280px; max-width: 340px; box-sizing: border-box; padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 14px; display: flex; flex-direction: column; gap: 14px">
+          <span style="align-self: flex-start; font-family: 'Klee One', cursive; font-size: 13px; color: #2747A0; padding: 2px 10px; border: 1.5px solid #2747A0; border-radius: 999px">No.{{cur.no}}</span>
+          <div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700">{{cur.title}}</h2>
+            <p style="margin: 4px 0 0; font-size: 14px; color: #5E5A52">{{cur.artist}}</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <div style="padding: 10px; border: 1px solid #ECE6DA; border-radius: 10px"><div style="font-size: 11px; color: #5E5A52">キー</div><div style="font-family: 'Klee One', cursive; font-size: 20px">{{cur.key}}</div></div>
+            <div style="padding: 10px; border: 1px solid #ECE6DA; border-radius: 10px"><div style="font-size: 11px; color: #5E5A52">最高点</div><div style="font-family: 'Klee One', cursive; font-size: 20px">[点数]</div></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 12px; color: #5E5A52; font-weight: 700">メモ</span>
+            <p style="margin: 0; font-size: 14px; line-height: 1.7">[メモ]</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button style="flex: 1 1 auto; height: 44px; border: 0; border-radius: 12px; background: #2747A0; color: #FFFFFF; font-size: 14px; font-weight: 700">今日歌った！</button>
+            <button style="height: 44px; padding: 0 16px; border: 1px solid #D9D2C3; border-radius: 12px; background: #FFFDF8; font-size: 14px; color: #1E1C18">編集</button>
+          </div>
+          <a href="#" style="font-size: 13px">Apple Musicで開く</a>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = { on: {}, sel: 0 }; }
+  renderVals() {
+    const on = this.state.on;
+    const defs = [
+      { name: '歌える度', tags: ['十八番','歌える','練習中'] },
+      { name: 'ジャンル', tags: ['J-POP','アニソン','ボカロ'] },
+      { name: 'シーン', tags: ['盛り上げ','バラード','デュエット'] }
+    ];
+    const groups = defs.map((g) => ({ ...g, tags: g.tags.map((l) => ({ label: l, on: !!on[l],
+      toggle: () => this.setState({ on: { ...this.state.on, [l]: !this.state.on[l] }, sel: 0 }) })) }));
+    const all = [
+      { title: '夜に駆ける', artist: 'YOASOBI', tags: ['十八番','J-POP','盛り上げ'], key: '-2' },
+      { title: '残酷な天使のテーゼ', artist: '高橋洋子', tags: ['アニソン','盛り上げ'], key: '±0' },
+      { title: 'マリーゴールド', artist: 'あいみょん', tags: ['十八番','J-POP','バラード'], key: '+1' },
+      { title: '白日', artist: 'King Gnu', tags: ['練習中','J-POP'], key: '-3' },
+      { title: 'Lemon', artist: '米津玄師', tags: ['歌える','バラード'], key: '±0' },
+      { title: 'シャルル', artist: 'バルーン', tags: ['歌える','ボカロ'], key: '-1' }
+    ];
+    const act = Object.keys(on).filter((k) => on[k]);
+    const list = act.length ? all.filter((s) => act.every((a) => s.tags.indexOf(a) >= 0)) : all;
+    const sel = Math.min(this.state.sel, Math.max(0, list.length - 1));
+    const songs = list.map((s, i) => ({ ...s, no: String(i + 1).padStart(2, '0'), rowBg: i === sel ? '#F3F0E6' : 'transparent', select: () => this.setState({ sel: i }) }));
+    const cur = songs[sel] || { no: '--', title: '該当する曲がありません', artist: '', key: '-' };
+    return { groups, songs, cur, count: songs.length, reset: () => this.setState({ on: {}, sel: 0 }) };
+  }
+}
+</script>
+</body>
+</html>

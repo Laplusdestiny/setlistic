@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>登録確認・タグ付け</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input,textarea{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; gap: 8px">
+    <a href="AddUrl.dc.html" aria-label="戻る" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-left: -10px; color: #1E1C18">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700">内容を確認</h1>
+  </header>
+
+  <div style="flex: 1; overflow-y: auto; padding: 4px 20px 16px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; gap: 14px; padding: 14px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px">
+      <span style="font-family: 'Klee One', cursive; font-size: 26px; color: #2747A0; width: 36px; flex: none">06</span>
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <span style="font-size: 11px; color: #1F6B3A; font-weight: 500">Apple Music から取得</span>
+        <span style="font-size: 17px; font-weight: 700">夜に駆ける</span>
+        <span style="font-size: 13px; color: #5E5A52">YOASOBI</span>
+        <a href="#" style="font-size: 12px; margin-top: 2px">曲名・アーティストを修正</a>
+      </div>
+    </div>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 700">タグ</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{tags}}" as="t" hint-placeholder-count="6">
+          <button aria-pressed="{{t.on}}" style="height: 38px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}" onClick="{{t.toggle}}">#{{t.label}}</button>
+        </sc-for>
+      </div>
+      <label for="newtag" style="position: absolute; width: 1px; height: 1px; overflow: hidden">新しいタグ</label>
+      <div style="display: flex; gap: 8px">
+        <input id="newtag" placeholder="新しいタグを入力" style="flex: 1; height: 44px; padding: 0 12px; border: 1px dashed #A99F8B; border-radius: 12px; background: transparent; font-size: 14px; color: #1E1C18">
+        <button style="height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #1E1C18; color: #FFFFFF; font-size: 14px">追加</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 700">メモ項目</h2>
+      <div style="display: flex; flex-direction: column; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 14px">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 14px; min-height: 52px; border-bottom: 1px solid #ECE6DA">
+          <span style="font-size: 14px">キー</span>
+          <div style="display: flex; align-items: center; gap: 4px">
+            <button aria-label="キーを下げる" style="width: 44px; height: 36px; border: 1px solid #D9D2C3; border-radius: 10px; background: #F5F2EA; font-size: 18px; color: #1E1C18" onClick="{{down}}">−</button>
+            <span style="width: 44px; text-align: center; font-size: 16px; font-weight: 700">{{keyLabel}}</span>
+            <button aria-label="キーを上げる" style="width: 44px; height: 36px; border: 1px solid #D9D2C3; border-radius: 10px; background: #F5F2EA; font-size: 18px; color: #1E1C18" onClick="{{up}}">＋</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+          <label for="memo" style="font-size: 14px">メモ</label>
+          <textarea id="memo" rows="2" placeholder="サビ前で息継ぎ、など" style="border: 0; background: transparent; resize: none; font-size: 14px; color: #1E1C18; outline: none"></textarea>
+        </div>
+      </div>
+      <button style="height: 44px; border: 1px dashed #A99F8B; border-radius: 12px; background: transparent; font-size: 14px; color: #2747A0; font-weight: 500">＋ 項目を追加（最高点・採点機種 など）</button>
+    </section>
+  </div>
+
+  <div style="padding: 12px 20px 34px; background: #FFFDF8; border-top: 1px solid #D9D2C3">
+    <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #2747A0; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none">セトリに追加</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = { on: { '歌える': true, 'J-POP': true }, key: -2 }; }
+  renderVals() {
+    const on = this.state.on;
+    const tags = ['十八番','歌える','練習中','J-POP','アニソン','盛り上げ','バラード'].map((l) => {
+      const a = !!on[l];
+      return { label: l, on: a ? 'true' : 'false', bg: a ? '#1E1C18' : '#FFFDF8', fg: a ? '#FFFFFF' : '#1E1C18', border: a ? '#1E1C18' : '#D9D2C3',
+        toggle: () => this.setState({ on: { ...this.state.on, [l]: !this.state.on[l] } }) };
+    });
+    const k = this.state.key;
+    return { tags, keyLabel: k === 0 ? '±0' : (k > 0 ? '+' + k : String(k)),
+      up: () => this.setState({ key: Math.min(7, this.state.key + 1) }),
+      down: () => this.setState({ key: Math.max(-7, this.state.key - 1) }) };
+  }
+}
+</script>
+</body>
+</html>

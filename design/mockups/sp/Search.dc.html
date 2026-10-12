@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>検索・タグ絞り込み</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; gap: 8px">
+    <a href="Main.dc.html" aria-label="戻る" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-left: -10px; color: #1E1C18">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700; flex: 1">絞り込み検索</h1>
+    <button style="height: 44px; border: 0; background: transparent; color: #2747A0; font-size: 14px; font-weight: 500" onClick="{{reset}}">リセット</button>
+  </header>
+
+  <div style="padding: 4px 20px 12px">
+    <label for="kw" style="font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px">キーワード</label>
+    <input id="kw" placeholder="曲名・アーティスト・メモ" style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 14px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 14px; font-size: 15px; color: #1E1C18">
+  </div>
+
+  <div style="flex: 1; overflow-y: auto; padding: 0 20px 16px; display: flex; flex-direction: column; gap: 20px">
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 700">{{g.name}}</h2>
+          <span style="font-size: 12px; color: #5E5A52">{{g.hint}}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{g.tags}}" as="t" hint-placeholder-count="4">
+            <button aria-pressed="{{t.on}}" style="height: 38px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}" onClick="{{t.toggle}}">#{{t.label}}</button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 700">タグの組み合わせ</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #E9E3D6; border-radius: 12px; padding: 4px; gap: 4px">
+        <button style="height: 40px; border: 0; border-radius: 9px; background: #FFFDF8; font-size: 13px; font-weight: 700; color: #1E1C18">すべて含む（AND）</button>
+        <button style="height: 40px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; color: #5E5A52">どれか（OR）</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 700">並び順</h2>
+      <div style="display: flex; flex-direction: column; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 12px">
+        <label style="display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 46px; border-bottom: 1px solid #ECE6DA; font-size: 14px"><input type="radio" name="sort" checked="checked"> 最近追加した順</label>
+        <label style="display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 46px; border-bottom: 1px solid #ECE6DA; font-size: 14px"><input type="radio" name="sort"> 最近歌った順</label>
+        <label style="display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 46px; font-size: 14px"><input type="radio" name="sort"> 曲名（五十音）</label>
+      </div>
+    </section>
+  </div>
+
+  <div style="padding: 12px 20px 34px; background: #FFFDF8; border-top: 1px solid #D9D2C3">
+    <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #2747A0; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none">{{resultLabel}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = { on: { '十八番': true, 'アニソン': true } }; }
+  renderVals() {
+    const defs = [
+      { name: '歌える度', hint: '基本タグ', tags: ['十八番','歌える','練習中','いつか歌いたい'] },
+      { name: 'ジャンル', hint: '基本タグ', tags: ['J-POP','アニソン','ボカロ','ロック','洋楽'] },
+      { name: 'シーン', hint: '基本タグ', tags: ['盛り上げ','バラード','デュエット','1曲目向き'] },
+      { name: 'マイタグ', hint: '自由に追加したタグ', tags: ['高音つらい','フル尺長い','原キーOK'] }
+    ];
+    const on = this.state.on;
+    const groups = defs.map((g) => ({ ...g, tags: g.tags.map((l) => {
+      const a = !!on[l];
+      return { label: l, on: a ? 'true' : 'false', bg: a ? '#1E1C18' : '#FFFDF8', fg: a ? '#FFFFFF' : '#1E1C18', border: a ? '#1E1C18' : '#D9D2C3',
+        toggle: () => this.setState({ on: { ...this.state.on, [l]: !this.state.on[l] } }) };
+    }) }));
+    const n = Object.keys(on).filter((k) => on[k]).length;
+    return { groups, resultLabel: n ? `${n}個のタグで絞り込む` : 'すべての曲を表示', reset: () => this.setState({ on: {} }) };
+  }
+}
+</script>
+</body>
+</html>

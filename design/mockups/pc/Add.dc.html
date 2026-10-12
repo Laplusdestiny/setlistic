@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>PC 曲登録</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input,textarea{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-wrap: wrap">
+
+  <nav aria-label="メインメニュー" style="flex: 1 1 200px; max-width: 240px; box-sizing: border-box; padding: 28px 16px; border-right: 1px solid #D9D2C3; background: #FFFDF8; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 10px 22px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E1C18" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+      <span style="font-size: 20px; font-weight: 700">Setlistic</span>
+    </div>
+    <a href="Home.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">セトリ（曲一覧）</a>
+    <a href="Tags.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">タグ管理</a>
+    <a href="Settings.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">設定</a>
+    <a href="Add.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 16px; border-radius: 12px; background: #1A3478; color: #FFFFFF; font-weight: 700; text-decoration: none; font-size: 14px">＋ 曲を登録</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 700; flex: 1 1 auto">曲を登録</h1>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #E9E3D6; border-radius: 12px; padding: 4px; gap: 4px; width: 280px; max-width: 100%">
+        <button style="height: 38px; border: 0; border-radius: 9px; background: #FFFDF8; font-size: 13px; font-weight: 700; color: #1E1C18">1曲ずつ</button>
+        <button style="height: 38px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; color: #5E5A52">まとめて登録</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start">
+      <section style="display: flex; flex-direction: column; gap: 16px; padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">1. 共有URLを貼り付け</h2>
+        <label for="pcurl" style="font-size: 13px; color: #5E5A52">Apple Music の「リンクをコピー」で取得したURL（Spotify などは今後対応）</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <input id="pcurl" value="https://music.apple.com/jp/album/[ALBUM]/[ID]?i=[TRACK_ID]" style="flex: 1 1 260px; min-width: 0; height: 46px; padding: 0 14px; border: 1.5px solid #2747A0; border-radius: 12px; background: #FFFFFF; font-size: 14px; color: #1E1C18">
+          <button style="height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: #1E1C18; color: #FFFFFF; font-size: 14px">取得</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px dashed #CFC7B6; border-radius: 12px">
+          <span style="font-size: 12px; color: #1F6B3A; font-weight: 700">取得結果</span>
+          <div style="display: grid; grid-template-columns: 96px 1fr; gap: 10px 12px; align-items: center; font-size: 14px">
+            <label for="ft" style="color: #5E5A52; font-size: 13px">曲名</label>
+            <input id="ft" value="夜に駆ける" style="height: 40px; padding: 0 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18">
+            <label for="fa" style="color: #5E5A52; font-size: 13px">アーティスト</label>
+            <input id="fa" value="YOASOBI" style="height: 40px; padding: 0 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18">
+            <span style="color: #5E5A52; font-size: 13px">リンク元</span>
+            <span style="font-size: 13px">Apple Music</span>
+          </div>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 16px; padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">2. タグとメモ</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="pctag" style="font-size: 13px; color: #5E5A52">タグ（入力で候補表示・Enterで新規作成）</label>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 46px; padding: 6px 10px; border: 1px solid #D9D2C3; border-radius: 12px; background: #FFFFFF; box-sizing: border-box">
+            <span style="font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #1E1C18; color: #FFFFFF">#歌える ×</span>
+            <span style="font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #1E1C18; color: #FFFFFF">#J-POP ×</span>
+            <input id="pctag" placeholder="タグを追加…" style="flex: 1; min-width: 120px; border: 0; height: 32px; font-size: 14px; outline: none; color: #1E1C18">
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <span style="font-size: 12px; color: #5E5A52; padding: 6px 0">よく使う：</span>
+            <button style="height: 32px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 999px; background: #FFFDF8; font-size: 12px; color: #1E1C18">#十八番</button>
+            <button style="height: 32px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 999px; background: #FFFDF8; font-size: 12px; color: #1E1C18">#盛り上げ</button>
+            <button style="height: 32px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 999px; background: #FFFDF8; font-size: 12px; color: #1E1C18">#練習中</button>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px 1fr; gap: 10px 12px; align-items: center">
+          <label for="pk" style="color: #5E5A52; font-size: 13px">キー</label>
+          <input id="pk" value="-2" style="width: 100px; height: 40px; padding: 0 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18">
+          <label for="ps" style="color: #5E5A52; font-size: 13px">最高点</label>
+          <input id="ps" placeholder="[点数]" style="width: 100px; height: 40px; padding: 0 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18">
+          <label for="pm" style="color: #5E5A52; font-size: 13px; align-self: start; padding-top: 10px">メモ</label>
+          <textarea id="pm" rows="3" style="padding: 10px 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; resize: vertical; color: #1E1C18"></textarea>
+        </div>
+        <a href="Settings.dc.html" style="font-size: 13px">項目を追加・編集（設定）</a>
+      </section>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap">
+      <a href="Home.dc.html" style="display: flex; align-items: center; height: 48px; padding: 0 20px; border: 1px solid #D9D2C3; border-radius: 12px; background: #FFFDF8; color: #1E1C18; text-decoration: none; font-size: 14px">キャンセル</a>
+      <a href="Home.dc.html" style="display: flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 12px; background: #FFFDF8; border: 1px solid #2747A0; color: #2747A0; text-decoration: none; font-size: 14px; font-weight: 700">保存して続けて登録</a>
+      <a href="Home.dc.html" style="display: flex; align-items: center; height: 48px; padding: 0 24px; border-radius: 12px; background: #2747A0; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 700">セトリに追加</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

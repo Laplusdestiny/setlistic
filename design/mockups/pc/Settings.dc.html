@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>PC 設定</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input,select{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-wrap: wrap">
+
+  <nav aria-label="メインメニュー" style="flex: 1 1 200px; max-width: 240px; box-sizing: border-box; padding: 28px 16px; border-right: 1px solid #D9D2C3; background: #FFFDF8; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 10px 22px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E1C18" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+      <span style="font-size: 20px; font-weight: 700">Setlistic</span>
+    </div>
+    <a href="Home.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">セトリ（曲一覧）</a>
+    <a href="Tags.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">タグ管理</a>
+    <a href="Settings.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #E6EAF5; color: #23397A; font-weight: 700; text-decoration: none; font-size: 14px">設定</a>
+    <a href="Add.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 16px; border-radius: 12px; background: #2747A0; color: #FFFFFF; font-weight: 700; text-decoration: none; font-size: 14px">＋ 曲を登録</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 20px">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 700">設定</h1>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <nav aria-label="設定の項目" style="flex: 1 1 180px; max-width: 220px; display: flex; flex-direction: column; gap: 2px">
+        <a href="#acct" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">アカウント</a>
+        <a href="#fields" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; background: #FFFDF8; border: 1px solid #D9D2C3; color: #1E1C18; text-decoration: none; font-size: 14px; font-weight: 700">カスタム項目</a>
+        <a href="#view" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">表示</a>
+        <a href="#data" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; color: #1E1C18; text-decoration: none; font-size: 14px">データ</a>
+        <a href="#share" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; color: #5E5A52; text-decoration: none; font-size: 14px">共有（今後）</a>
+      </nav>
+
+      <div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <section id="fields" style="padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+            <div>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 700">カスタム項目</h2>
+              <p style="margin: 4px 0 0; font-size: 13px; color: #5E5A52">曲ごとに記録する項目。曲名・アーティスト・タグは固定です。</p>
+            </div>
+            <button style="height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #1E1C18; color: #FFFFFF; font-size: 13px">＋ 項目を追加</button>
+          </div>
+          <div style="overflow-x: auto; border: 1px solid #ECE6DA; border-radius: 12px">
+            <table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px">
+              <thead>
+                <tr style="text-align: left; font-size: 12px; color: #5E5A52">
+                  <th style="padding: 10px 14px; border-bottom: 1px solid #ECE6DA; font-weight: 500">項目名</th>
+                  <th style="padding: 10px 8px; border-bottom: 1px solid #ECE6DA; font-weight: 500">種類</th>
+                  <th style="padding: 10px 8px; border-bottom: 1px solid #ECE6DA; font-weight: 500">一覧に表示</th>
+                  <th style="padding: 10px 14px; border-bottom: 1px solid #ECE6DA; font-weight: 500; width: 60px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{fields}}" as="f" hint-placeholder-count="4">
+                  <tr>
+                    <td style="padding: 10px 14px; border-bottom: 1px solid #ECE6DA">{{f.name}}<span style="font-size: 11px; color: #5E5A52; margin-left: 6px">{{f.note}}</span></td>
+                    <td style="padding: 10px 8px; border-bottom: 1px solid #ECE6DA; color: #5E5A52">{{f.type}}</td>
+                    <td style="padding: 10px 8px; border-bottom: 1px solid #ECE6DA"><input type="checkbox" checked="{{f.show}}" aria-label="一覧に表示"></td>
+                    <td style="padding: 4px 14px; border-bottom: 1px solid #ECE6DA"><button style="height: 36px; border: 0; background: transparent; color: #2747A0; font-size: 13px">編集</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view" style="padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 700; grid-column: 1 / -1">表示</h2>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="th" style="font-size: 13px; color: #5E5A52">テーマ</label>
+            <select id="th" style="height: 42px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18"><option>端末に合わせる</option><option>ライト</option><option>ダーク</option></select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="so" style="font-size: 13px; color: #5E5A52">一覧の並び順</label>
+            <select id="so" style="height: 42px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18"><option>最近追加した順</option><option>最近歌った順</option><option>曲名（五十音）</option></select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="dt" style="font-size: 13px; color: #5E5A52">登録時に付けるタグ</label>
+            <select id="dt" style="height: 42px; padding: 0 10px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFFFF; font-size: 14px; color: #1E1C18"><option>#歌える</option><option>なし</option></select>
+          </div>
+        </section>
+
+        <section id="data" style="padding: 22px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 700; flex: 1 1 200px">データ</h2>
+          <button style="height: 42px; padding: 0 16px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFDF8; font-size: 14px; color: #1E1C18">CSVでエクスポート</button>
+          <button style="height: 42px; padding: 0 16px; border: 1px solid #D9D2C3; border-radius: 10px; background: #FFFDF8; font-size: 14px; color: #1E1C18">インポート</button>
+          <button style="height: 42px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; color: #A3341C">アカウントを削除</button>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { fields: [
+      { name: 'キー', note: '基本', type: '数値（±）', show: true },
+      { name: 'メモ', note: '基本', type: 'テキスト', show: false },
+      { name: '最高点', note: '', type: '数値', show: false },
+      { name: '最後に歌った日', note: '', type: '日付', show: true },
+      { name: '採点機種', note: '', type: '選択肢', show: false }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

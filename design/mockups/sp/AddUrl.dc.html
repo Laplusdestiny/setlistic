@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>曲登録（URL貼り付け）</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Klee+One:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2747A0}a:hover{color:#1A3478}
+button,input,textarea{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F5F2EA; color: #1E1C18; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif; display: flex; flex-direction: column">
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; gap: 8px">
+    <a href="Main.dc.html" aria-label="閉じる" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-left: -10px; color: #1E1C18">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700">曲を登録</h1>
+  </header>
+
+  <div style="padding: 8px 20px; display: flex; flex-direction: column; gap: 20px; flex: 1">
+    <p style="margin: 0; font-size: 14px; color: #5E5A52; line-height: 1.7">音楽アプリの「共有 → リンクをコピー」で取得したURLを貼り付けてください。曲名・アーティストを自動で取得します。</p>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="url" style="font-size: 13px; font-weight: 500">共有URL</label>
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFDF8; border: 1.5px solid #2747A0; border-radius: 14px">
+        <textarea id="url" rows="3" style="border: 0; background: transparent; resize: none; font-size: 15px; line-height: 1.5; color: #1E1C18; outline: none">https://music.apple.com/jp/album/[ALBUM]/[ID]?i=[TRACK_ID]</textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #1F6B3A; font-weight: 500">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Apple Music のURLを認識</span>
+          <button style="height: 36px; padding: 0 12px; border: 1px solid #D9D2C3; border-radius: 10px; background: #F5F2EA; font-size: 13px; color: #1E1C18">ペースト</button>
+        </div>
+      </div>
+    </div>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 500; color: #5E5A52">対応サービス</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px; background: #FFFDF8; border: 1px solid #D9D2C3; border-radius: 12px">
+          <span style="font-size: 14px; font-weight: 700">Apple Music</span><span style="font-size: 11px; color: #1F6B3A">対応（MVP）</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px; background: #FFFDF8; border: 1px dashed #CFC7B6; border-radius: 12px">
+          <span style="font-size: 14px; font-weight: 700; color: #5E5A52">Spotify</span><span style="font-size: 11px; color: #5E5A52">検討中</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px; background: #FFFDF8; border: 1px dashed #CFC7B6; border-radius: 12px">
+          <span style="font-size: 14px; font-weight: 700; color: #5E5A52">YouTube Music</span><span style="font-size: 11px; color: #5E5A52">検討中</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px; background: #FFFDF8; border: 1px dashed #CFC7B6; border-radius: 12px">
+          <span style="font-size: 14px; font-weight: 700; color: #5E5A52">Amazon Music</span><span style="font-size: 11px; color: #5E5A52">検討中</span></div>
+      </div>
+    </section>
+
+    <a href="#" style="font-size: 14px; text-align: center; padding: 10px; min-height: 24px">URLなしで手入力する</a>
+  </div>
+
+  <div style="padding: 12px 20px 34px">
+    <a href="AddConfirm.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #2747A0; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none">曲情報を取得</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
