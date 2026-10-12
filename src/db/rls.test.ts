@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import postgres from "postgres";
 import {
   EMPTY_CONDITIONS,
@@ -1182,6 +1183,164 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
         });
       });
       await as(null, (tx) => rejects(tx`select bulk_edit_song_tags(${ids}::uuid[])`));
+    });
+  });
+
+  describe("招待の管理（管理者だけ）", () => {
+    const ADM = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const NON = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const hashOf = (email: string) =>
+      createHash("sha256").update(email.toLowerCase()).digest("hex");
+    const hook = async (email: string) =>
+      (
+        await sql`select hook_before_user_created(${sql.json({ user: { email } } as never)}) as r`
+      )[0].r;
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${ADM}, 'authenticated', 'authenticated', 'admin@test.invalid'),
+        (${NON}, 'authenticated', 'authenticated', 'non-admin@test.invalid')`;
+      await sql`insert into app_admins (user_id) values (${ADM})`;
+      await sql`insert into allowed_emails (email_hash) values (${hashOf("admin@test.invalid")}) on conflict do nothing`;
+    });
+
+    it("管理者でないユーザー・未ログインは、どの管理関数も使えない", async () => {
+      for (const call of [
+        (tx: postgres.TransactionSql) => tx`select * from admin_list_invites()`,
+        (tx: postgres.TransactionSql) => tx`select admin_add_invite('x@example.com', 'x')`,
+        (tx: postgres.TransactionSql) =>
+          tx`select admin_revoke_invite(${hashOf("x@example.com")}, true)`,
+      ]) {
+        await as(NON, async (tx) => {
+          await expect(call(tx)).rejects.toMatchObject({ code: "42501" });
+        });
+        await as(null, (tx) => rejects(call(tx)));
+      }
+    });
+
+    it("is_app_admin：管理者だけ true", async () => {
+      await as(ADM, async (tx) => expect((await tx`select is_app_admin() as a`)[0].a).toBe(true));
+      await as(NON, async (tx) => expect((await tx`select is_app_admin() as a`)[0].a).toBe(false));
+    });
+
+    it("管理者・許可リスト自体は API ロールから読めない", async () => {
+      await as(ADM, async (tx) => {
+        expect((await tx`select count(*)::int as n from app_admins`)[0].n).toBe(0);
+        expect((await tx`select count(*)::int as n from allowed_emails`)[0].n).toBe(0);
+      });
+    });
+
+    it("招待を追加すると、フックが同じメール（大文字小文字を問わない）を通し、他は拒否する", async () => {
+      const h = await asCommit(
+        ADM,
+        async (tx) =>
+          (await tx`select admin_add_invite(${"  Friend@Example.COM "}, ${" 大学の友人 "}) as h`)[0]
+            .h,
+      );
+      expect(h).toBe(hashOf("friend@example.com"));
+      expect(await hook("friend@example.com")).toEqual({});
+      expect(await hook("FRIEND@example.com")).toEqual({});
+      expect((await hook("stranger@example.com")).error.http_code).toBe(403);
+      const [row] = await sql`select label from allowed_emails where email_hash = ${h}`;
+      expect(row.label).toBe("大学の友人"); // メモは trim される。メールアドレスそのものはどこにも保存されない
+      expect(JSON.stringify(await sql`select * from allowed_emails`)).not.toContain(
+        "friend@example.com",
+      );
+    });
+
+    it("同じメールを再度追加するとメモだけ更新（重複しない）。メモなしなら既存を保つ", async () => {
+      await asCommit(ADM, async (tx) => {
+        await tx`select admin_add_invite('friend@example.com', '新しいメモ')`;
+        await tx`select admin_add_invite('friend@example.com')`;
+      });
+      const rows =
+        await sql`select label from allowed_emails where email_hash = ${hashOf("friend@example.com")}`;
+      expect(rows).toEqual([{ label: "新しいメモ" }]);
+    });
+
+    it("不正なメール・長すぎるメモは拒否", async () => {
+      for (const bad of [
+        "",
+        "no-at-sign",
+        "a@b",
+        "a b@c.com",
+        "@c.com",
+        `${"a".repeat(250)}@x.com`,
+      ]) {
+        await as(ADM, async (tx) => {
+          await expect(tx`select admin_add_invite(${bad})`).rejects.toMatchObject({
+            code: "22023",
+          });
+        });
+      }
+      await as(ADM, async (tx) => {
+        await expect(
+          tx`select admin_add_invite('ok@example.com', ${"あ".repeat(31)})`,
+        ).rejects.toMatchObject({ code: "22023" });
+      });
+    });
+
+    it("一覧：招待ごとの利用状況（未ログイン／ログイン済み）。メールアドレスは含まれない", async () => {
+      await sql`update auth.users set last_sign_in_at = '2026-10-01T00:00:00Z' where id = ${NON}`;
+      await asCommit(ADM, async (tx) => {
+        await tx`select admin_add_invite('non-admin@test.invalid', '利用中の人')`;
+      });
+      const rows = await as(ADM, async (tx) => tx`select * from admin_list_invites()`);
+      const byLabel = Object.fromEntries(rows.map((r) => [r.label ?? "(none)", r]));
+      expect(byLabel["新しいメモ"].user_id).toBeNull(); // まだログインしていない
+      expect(byLabel["利用中の人"].user_id).toBe(NON);
+      expect(byLabel["利用中の人"].last_sign_in_at).toBeInstanceOf(Date);
+      expect(rows.find((r) => r.is_self)?.user_id).toBe(ADM);
+      expect(JSON.stringify(rows)).not.toContain("@");
+    });
+
+    it("取り消し：許可リストから消え、フックが拒否する（アカウントは残る）", async () => {
+      await asCommit(ADM, async (tx) => {
+        await tx`select admin_revoke_invite(${hashOf("friend@example.com")}, false)`;
+      });
+      expect((await hook("friend@example.com")).error.http_code).toBe(403);
+    });
+
+    it("取り消し＋アカウント削除：ユーザーと全データが消える", async () => {
+      const [s] =
+        await sql`insert into songs (user_id, title, artist) values (${NON}, 'bye', 'a') returning id`;
+      await sql`insert into sing_logs (user_id, song_id) values (${NON}, ${s.id})`;
+      await asCommit(ADM, async (tx) => {
+        await tx`select admin_revoke_invite(${hashOf("non-admin@test.invalid")}, true)`;
+      });
+      expect(await sql`select 1 from auth.users where id = ${NON}`).toHaveLength(0);
+      for (const table of USER_TABLES) {
+        const [{ n }] =
+          await sql`select count(*)::int as n from ${sql(table)} where user_id = ${NON}`;
+        expect(n, table).toBe(0);
+      }
+      expect(
+        await sql`select 1 from allowed_emails where email_hash = ${hashOf("non-admin@test.invalid")}`,
+      ).toHaveLength(0);
+    });
+
+    it("自分自身の招待は取り消せない。不正なハッシュは拒否", async () => {
+      await as(ADM, async (tx) => {
+        await expect(
+          tx`select admin_revoke_invite(${hashOf("admin@test.invalid")}, true)`,
+        ).rejects.toMatchObject({ code: "22023" });
+      });
+      expect(await sql`select 1 from auth.users where id = ${ADM}`).toHaveLength(1);
+      await as(ADM, async (tx) => {
+        await expect(tx`select admin_revoke_invite('not-a-hash')`).rejects.toMatchObject({
+          code: "22023",
+        });
+      });
+    });
+
+    it("招待は200件まで", async () => {
+      await sql`insert into allowed_emails (email_hash) select md5(g::text) || md5((g+1)::text) from generate_series(1, 200) g on conflict do nothing`;
+      await as(ADM, async (tx) => {
+        await expect(tx`select admin_add_invite('overflow@example.com')`).rejects.toMatchObject({
+          code: "22023",
+        });
+      });
+      await sql`delete from allowed_emails where label is null and email_hash <> ${hashOf("admin@test.invalid")}`;
     });
   });
 

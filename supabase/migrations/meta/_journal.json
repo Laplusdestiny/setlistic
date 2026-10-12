@@ -64,6 +64,20 @@
       "when": 1791783258838,
       "tag": "0008_bulk_edit_song_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791784707530,
+      "tag": "0009_admin_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791784708681,
+      "tag": "0010_admin_invite_functions",
+      "breakpoints": true
     }
   ]
 }

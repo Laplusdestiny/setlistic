@@ -261,5 +261,17 @@ export const userSettings = pgTable(
 // 参照するのは Before User Created フック（security definer）だけ。
 export const allowedEmails = pgTable("allowed_emails", {
   emailHash: text("email_hash").primaryKey(),
+  /** 管理画面での目印（例：「大学の友人」）。任意。メールアドレスではない */
+  label: text("label"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+// ───────── 管理者 ─────────
+// 招待の管理ができるユーザー。ポリシーなし（RLSのみ有効）なので API からは読めない。
+// 参照するのは security definer の管理用関数だけ（呼び出し元がここにいるかを検査する）。
+export const appAdmins = pgTable("app_admins", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();

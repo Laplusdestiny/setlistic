@@ -210,3 +210,9 @@ export async function getUserSettings(supabase: Client, userId: string): Promise
     defaultTagIds: data?.default_tag_ids ?? [],
   };
 }
+
+/** 管理者か（招待の管理画面を出してよいか）。判定は DB 関数が行う */
+export async function isAppAdmin(supabase: Client): Promise<boolean> {
+  const { data } = await supabase.rpc("is_app_admin");
+  return data === true;
+}

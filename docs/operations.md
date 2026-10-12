@@ -58,25 +58,33 @@ vercel logs --project setlistic --scope laplus-destiny --level error   # エラ�
 3. **利用規約・プライバシーポリシー（`/terms` `/privacy`）が確定しているか**（連絡先を含む）。招待した人は、これに同意して使う
 4. 独自ドメイン（`setlistic.laplusdestiny.com`）を使うなら、Supabase の Site URL / Redirect URLs にも追加してある
 
-### 1人を招待する手順
+### 1人を招待する手順（アプリの「招待の管理」画面）
 
-1. 相手の **Google アカウントのメールアドレス**を聞く（ログインに使うもの。Gmail なら通常そのアドレス）
-2. 小文字にして SHA-256 を計算する：
-   ```bash
-   printf '%s' 'friend@example.com' | tr 'A-Z' 'a-z' | sha256sum
-   ```
-3. Supabase の SQL Editor で登録する（メールアドレスそのものは入れない）：
-   ```sql
-   insert into public.allowed_emails (email_hash) values ('<上で出た64文字>');
-   ```
-4. 相手に伝える：アプリのURLを開く → 「Googleでサインイン」（**登録したメールの Google アカウント**で）。iPhone は Safari の共有ボタン →「ホーム画面に追加」
+設定 →「招待の管理（友人を招待する）」（管理者のオーナーにだけ表示される）。
+
+1. 相手の **Google アカウントのメールアドレス**を入力し、必要なら自分用のメモ（例：「大学の友人」）を書いて「招待する」
+   - メールアドレスは保存されない。DB 関数の中でハッシュ（小文字化 → SHA-256）にされ、判定用の値だけが残る
+2. 表示される**案内文**を、「案内文をコピー」または「共有する」で相手に送る（アプリのURLと、ログインの仕方、iPhone のホーム画面への追加の仕方が書いてある）
+3. 相手が、登録したメールの Google アカウントでログインすると、一覧が「まだログインしていません」から「利用中（最終ログイン日）」に変わる
+
+画面が使えないとき（手動で行う場合）：
+```bash
+printf '%s' 'friend@example.com' | tr 'A-Z' 'a-z' | sha256sum   # 小文字にしてからハッシュ
+```
+```sql
+insert into public.allowed_emails (email_hash) values ('<上で出た64文字>');
+```
 
 ### 招待をやめる（アクセスを止める）
 
-許可リストから消すだけでは **止まらない**（フックは、アカウントを新しく作るときにだけ働くため。すでに作られたアカウントはそのままログインできる）。次の2つを行う。
+「招待の管理」の一覧から：
+- **まだログインしていない人**：「招待を取り消す」
+- **利用中の人**：「アクセスを止める」。**その人のアカウントと全データも削除される**（許可リストから消すだけでは、すでに作られたアカウントはログインできてしまうため）。必要なら、先に相手にエクスポートしてもらう
+- 自分自身は取り消せない
 
-1. `delete from public.allowed_emails where email_hash = '<ハッシュ>';`
-2. Supabase ダッシュボード → Authentication → Users で、そのユーザーを削除（またはBan）。削除すると、そのユーザーのデータもすべて消える（相手に先にエクスポートしてもらうとよい）
+### 管理者の追加（オーナー以外にも招待をさせたいとき）
+
+管理者は `public.app_admins` のユーザーID。Supabase の SQL Editor で `insert into public.app_admins (user_id) values ('<ユーザーID>');`（ユーザーIDは Authentication → Users で確認）。管理操作の DB 関数は、呼び出したユーザーが管理者かを必ず検査する。
 
 ### 知っておくこと
 

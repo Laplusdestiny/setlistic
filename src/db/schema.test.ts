@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as schema from "./schema";
 
 // 許可リストはユーザーデータではない（ポリシーなし＝APIから一切読めない）
-const NON_USER_TABLES = ["allowed_emails"];
+const NON_USER_TABLES = ["allowed_emails", "app_admins"];
 const allTables = Object.values<unknown>(schema).filter((v) => is(v, PgTable)) as PgTable[];
 const tables = allTables.filter((t) => !NON_USER_TABLES.includes(getTableConfig(t).name));
 
@@ -23,9 +23,11 @@ describe("DBスキーマ", () => {
     },
   );
 
-  it("許可リストはRLS有効でポリシーを持たない（APIから読めない）", () => {
-    const cfg = getTableConfig(schema.allowedEmails);
-    expect(cfg.enableRLS).toBe(true);
-    expect(cfg.policies).toHaveLength(0);
+  it("許可リスト・管理者はRLS有効でポリシーを持たない（APIから読めない）", () => {
+    for (const table of [schema.allowedEmails, schema.appAdmins]) {
+      const cfg = getTableConfig(table);
+      expect(cfg.enableRLS).toBe(true);
+      expect(cfg.policies).toHaveLength(0);
+    }
   });
 });

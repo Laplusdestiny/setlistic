@@ -20,6 +20,8 @@ type Props = {
   fields: CustomField[];
   tags: TagOption[];
   groups: GroupOption[];
+  /** 招待の管理ができる管理者か */
+  isAdmin: boolean;
 };
 
 const NAV = [
@@ -30,7 +32,7 @@ const NAV = [
   { href: "#danger", label: "アカウントの削除" },
 ] as const;
 
-export function SettingsScreen({ email, settings, fields, tags, groups }: Props) {
+export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin }: Props) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -91,6 +93,7 @@ export function SettingsScreen({ email, settings, fields, tags, groups }: Props)
           <section className={styles.card} aria-labelledby="links-h">
             <h2 id="links-h">そのほか</h2>
             <p className={styles.links}>
+              {isAdmin && <Link href="/admin/invites">招待の管理（友人を招待する）</Link>}
               <Link href="/tags">タグの管理</Link>
               <Link href="/bulk">タグの一括変更（複数の曲にまとめて付ける・外す）</Link>
               <Link href="/terms">利用規約</Link>

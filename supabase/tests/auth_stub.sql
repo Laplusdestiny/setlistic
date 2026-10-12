@@ -9,7 +9,8 @@ CREATE TABLE auth.users (
   id uuid PRIMARY KEY,
   aud text,
   role text,
-  email text
+  email text,
+  last_sign_in_at timestamptz
 );
 
 CREATE FUNCTION auth.uid() RETURNS uuid
