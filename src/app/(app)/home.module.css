@@ -399,8 +399,11 @@
   cursor: pointer;
 }
 
+/* min-width: 0 が必須：行の1要素なので、無いと中身（入力欄の標準幅）より小さくならず、iPhone で画面からはみ出す */
 .searchBox {
   flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -414,6 +417,7 @@
 
 .searchBox input {
   flex: 1;
+  width: 100%;
   min-width: 0;
   min-height: 44px;
   border: 0;

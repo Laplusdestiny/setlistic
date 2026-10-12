@@ -293,7 +293,7 @@ export function SetList({
               ref={searchInput}
               type="search"
               value={draft.q}
-              placeholder="曲名・アーティスト・メモ・タグで検索　/"
+              placeholder="曲名・アーティスト・タグ"
               autoComplete="off"
               enterKeyHint="search"
               onChange={(e) => change({ ...draft, q: e.target.value })}

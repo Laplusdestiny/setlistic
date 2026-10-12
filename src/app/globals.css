@@ -62,6 +62,14 @@ a:hover {
   outline-offset: 2px;
 }
 
+/* 入力欄の標準の幅（size=20 相当）が、横並びの行を押し広げないようにする（iOS Safari で顕著） */
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
