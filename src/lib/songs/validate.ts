@@ -103,30 +103,9 @@ export function toRegisterPayload(raw: unknown): Result<RegisterPayload> {
   const key =
     typeof raw.songKey === "number" && Number.isFinite(raw.songKey) ? clampKey(raw.songKey) : null;
 
-  const tagIds = Array.isArray(raw.tagIds)
-    ? raw.tagIds.filter((x): x is string => typeof x === "string" && UUID.test(x))
-    : [];
-  const rawNew = Array.isArray(raw.newTags) ? raw.newTags : [];
-  const groupOf = new Map<string, string | undefined>();
-  const names: string[] = [];
-  for (const t of rawNew) {
-    if (!obj(t) || typeof t.name !== "string") continue;
-    if ([...t.name].length > MAX_TAG_LENGTH + 1) continue; // 長すぎるものは捨てる
-    const group = ALLOWED_GROUPS.find((g) => g === t.group);
-    names.push(t.name);
-    const key = normalizeTagName(t.name.replace(/^\s*[#＃]+/, ""));
-    // 同じタグが重複して届いたとき、先に指定されたグループを消さない
-    if (!groupOf.get(key)) groupOf.set(key, group);
-  }
-  const newTags = dedupeTagNames(names)
-    .filter((n) => [...n].length <= MAX_TAG_LENGTH)
-    .map((name) => {
-      const normalized = normalizeTagName(name);
-      return { name, normalized, group: groupOf.get(normalized) };
-    });
-
-  if (new Set(tagIds).size + newTags.length > LIMITS.tags)
-    return { ok: false, error: `タグは${LIMITS.tags}個までです` };
+  const tags = parseTags(raw.tagIds, raw.newTags);
+  if (!tags.ok) return tags;
+  const { tagIds, newTags } = tags.value;
 
   const d = draft.value;
   return {
@@ -152,3 +131,82 @@ export function toRegisterPayload(raw: unknown): Result<RegisterPayload> {
     },
   };
 }
+
+type ParsedTags = { tagIds: string[]; newTags: RegisterPayload["newTags"] };
+
+/** タグID（UUIDのみ）と新規タグ名（正規化・重複排除・許可グループのみ）を整える */
+export function parseTags(rawIds: unknown, rawNew: unknown): Result<ParsedTags> {
+  const tagIds = Array.isArray(rawIds)
+    ? rawIds.filter((x): x is string => typeof x === "string" && UUID.test(x))
+    : [];
+  const list = Array.isArray(rawNew) ? rawNew : [];
+  const groupOf = new Map<string, string | undefined>();
+  const names: string[] = [];
+  for (const t of list) {
+    if (!obj(t) || typeof t.name !== "string") continue;
+    if ([...t.name].length > MAX_TAG_LENGTH + 1) continue; // 長すぎるものは捨てる
+    const group = ALLOWED_GROUPS.find((g) => g === t.group);
+    names.push(t.name);
+    const key = normalizeTagName(t.name.replace(/^\s*[#＃]+/, ""));
+    // 同じタグが重複して届いたとき、先に指定されたグループを消さない
+    if (!groupOf.get(key)) groupOf.set(key, group);
+  }
+  const newTags = dedupeTagNames(names)
+    .filter((n) => [...n].length <= MAX_TAG_LENGTH)
+    .map((name) => {
+      const normalized = normalizeTagName(name);
+      return { name, normalized, group: groupOf.get(normalized) };
+    });
+
+  const unique = [...new Set(tagIds)];
+  if (unique.length + newTags.length > LIMITS.tags)
+    return { ok: false, error: `タグは${LIMITS.tags}個までです` };
+  return { ok: true, value: { tagIds: unique, newTags } };
+}
+
+export type UpdateSongInput = {
+  id: string;
+  title: string;
+  artist: string;
+  songKey: number | null;
+  memo: string;
+  tagIds: string[];
+  newTags: { name: string; group?: string }[];
+};
+
+export type UpdatePayload = {
+  id: string;
+  song: { title: string; artist: string; song_key: number | null; memo: string | null };
+  tagIds: string[];
+  newTags: RegisterPayload["newTags"];
+};
+
+/** 編集リクエストの検証。編集できるのは曲名・アーティスト・キー・メモ・タグだけ */
+export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
+  if (!obj(raw)) return { ok: false, error: "リクエストが正しくありません" };
+  if (typeof raw.id !== "string" || !UUID.test(raw.id))
+    return { ok: false, error: "曲が見つかりません" };
+  const title = text(raw.title, LIMITS.title);
+  const artist = text(raw.artist, LIMITS.artist);
+  if (!title) return { ok: false, error: "曲名を入力してください" };
+  if (!artist) return { ok: false, error: "アーティスト名を入力してください" };
+
+  const tags = parseTags(raw.tagIds, raw.newTags);
+  if (!tags.ok) return tags;
+
+  const memo = typeof raw.memo === "string" ? raw.memo.trim().slice(0, LIMITS.memo) : "";
+  const key =
+    typeof raw.songKey === "number" && Number.isFinite(raw.songKey) ? clampKey(raw.songKey) : null;
+
+  return {
+    ok: true,
+    value: {
+      id: raw.id,
+      song: { title, artist, song_key: key, memo: memo || null },
+      tagIds: tags.value.tagIds,
+      newTags: tags.value.newTags,
+    },
+  };
+}
+
+export { UUID as UUID_PATTERN };

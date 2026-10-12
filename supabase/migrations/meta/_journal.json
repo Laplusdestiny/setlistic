@@ -29,6 +29,13 @@
       "when": 1791777770877,
       "tag": "0003_register_song",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791778499302,
+      "tag": "0004_sing_stats_and_update_song",
+      "breakpoints": true
     }
   ]
 }

@@ -302,6 +302,123 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  describe("歌唱記録と last_sung_at / sung_count", () => {
+    const stats = async (tx: postgres.TransactionSql, id: string) => {
+      const [r] =
+        await tx`select sung_count, last_sung_at::text as last from songs where id = ${id}`;
+      return r;
+    };
+
+    it("記録を付けると回数と最後に歌った日が変わり、消すと元に戻る", async () => {
+      await as(A, async (tx) => {
+        const [{ id }] =
+          await tx`select register_song(${sql.json({ title: "s", artist: "a" } as never)}) as id`;
+        expect(await stats(tx, id)).toEqual({ sung_count: 0, last: null });
+
+        const [l1] =
+          await tx`insert into sing_logs (user_id, song_id, sung_at, ease) values (${A}, ${id}, '2026-01-10', 3) returning id`;
+        const [l2] =
+          await tx`insert into sing_logs (user_id, song_id, sung_at) values (${A}, ${id}, '2026-03-05') returning id`;
+        expect(await stats(tx, id)).toEqual({ sung_count: 2, last: "2026-03-05" });
+
+        await tx`delete from sing_logs where id = ${l2.id}`;
+        expect(await stats(tx, id)).toEqual({ sung_count: 1, last: "2026-01-10" });
+
+        await tx`update sing_logs set sung_at = '2026-02-01' where id = ${l1.id}`;
+        expect(await stats(tx, id)).toEqual({ sung_count: 1, last: "2026-02-01" });
+
+        await tx`delete from sing_logs where id = ${l1.id}`;
+        expect(await stats(tx, id)).toEqual({ sung_count: 0, last: null });
+      });
+    });
+
+    it("歌いやすさは1〜5だけ（範囲外は拒否）", async () => {
+      await as(A, async (tx) => {
+        const [{ id }] =
+          await tx`select register_song(${sql.json({ title: "s", artist: "a" } as never)}) as id`;
+        await expect(
+          tx`insert into sing_logs (user_id, song_id, ease) values (${A}, ${id}, 6)`,
+        ).rejects.toMatchObject({ code: "23514" });
+      });
+    });
+
+    it("他人の曲に記録を付けられない／他人の記録は消せない", async () => {
+      const [other] =
+        await sql`insert into songs (user_id, title, artist) values (${A}, 'x', 'x') returning id`;
+      const [log] =
+        await sql`insert into sing_logs (user_id, song_id) values (${A}, ${other.id}) returning id`;
+      await as(B, (tx) =>
+        rejects(tx`insert into sing_logs (user_id, song_id) values (${B}, ${other.id})`),
+      );
+      await as(B, async (tx) => {
+        const del = await tx`delete from sing_logs where id = ${log.id}`;
+        expect(del.count).toBe(0);
+      });
+      const [s] = await sql`select sung_count from songs where id = ${other.id}`;
+      expect(s.sung_count).toBe(1);
+    });
+  });
+
+  describe("update_song（曲の編集）", () => {
+    const patch = (over: Record<string, unknown> = {}) =>
+      sql.json({
+        title: "新しい曲名",
+        artist: "新アーティスト",
+        song_key: 3,
+        memo: "メモ",
+        ...over,
+      } as never);
+
+    it("曲名・アーティスト・キー・メモを更新し、タグを付け直す", async () => {
+      await as(A, async (tx) => {
+        const [{ id: t1 }] = await tx`select id from tags where name = '十八番'`;
+        const [{ id: t2 }] = await tx`select id from tags where name = '歌える'`;
+        const [{ id }] =
+          await tx`select register_song(${sql.json({ title: "old", artist: "old" } as never)}, ${[t1]}::uuid[]) as id`;
+
+        await tx`select update_song(${id}, ${patch()}, ${[t2]}::uuid[], ${sql.json([{ name: "盛り上げ", normalized: "盛り上げ" }] as never)})`;
+
+        const [row] = await tx`select title, artist, song_key, memo from songs where id = ${id}`;
+        expect(row).toEqual({
+          title: "新しい曲名",
+          artist: "新アーティスト",
+          song_key: 3,
+          memo: "メモ",
+        });
+        const tags =
+          await tx`select t.name from song_tags st join tags t on t.id = st.tag_id where st.song_id = ${id} order by t.name`;
+        expect(tags.map((t) => t.name)).toEqual(["歌える", "盛り上げ"]); // 十八番は外れる
+      });
+    });
+
+    it("他人の曲は更新できない（P0002）", async () => {
+      const [other] =
+        await sql`insert into songs (user_id, title, artist) values (${A}, 'mine', 'a') returning id`;
+      await as(B, async (tx) => {
+        await expect(tx`select update_song(${other.id}, ${patch()})`).rejects.toMatchObject({
+          code: "P0002",
+        });
+      });
+      const [row] = await sql`select title from songs where id = ${other.id}`;
+      expect(row.title).toBe("mine");
+    });
+
+    it("曲名が空なら拒否し、タグも変わらない", async () => {
+      await as(A, async (tx) => {
+        const [{ id: t1 }] = await tx`select id from tags where name = '十八番'`;
+        const [{ id }] =
+          await tx`select register_song(${sql.json({ title: "keep", artist: "a" } as never)}, ${[t1]}::uuid[]) as id`;
+        await tx`savepoint s`;
+        await expect(
+          tx`select update_song(${id}, ${patch({ title: " " })}, '{}'::uuid[])`,
+        ).rejects.toMatchObject({ code: "22023" });
+        await tx`rollback to savepoint s`;
+        const tags = await tx`select 1 from song_tags where song_id = ${id}`;
+        expect(tags).toHaveLength(1);
+      });
+    });
+  });
+
   it("アカウント削除で、そのユーザーの全データが消える", async () => {
     const C = "33333333-3333-4333-8333-333333333333";
     await sql`insert into auth.users (id, aud, role, email) values (${C}, 'authenticated', 'authenticated', 'c@test.invalid')`;

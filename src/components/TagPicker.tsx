@@ -2,10 +2,8 @@
 
 import { useId, useState } from "react";
 import { normalizeTagName, tagNameFromInput, validateTagName } from "@/lib/tags/normalize";
-import type { GroupOption, TagOption } from "./types";
-import styles from "./add.module.css";
-
-export type NewTag = { name: string; group?: string };
+import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
+import styles from "./form.module.css";
 
 type Props = {
   groups: GroupOption[];
@@ -138,7 +136,7 @@ export function TagPicker({
         ))}
       </datalist>
       {error && (
-        <p role="alert" className={styles.hint} style={{ color: "var(--color-danger)" }}>
+        <p role="alert" className={`${styles.hint} ${styles.error}`}>
           {error}
         </p>
       )}

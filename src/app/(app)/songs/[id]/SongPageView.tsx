@@ -1,0 +1,54 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SongDetail } from "@/components/SongDetail";
+import type { SingState, SongRow } from "@/lib/songs/queries";
+import type { GroupOption, TagOption } from "@/lib/tags/types";
+import styles from "./song-page.module.css";
+
+type Props = {
+  song: SongRow;
+  number?: string;
+  sing: SingState;
+  today: string;
+  allTags: TagOption[];
+  groups: GroupOption[];
+};
+
+/** スマホ向けの曲詳細ページ。PC では一覧の右パネルで同じ表示をする */
+export function SongPageView({ song, number, sing, today, allTags, groups }: Props) {
+  const router = useRouter();
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.back} aria-label="戻る">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </Link>
+      </header>
+      <div className={styles.body}>
+        <SongDetail
+          key={song.id}
+          song={song}
+          number={number}
+          groups={groups}
+          allTags={allTags}
+          initialSing={sing}
+          today={today}
+          onDeleted={() => router.replace("/")}
+        />
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeDraft, toRegisterPayload } from "./validate";
+import { sanitizeDraft, toRegisterPayload, toUpdatePayload } from "./validate";
 
 const draft = {
   appleTrackId: 1,
@@ -111,5 +111,51 @@ describe("toRegisterPayload", () => {
   it("曲情報が不正ならエラー", () => {
     expect(toRegisterPayload({ ...base, draft: { ...draft, title: "" } }).ok).toBe(false);
     expect(toRegisterPayload(undefined).ok).toBe(false);
+  });
+});
+
+describe("toUpdatePayload", () => {
+  const base = {
+    id: UUID,
+    title: " 新曲名 ",
+    artist: "新",
+    songKey: -1,
+    memo: " m ",
+    tagIds: [],
+    newTags: [],
+  };
+
+  it("編集できる項目だけをDB関数の形にする", () => {
+    const r = toUpdatePayload({ ...base, appleTrackId: 5, sungCount: 99, userId: "x" });
+    expect(r).toEqual({
+      ok: true,
+      value: {
+        id: UUID,
+        song: { title: "新曲名", artist: "新", song_key: -1, memo: "m" },
+        tagIds: [],
+        newTags: [],
+      },
+    });
+  });
+  it("曲IDがUUIDでない・曲名/アーティストが空はエラー", () => {
+    expect(toUpdatePayload({ ...base, id: "1; drop" }).ok).toBe(false);
+    expect(toUpdatePayload({ ...base, title: " " }).ok).toBe(false);
+    expect(toUpdatePayload({ ...base, artist: "" }).ok).toBe(false);
+    expect(toUpdatePayload(null).ok).toBe(false);
+  });
+  it("キーは範囲内に収め、メモが空なら null", () => {
+    const r = toUpdatePayload({ ...base, songKey: 50, memo: "  " });
+    expect(r.ok && r.value.song).toMatchObject({ song_key: 7, memo: null });
+  });
+  it("タグは登録と同じ規則で整える", () => {
+    const r = toUpdatePayload({
+      ...base,
+      tagIds: [UUID, "bad"],
+      newTags: [{ name: "#Rock" }, { name: "rock" }],
+    });
+    expect(r.ok && [r.value.tagIds, r.value.newTags]).toEqual([
+      [UUID],
+      [{ name: "Rock", normalized: "rock", group: undefined }],
+    ]);
   });
 });

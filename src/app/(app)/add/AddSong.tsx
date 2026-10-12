@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
-import { clampKey, formatKey } from "@/lib/songs/key";
 import type { SongDraft } from "@/lib/songs/types";
 import { normalizeTagName } from "@/lib/tags/normalize";
 import { lookupFromUrl, saveSongAction } from "./actions";
 import { BulkAdd } from "./BulkAdd";
 import { lookupErrorMessage } from "./messages";
 import { SearchPanel } from "./SearchPanel";
-import { TagPicker, type NewTag } from "./TagPicker";
+import { KeyStepper } from "@/components/KeyStepper";
+import { TagPicker } from "@/components/TagPicker";
+import type { NewTag } from "@/lib/tags/types";
 import type { DuplicateInfo, GroupOption, LookupError, TagOption } from "./types";
 import styles from "./add.module.css";
 
@@ -431,27 +432,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
                     <div className={styles.memoBox}>
                       <div className={styles.row}>
                         <span id="key-label">キー</span>
-                        <div className={styles.stepper} role="group" aria-labelledby="key-label">
-                          <button
-                            type="button"
-                            className={styles.step}
-                            aria-label="キーを下げる"
-                            onClick={() => setSongKey(clampKey(songKey - 1))}
-                          >
-                            −
-                          </button>
-                          <span className={styles.keyValue} aria-live="polite">
-                            {formatKey(songKey)}
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.step}
-                            aria-label="キーを上げる"
-                            onClick={() => setSongKey(clampKey(songKey + 1))}
-                          >
-                            ＋
-                          </button>
-                        </div>
+                        <KeyStepper value={songKey} onChange={setSongKey} />
                       </div>
                       <div className={styles.memoField}>
                         <label htmlFor="memo">メモ</label>

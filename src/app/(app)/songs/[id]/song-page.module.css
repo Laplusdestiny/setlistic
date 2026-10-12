@@ -1,0 +1,26 @@
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100dvh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 20px 20px 8px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  border-radius: var(--radius-nav);
+}
+
+.body {
+  padding: 4px 20px 40px;
+}
