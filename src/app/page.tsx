@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { signOut } from "./login/actions";
 
@@ -11,6 +12,24 @@ export default function Home() {
       </p>
       <p style={{ color: "var(--color-ink-muted)" }}>
         ログインできました。曲の登録はこれから作ります。
+      </p>
+      <p>
+        <Link
+          href="/add"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: 44,
+            padding: "0 20px",
+            borderRadius: "var(--radius-control)",
+            background: "var(--color-primary)",
+            color: "var(--color-on-primary)",
+            fontWeight: 700,
+            textDecoration: "none",
+          }}
+        >
+          ＋ 曲を登録
+        </Link>
       </p>
       <Suspense fallback={null}>
         <form action={signOut}>

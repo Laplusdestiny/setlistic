@@ -22,6 +22,13 @@
       "when": 1791776286810,
       "tag": "0002_auth_hooks_and_bootstrap",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791777770877,
+      "tag": "0003_register_song",
+      "breakpoints": true
     }
   ]
 }

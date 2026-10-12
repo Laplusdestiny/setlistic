@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // 使い捨ての Postgres（docker / CI の service container）が必要。
 // TEST_DATABASE_URL が無いときは skip する。本番の Supabase には絶対に向けないこと。
 const url = process.env.TEST_DATABASE_URL;
-const root = path.resolve(__dirname, "../..");
+const root = path.resolve(import.meta.dirname, "../..");
 
 const USER_TABLES = [
   "songs",
@@ -213,6 +213,92 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     it("API ロール（anon / authenticated）は実行できない", async () => {
       await as(null, (tx) => rejects(tx`select hook_before_user_created('{}'::jsonb)`));
       await as(A, (tx) => rejects(tx`select hook_before_user_created('{}'::jsonb)`));
+    });
+  });
+
+  describe("register_song（曲＋タグの原子的な登録）", () => {
+    const song = (over: Record<string, unknown> = {}) =>
+      sql.json({
+        title: "夜に駆ける",
+        artist: "YOASOBI",
+        source_service: "manual",
+        ...over,
+      } as never);
+
+    it("曲・既存タグ・新規タグをまとめて登録し、user_id は呼び出しユーザーになる", async () => {
+      await as(A, async (tx) => {
+        const [{ id: tagId }] = await tx`select id from tags where name = '十八番'`;
+        const [{ id }] = await tx`select register_song(
+          ${song({ apple_track_id: 1001, song_key: -2, genre: "J-Pop" })},
+          ${[tagId]}::uuid[],
+          ${sql.json([{ name: "J-Pop", normalized: "j-pop", group: "ジャンル" }] as never)}
+        ) as id`;
+        const [row] = await tx`select user_id, song_key from songs where id = ${id}`;
+        expect(row).toMatchObject({ user_id: A, song_key: -2 });
+        const tags = await tx`select t.name, g.name as grp from song_tags st
+          join tags t on t.id = st.tag_id left join tag_groups g on g.id = t.group_id
+          where st.song_id = ${id} order by t.name`;
+        expect(tags.map((t) => [t.name, t.grp])).toEqual([
+          ["J-Pop", "ジャンル"],
+          ["十八番", "歌える度"],
+        ]);
+      });
+    });
+
+    it("正規化名が同じ新規タグは既存タグを再利用し、重複を作らない", async () => {
+      await as(A, async (tx) => {
+        const newTags = (name: string) => sql.json([{ name, normalized: "rock" }] as never);
+        await tx`select register_song(${song({ apple_track_id: 2001 })}, '{}'::uuid[], ${newTags("Rock")})`;
+        await tx`select register_song(${song({ apple_track_id: 2002 })}, '{}'::uuid[], ${newTags("rock")})`;
+        const rows = await tx`select name from tags where normalized_name = 'rock'`;
+        expect(rows).toHaveLength(1);
+        expect(rows[0].name).toBe("Rock");
+      });
+    });
+
+    it("同じ apple_track_id の再登録は unique 違反(23505)で、途中まで作った行も残らない", async () => {
+      await as(A, async (tx) => {
+        await tx`select register_song(${song({ apple_track_id: 3001 })})`;
+        await tx`savepoint s`;
+        await expect(
+          tx`select register_song(${song({ apple_track_id: 3001 })}, '{}'::uuid[], ${sql.json([{ name: "ghost", normalized: "ghost" }] as never)})`,
+        ).rejects.toMatchObject({ code: "23505" });
+        await tx`rollback to savepoint s`;
+        const ghost = await tx`select 1 from tags where normalized_name = 'ghost'`;
+        expect(ghost).toHaveLength(0);
+      });
+    });
+
+    it("手動登録(apple_track_id なし)は同じ曲名でも複数登録できる", async () => {
+      await as(A, async (tx) => {
+        await tx`select register_song(${song()})`;
+        await tx`select register_song(${song()})`;
+      });
+    });
+
+    it("他人のタグIDを渡しても結べず、全体が失敗する", async () => {
+      const [{ id: tagB }] = await sql`select id from tags where user_id = ${B} limit 1`;
+      await as(A, (tx) =>
+        rejects(tx`select register_song(${song({ apple_track_id: 4001 })}, ${[tagB]}::uuid[])`),
+      );
+    });
+
+    it("曲名・アーティストが空なら拒否、未ログインも拒否", async () => {
+      await as(A, async (tx) => {
+        await tx`savepoint s`;
+        await expect(tx`select register_song(${song({ title: "  " })})`).rejects.toMatchObject({
+          code: "22023",
+        });
+      });
+      await as(null, (tx) => rejects(tx`select register_song(${song()})`));
+    });
+
+    it("キーが範囲外なら拒否(check 制約)", async () => {
+      await as(A, async (tx) => {
+        await expect(tx`select register_song(${song({ song_key: 9 })})`).rejects.toMatchObject({
+          code: "23514",
+        });
+      });
     });
   });
 
