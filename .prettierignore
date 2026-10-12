@@ -1,0 +1,9 @@
+.next
+node_modules
+supabase/migrations
+package-lock.json
+design
+docs
+CLAUDE.md
+README.md
+AGENTS.md
