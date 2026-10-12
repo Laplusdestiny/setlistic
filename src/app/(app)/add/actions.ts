@@ -3,12 +3,16 @@
 import { sanitizeFieldValues } from "@/lib/custom-fields";
 import { lookupTrack, searchTracks } from "@/lib/songs/itunes";
 import { listCustomFields } from "@/lib/songs/queries";
-import { parseMusicUrl } from "@/lib/songs/apple-url";
+import { parseMusicUrl, type ExternalParsed, type ParseResult } from "@/lib/songs/apple-url";
+import { resolveExternal } from "@/lib/songs/resolve";
+import { SourceError } from "@/lib/songs/source-fetch";
+import type { SongDraft } from "@/lib/songs/types";
 import { toRegisterPayload } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
 import type {
   BulkItem,
   BulkSaveItem,
+  Candidate,
   DuplicateInfo,
   LookupResult,
   SaveResult,
@@ -37,8 +41,72 @@ async function findDuplicates(
   return map;
 }
 
+/** Apple Music に無い曲の重複判定：登録元（サービス＋正規化したURL）が同じ曲 */
+async function findSourceDuplicate(
+  supabase: Client,
+  service: string,
+  url: string,
+): Promise<DuplicateInfo> {
+  const { data } = await supabase
+    .from("songs")
+    .select("id, title")
+    .eq("source_service", service)
+    .eq("source_url", url)
+    .limit(1);
+  return data?.[0] ? { id: data[0].id, title: data[0].title } : null;
+}
+
+const SOURCE_ERRORS = {
+  unsupported_url: "not_song",
+  fetch_failed: "source_failed",
+  meta_not_found: "source_meta_not_found",
+} as const;
+
+/** Spotify / YouTube Music：取得元の曲情報を iTunes Search で Apple Music の表記にそろえる */
+async function lookupExternal(supabase: Client, parsed: ExternalParsed): Promise<LookupResult> {
+  let m;
+  try {
+    m = await resolveExternal(parsed);
+  } catch (e) {
+    if (!(e instanceof SourceError)) throw e;
+    console.warn(`[lookup] ${parsed.service} ${parsed.canonicalUrl}: ${e.code} ${e.message}`);
+    return { status: "error", reason: SOURCE_ERRORS[e.code], service: parsed.service };
+  }
+
+  // 重複判定は iTunes の曲IDを優先し、無ければ登録元のURLで見る
+  const drafts = [m.best, ...m.candidates].filter((d): d is SongDraft => d !== null);
+  const [dups, sourceDup] = await Promise.all([
+    findDuplicates(
+      supabase,
+      drafts.flatMap((d) => (d.appleTrackId ? [d.appleTrackId] : [])),
+    ),
+    findSourceDuplicate(supabase, m.source.service, m.source.url),
+  ]);
+  const withDup = (draft: SongDraft): Candidate => ({
+    draft,
+    duplicate: draft.appleTrackId ? (dups.get(draft.appleTrackId) ?? null) : sourceDup,
+  });
+
+  const source = withDup(m.sourceDraft);
+  const candidates = m.candidates.map(withDup);
+  const first = m.best ? withDup(m.best) : (candidates[0] ?? source);
+  return {
+    status: "ok",
+    draft: first.draft,
+    duplicate: first.duplicate,
+    external: {
+      service: m.source.service,
+      confidence: m.confidence,
+      source,
+      candidates,
+      itunesFailed: m.itunesFailed,
+    },
+  };
+}
+
 async function lookupOne(supabase: Client, input: string): Promise<LookupResult> {
   const parsed = parseMusicUrl(input);
+  if (parsed.ok && parsed.service !== "apple_music") return lookupExternal(supabase, parsed);
   if (!parsed.ok) {
     return {
       status: "error",
@@ -128,18 +196,25 @@ export async function lookupManyAction(inputs: string[]): Promise<BulkItem[]> {
     .slice(0, MAX_BULK);
 
   const out: BulkItem[] = [];
-  const seen = new Set<number>();
+  const seen = new Set<string>();
   for (const input of list) {
     const parsed = parseMusicUrl(input);
+    const key = sameSongKey(parsed);
     // 同じ貼り付けの中の重複は、APIを呼ばずに印だけ付ける
-    if (parsed.ok && seen.has(parsed.trackId)) {
+    if (key && seen.has(key)) {
       out.push({ input, result: { status: "error", reason: "not_found" }, repeated: true });
       continue;
     }
-    if (parsed.ok) seen.add(parsed.trackId);
+    if (key) seen.add(key);
     out.push({ input, result: await lookupOne(supabase, input) });
   }
   return out;
+}
+
+/** 同じ貼り付けの中で同じ曲かを見るキー（Apple Music は国違いも同じ曲） */
+function sameSongKey(parsed: ParseResult): string | null {
+  if (!parsed.ok) return null;
+  return parsed.service === "apple_music" ? `apple:${parsed.trackId}` : parsed.canonicalUrl;
 }
 
 /**
