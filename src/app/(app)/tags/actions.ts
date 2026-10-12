@@ -64,6 +64,19 @@ export async function renameTagAction(input: { id: string; name: string }): Prom
   return error ? (error.code === UNIQUE ? fail("同じ名前のタグがあります") : FAILED) : ok;
 }
 
+/** タグを移動先グループの末尾に置く */
+async function moveTag(supabase: Client, id: string, groupId: string | null) {
+  const { count } = await supabase
+    .from("tags")
+    .select("id", { count: "exact", head: true })
+    .eq("group_id", groupId ?? "00000000-0000-0000-0000-000000000000");
+  const { error } = await supabase
+    .from("tags")
+    .update({ group_id: groupId, sort_order: count ?? 0 })
+    .eq("id", id);
+  return error;
+}
+
 export async function moveTagAction(input: {
   id: string;
   groupId: string | null;
@@ -71,16 +84,7 @@ export async function moveTagAction(input: {
   const { supabase } = await requireUser();
   if (!isId(input?.id) || (input.groupId !== null && !isId(input.groupId)))
     return fail("タグが見つかりません");
-  // 移動先グループの末尾に置く
-  const { count } = await supabase
-    .from("tags")
-    .select("id", { count: "exact", head: true })
-    .eq("group_id", input.groupId ?? "00000000-0000-0000-0000-000000000000");
-  const { error } = await supabase
-    .from("tags")
-    .update({ group_id: input.groupId, sort_order: count ?? 0 })
-    .eq("id", input.id);
-  return error ? FAILED : ok;
+  return (await moveTag(supabase, input.id, input.groupId)) ? FAILED : ok;
 }
 
 export async function addAliasAction(input: { tagId: string; alias: string }): Promise<Result> {
@@ -153,15 +157,23 @@ export async function reorderTagsAction(ids: string[]): Promise<Result> {
 
 // ───────── グループ ─────────
 
-export async function createGroupAction(name: string): Promise<Result> {
+/** グループの新規作成。tagId を渡すと、そのタグを作ったグループへ移す */
+export async function createGroupAction(input: { name: string; tagId?: string }): Promise<Result> {
   const { supabase, userId } = await requireUser();
+  if (input?.tagId !== undefined && !isId(input.tagId)) return fail("タグが見つかりません");
   const { data } = await supabase.from("tag_groups").select("id, name");
-  const r = validateGroupName(String(name ?? ""), data ?? []);
+  const r = validateGroupName(String(input?.name ?? ""), data ?? []);
   if (!r.ok) return fail(r.error);
-  const { error } = await supabase
+  const { data: created, error } = await supabase
     .from("tag_groups")
-    .insert({ user_id: userId, name: r.value, sort_order: data?.length ?? 0 });
-  return error ? (error.code === UNIQUE ? fail("同じ名前のグループがあります") : FAILED) : ok;
+    .insert({ user_id: userId, name: r.value, sort_order: data?.length ?? 0 })
+    .select("id")
+    .single();
+  if (error || !created)
+    return error?.code === UNIQUE ? fail("同じ名前のグループがあります") : FAILED;
+  if (input.tagId && (await moveTag(supabase, input.tagId, created.id)))
+    return fail("グループは作りましたが、タグを移せませんでした");
+  return ok;
 }
 
 export async function renameGroupAction(input: { id: string; name: string }): Promise<Result> {

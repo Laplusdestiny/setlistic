@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { conditionsToHref, EMPTY_CONDITIONS } from "@/lib/search/conditions";
 import type { GroupOption } from "@/lib/tags/types";
+import { GROUP_NAME_MAX } from "@/lib/tags/manage";
 import {
   addAliasAction,
+  createGroupAction,
   deleteTagAction,
   mergeTagsAction,
   moveTagAction,
@@ -25,6 +27,9 @@ type Props = {
 
 type Res = { status: string; message?: string };
 
+// グループの選択肢に混ぜる「新しいグループを作る」の値（UUID と重ならない）
+const NEW_GROUP = "__new__";
+
 /** タグの編集（名前・グループ・別名・統合・削除）。PC では右パネル、スマホではダイアログに出す */
 export function TagEditor({ tag, tags, groups, onClose }: Props) {
   const router = useRouter();
@@ -32,6 +37,7 @@ export function TagEditor({ tag, tags, groups, onClose }: Props) {
   const [name, setName] = useState(tag.name);
   const [alias, setAlias] = useState("");
   const [mergeTo, setMergeTo] = useState("");
+  const [newGroup, setNewGroup] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -89,14 +95,16 @@ export function TagEditor({ tag, tags, groups, onClose }: Props) {
         <select
           id={`${id}-g`}
           className={styles.input}
-          value={tag.groupId ?? ""}
+          value={newGroup !== null ? NEW_GROUP : (tag.groupId ?? "")}
           disabled={pending}
-          onChange={(e) =>
+          onChange={(e) => {
+            if (e.target.value === NEW_GROUP) return setNewGroup("");
+            setNewGroup(null);
             run(
               () => moveTagAction({ id: tag.id, groupId: e.target.value || null }),
               "グループを移しました",
-            )
-          }
+            );
+          }}
         >
           <option value="">マイタグ（グループなし）</option>
           {groups.map((g) => (
@@ -104,7 +112,40 @@ export function TagEditor({ tag, tags, groups, onClose }: Props) {
               {g.name}
             </option>
           ))}
+          <option value={NEW_GROUP}>＋ 新しいグループを作る</option>
         </select>
+        {newGroup !== null && (
+          <form
+            className={styles.inline}
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(
+                () => createGroupAction({ name: newGroup, tagId: tag.id }),
+                "グループを作って移しました",
+                () => setNewGroup(null),
+              );
+            }}
+          >
+            <label htmlFor={`${id}-ng`} className="visually-hidden">
+              新しいグループ名
+            </label>
+            <input
+              id={`${id}-ng`}
+              className={styles.input}
+              value={newGroup}
+              maxLength={GROUP_NAME_MAX}
+              placeholder="新しいグループ名"
+              autoFocus
+              onChange={(e) => setNewGroup(e.target.value)}
+            />
+            <button type="submit" className={styles.dark} disabled={pending || !newGroup.trim()}>
+              作成
+            </button>
+            <button type="button" className={styles.text} onClick={() => setNewGroup(null)}>
+              やめる
+            </button>
+          </form>
+        )}
       </div>
 
       <div className={styles.field}>
