@@ -8,6 +8,18 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +31,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - run: npm test
+        env:
+          # 使い捨ての Postgres に対する RLS テスト（Supabase 本番には向けない）
+          TEST_DATABASE_URL: postgres://postgres:pw@localhost:5432/postgres
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co

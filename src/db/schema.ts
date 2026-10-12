@@ -254,3 +254,12 @@ export const userSettings = pgTable(
   },
   () => [ownRows("user_settings")],
 ).enableRLS();
+
+// ───────── 招待制の許可リスト ─────────
+// メールアドレスそのものは持たず、小文字化したメールの SHA-256 のみ保存する。
+// ポリシーを置かない（RLSのみ有効）ので anon / authenticated からは読めない。
+// 参照するのは Before User Created フック（security definer）だけ。
+export const allowedEmails = pgTable("allowed_emails", {
+  emailHash: text("email_hash").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
