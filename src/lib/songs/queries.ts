@@ -136,19 +136,26 @@ export async function getSingState(supabase: Client, songId: string): Promise<Si
   };
 }
 
-export type TagWithCount = { id: string; name: string; groupId: string | null; count: number };
+export type TagWithCount = {
+  id: string;
+  name: string;
+  groupId: string | null;
+  count: number;
+  aliases: string[];
+};
 
 /** タグと使用曲数（フィルターチップの「よく使うタグ」用） */
 export async function listTagsWithCount(supabase: Client): Promise<TagWithCount[]> {
   const { data } = await supabase
     .from("tags")
-    .select("id, name, group_id, sort_order, uses:song_tags(count)")
+    .select("id, name, group_id, sort_order, uses:song_tags(count), aliases:tag_aliases(alias)")
     .order("sort_order");
   return (data ?? []).map((t) => ({
     id: t.id,
     name: t.name,
     groupId: t.group_id,
     count: (t.uses as { count: number }[] | null)?.[0]?.count ?? 0,
+    aliases: ((t.aliases as { alias: string }[] | null) ?? []).map((a) => a.alias),
   }));
 }
 

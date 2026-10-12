@@ -23,7 +23,10 @@ async function AddLoader({ searchParams }: { searchParams: Promise<{ url?: strin
 
   const [groups, tags, settings, fields] = await Promise.all([
     supabase.from("tag_groups").select("id, name").order("sort_order"),
-    supabase.from("tags").select("id, name, group_id").order("sort_order"),
+    supabase
+      .from("tags")
+      .select("id, name, group_id, aliases:tag_aliases(alias)")
+      .order("sort_order"),
     supabase.from("user_settings").select("default_tag_ids").eq("user_id", userId).maybeSingle(),
     listCustomFields(supabase),
   ]);
@@ -33,6 +36,7 @@ async function AddLoader({ searchParams }: { searchParams: Promise<{ url?: strin
     id: t.id,
     name: t.name,
     groupId: t.group_id,
+    aliases: ((t.aliases as { alias: string }[] | null) ?? []).map((a) => a.alias),
   }));
 
   return (

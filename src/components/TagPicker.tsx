@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { normalizeTagName, tagNameFromInput, validateTagName } from "@/lib/tags/normalize";
+import { suggestTags } from "@/lib/tags/suggest";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import styles from "./form.module.css";
 
@@ -30,6 +31,7 @@ export function TagPicker({
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const listId = useId();
+  const { matches, create } = useMemo(() => suggestTags(input, tags), [input, tags]);
 
   function commit() {
     const problem = validateTagName(input);
@@ -110,7 +112,6 @@ export function TagPicker({
           id={`${listId}-in`}
           className={styles.input}
           value={input}
-          list={`${listId}-list`}
           placeholder="新しいタグを入力（Enterで追加）"
           autoComplete="off"
           enterKeyHint="done"
@@ -130,11 +131,44 @@ export function TagPicker({
           追加
         </button>
       </div>
-      <datalist id={`${listId}-list`}>
-        {tags.map((t) => (
-          <option key={t.id} value={t.name} />
-        ))}
-      </datalist>
+      {input.trim() && (matches.length > 0 || create) && (
+        <div className={styles.suggest} role="group" aria-label="タグの候補">
+          <p className={styles.hint}>過去に作ったタグ</p>
+          <ul>
+            {matches.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  aria-pressed={selectedIds.has(t.id)}
+                  onClick={() => {
+                    onToggle(t.id);
+                    setInput("");
+                    setError(null);
+                  }}
+                >
+                  #{t.name}
+                  <span>{selectedIds.has(t.id) ? "選択中（タップで外す）" : "タップで付ける"}</span>
+                </button>
+              </li>
+            ))}
+            {create && (
+              <li>
+                <button
+                  type="button"
+                  className={styles.suggestNew}
+                  onClick={() => {
+                    onAddNew({ name: create });
+                    setInput("");
+                    setError(null);
+                  }}
+                >
+                  「#{create}」を新しいタグとして追加
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
       {error && (
         <p role="alert" className={`${styles.hint} ${styles.error}`}>
           {error}

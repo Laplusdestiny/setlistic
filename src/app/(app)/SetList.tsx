@@ -434,7 +434,12 @@ export function SetList({
             <SongPanel
               song={selected}
               groups={groups}
-              allTags={tags.map(({ id, name, groupId }) => ({ id, name, groupId }))}
+              allTags={tags.map(({ id, name, groupId, aliases }) => ({
+                id,
+                name,
+                groupId,
+                aliases,
+              }))}
               fields={fields}
               today={today}
               onDeleted={() => setSelectedId(null)}
