@@ -34,6 +34,8 @@ export const metadata: Metadata = {
     title: "Setlistic",
     description: DESCRIPTION,
     locale: "ja_JP",
+    // サイトの入口（トップ）を正規のURLとする。metadataBase で本番ドメインの絶対URLになる
+    url: "/",
   },
   twitter: { card: "summary_large_image", title: "Setlistic", description: DESCRIPTION },
   icons: {
