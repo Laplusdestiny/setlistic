@@ -1,5 +1,6 @@
 "use server";
 
+import { planKaraokeTags } from "@/lib/tags/karaoke";
 import { validateAlias, validateGroupName, validateRename } from "@/lib/tags/manage";
 import {
   MAX_TAG_LENGTH,
@@ -174,6 +175,39 @@ export async function createGroupAction(input: { name: string; tagId?: string })
   if (input.tagId && (await moveTag(supabase, input.tagId, created.id)))
     return fail("グループは作りましたが、タグを移せませんでした");
   return ok;
+}
+
+/** 「カラオケ機種」グループに DAM・JOYSOUND のタグを作る。すでにあるタグ・グループは作らない */
+export async function addKaraokeTagsAction(): Promise<Result> {
+  const { supabase, userId } = await requireUser();
+  const [{ data: groups }, tags] = await Promise.all([
+    supabase.from("tag_groups").select("id, name"),
+    loadTags(supabase),
+  ]);
+  const plan = planKaraokeTags(groups ?? [], tags);
+  if (plan.names.length === 0) return ok;
+
+  let groupId = plan.groupId;
+  if (!groupId) {
+    const { data: created, error } = await supabase
+      .from("tag_groups")
+      .insert({ user_id: userId, name: plan.groupName, sort_order: groups?.length ?? 0 })
+      .select("id")
+      .single();
+    if (error || !created) return FAILED;
+    groupId = created.id;
+  }
+
+  const { error } = await supabase.from("tags").insert(
+    plan.names.map((name, i) => ({
+      user_id: userId,
+      group_id: groupId,
+      name,
+      normalized_name: normalizeTagName(name),
+      sort_order: tags.length + i,
+    })),
+  );
+  return error ? FAILED : ok;
 }
 
 export async function renameGroupAction(input: { id: string; name: string }): Promise<Result> {

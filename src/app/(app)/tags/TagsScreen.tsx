@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { conditionsToHref, EMPTY_CONDITIONS } from "@/lib/search/conditions";
+import { planKaraokeTags } from "@/lib/tags/karaoke";
 import { GROUP_NAME_MAX, moveItem } from "@/lib/tags/manage";
 import { normalizeTagName } from "@/lib/tags/normalize";
 import type { GroupOption } from "@/lib/tags/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import {
+  addKaraokeTagsAction,
   createGroupAction,
   createTagAction,
   deleteGroupAction,
@@ -44,6 +46,7 @@ export function TagsScreen({ groups, tags }: Props) {
   const [pending, start] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
 
+  const karaoke = planKaraokeTags(groups, tags);
   const selected = tags.find((t) => t.id === selectedId) ?? null;
   const needle = normalizeTagName(q);
   const matches = (t: ManagedTag) =>
@@ -359,13 +362,23 @@ export function TagsScreen({ groups, tags }: Props) {
                 pending={pending}
                 onSubmit={(name, done) => run(() => createGroupAction({ name }), done)}
               />
+              {karaoke.names.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.addButton}
+                  disabled={pending}
+                  onClick={() => run(() => addKaraokeTagsAction())}
+                >
+                  ＋ カラオケ機種のタグ（{karaoke.names.join("・")}）
+                </button>
+              )}
             </section>
           )}
 
           {mode === "manage" && (
             <p className={styles.note}>
-              ↑↓ボタンで並べ替え、「＋
-              新しいグループ」でグループを作れます。タグの「編集」では、グループの移動（新しいグループを作って移すことも）・名前変更・統合・削除ができます。タグを削除しても曲は消えません。
+              ↑↓ボタンで並べ替え、「＋ 新しいグループ」でグループを作れます。「＋
+              カラオケ機種のタグ」で、曲が入っている機種（DAM・JOYSOUND）を付けるためのタグをまとめて作れます。タグの「編集」では、グループの移動（新しいグループを作って移すことも）・名前変更・統合・削除ができます。タグを削除しても曲は消えません。
             </p>
           )}
         </div>
