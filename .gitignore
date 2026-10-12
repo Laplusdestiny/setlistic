@@ -11,3 +11,7 @@ next-env.d.ts
 .claude/settings.local.json
 .vercel
 .env*
+
+
+# APM dependencies
+apm_modules/
