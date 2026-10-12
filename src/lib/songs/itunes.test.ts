@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { mapLookupResponse, mapSearchResponse } from "./itunes";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { lookupTrack, mapLookupResponse, mapSearchResponse, searchTracks } from "./itunes";
 
 const track = {
   wrapperType: "track",
@@ -96,5 +96,79 @@ describe("mapSearchResponse", () => {
   it("結果が無ければ空配列", () => {
     expect(mapSearchResponse({ results: [] })).toEqual([]);
     expect(mapSearchResponse(undefined)).toEqual([]);
+  });
+});
+
+describe("通信（fetch をスタブ）", () => {
+  const respond = (body: unknown, status = 200) =>
+    new Response(typeof body === "string" ? body : JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "text/javascript; charset=utf-8" },
+    });
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lookupTrack: 指定の国で見つかればそれを返す", async () => {
+    fetchMock.mockResolvedValue(respond({ results: [track] }));
+    const d = await lookupTrack(1542182776, "us", "https://music.apple.com/us/song/1");
+    expect(d?.title).toBe("夜に駆ける");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://itunes.apple.com/lookup?id=1542182776&country=us&entity=song",
+    );
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: "no-store" });
+  });
+
+  it("lookupTrack: 見つからなければ jp で取り直す", async () => {
+    fetchMock
+      .mockResolvedValueOnce(respond({ results: [] }))
+      .mockResolvedValueOnce(respond({ results: [track] }));
+    const d = await lookupTrack(1, "gb", "u");
+    expect(d?.sourceUrl).toBe("u");
+    expect(fetchMock.mock.calls.map((c) => new URL(c[0]).searchParams.get("country"))).toEqual([
+      "gb",
+      "jp",
+    ]);
+  });
+
+  it("lookupTrack: 国の指定がなければ jp だけ。どこにもなければ null", async () => {
+    fetchMock.mockResolvedValue(respond({ results: [] }));
+    expect(await lookupTrack(1, null, "u")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("HTTP エラーは例外にする", async () => {
+    fetchMock.mockResolvedValue(respond("busy", 503));
+    await expect(lookupTrack(1, "jp", "u")).rejects.toThrow("iTunes API 503");
+  });
+
+  it("searchTracks: 日本のストアを日本語で検索する", async () => {
+    fetchMock.mockResolvedValue(respond({ results: [track] }));
+    const list = await searchTracks("夜に駆ける", 5);
+    expect(list).toHaveLength(1);
+    const u = new URL(fetchMock.mock.calls[0][0]);
+    expect(u.pathname).toBe("/search");
+    expect(Object.fromEntries(u.searchParams)).toEqual({
+      term: "夜に駆ける",
+      country: "jp",
+      media: "music",
+      entity: "song",
+      limit: "5",
+      lang: "ja_jp",
+    });
+  });
+});
+
+describe("toSongDraft の細部", () => {
+  it("壊れた trackViewUrl と日付形式でない releaseDate は null", () => {
+    const d = mapLookupResponse(
+      { results: [{ ...track, trackViewUrl: "not a url", releaseDate: "December 2019" }] },
+      null,
+    );
+    expect(d).toMatchObject({ appleUrl: null, releaseDate: null });
   });
 });
