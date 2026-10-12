@@ -30,6 +30,8 @@ export const viewport: Viewport = {
   themeColor: "#f5f2ea",
   width: "device-width",
   initialScale: 1,
+  // iPhone のセーフエリア（ホームバー）の余白（env(safe-area-inset-bottom)）を効かせるために必要
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

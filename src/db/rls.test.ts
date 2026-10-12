@@ -1084,6 +1084,17 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  it("health_ping は未ログイン(anon)でも呼べて、時刻だけを返す", async () => {
+    await as(null, async (tx) => {
+      const [r] = await tx`select health_ping() as t`;
+      expect(r.t).toBeInstanceOf(Date);
+    });
+    await as(A, async (tx) => {
+      const [r] = await tx`select health_ping() as t`;
+      expect(r.t).toBeInstanceOf(Date);
+    });
+  });
+
   it("アカウント削除で、そのユーザーの全データが消える", async () => {
     const C = "33333333-3333-4333-8333-333333333333";
     await sql`insert into auth.users (id, aud, role, email) values (${C}, 'authenticated', 'authenticated', 'c@test.invalid')`;

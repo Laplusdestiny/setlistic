@@ -455,7 +455,7 @@ textarea.input {
   .nav a {
     display: flex;
     align-items: center;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 12px;
     border-radius: var(--radius-nav);
     color: var(--color-ink);

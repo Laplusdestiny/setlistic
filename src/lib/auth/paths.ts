@@ -1,5 +1,6 @@
 // ログイン不要のパス
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/terms", "/privacy"];
+// /api/health は Vercel Cron 用（CRON_SECRET で保護）。ログイン不要だが秘密がなければ何もしない
+const PUBLIC_PATHS = ["/api/health", "/login", "/auth/callback", "/terms", "/privacy"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

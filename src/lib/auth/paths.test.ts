@@ -6,11 +6,14 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/auth/callback")).toBe(true);
     expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/api/health")).toBe(true);
   });
   it("それ以外は非公開", () => {
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/add")).toBe(false);
     expect(isPublicPath("/loginx")).toBe(false);
+    expect(isPublicPath("/api/export")).toBe(false);
+    expect(isPublicPath("/api/import")).toBe(false);
   });
 });
 
