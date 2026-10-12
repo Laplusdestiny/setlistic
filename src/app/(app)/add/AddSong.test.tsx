@@ -81,7 +81,9 @@ beforeEach(() => {
 
 async function fetchFromUrl(res: LookupResult = { status: "ok", draft: draft(), duplicate: null }) {
   vi.mocked(lookupFromUrl).mockResolvedValue(res);
-  await userEvent.type(screen.getByLabelText("共有URL"), URL1);
+  // 共有URLは貼り付けで入る（1文字ずつ打つと遅く、負荷が高いと待ち時間を超える）
+  await userEvent.click(screen.getByLabelText("共有URL"));
+  await userEvent.paste(URL1);
   await userEvent.click(screen.getByRole("button", { name: "曲情報を取得" }));
 }
 
