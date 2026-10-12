@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { TagPicker } from "@/components/TagPicker";
+import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { lookupManyAction, saveManyAction } from "./actions";
 import { lookupErrorMessage } from "./messages";
 import type { BulkItem, BulkSaveItem } from "./types";
@@ -9,11 +11,16 @@ import styles from "./add.module.css";
 
 const MAX = 20;
 
-export function BulkAdd() {
+type Props = { groups: GroupOption[]; tags: TagOption[]; defaultTagIds: string[] };
+
+export function BulkAdd({ groups, tags, defaultTagIds }: Props) {
   const [text, setText] = useState("");
   const [items, setItems] = useState<BulkItem[] | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<BulkSaveItem[] | null>(null);
+  // 取り込む曲すべてに付けるタグ（最初は「登録時に付けるタグ」）
+  const [tagIds, setTagIds] = useState<Set<string>>(new Set(defaultTagIds));
+  const [newTags, setNewTags] = useState<NewTag[]>([]);
   const [pending, start] = useTransition();
 
   const urls = text.match(/https?:\/\/[^\s<>"']+/g) ?? [];
@@ -37,7 +44,7 @@ export function BulkAdd() {
       checked.has(i) && r.result.status === "ok" ? [r.result.draft] : [],
     );
     start(async () => {
-      setSaved(await saveManyAction(drafts));
+      setSaved(await saveManyAction(drafts, [...tagIds], newTags));
       setItems(null);
       setText("");
     });
@@ -47,8 +54,7 @@ export function BulkAdd() {
     <div className={styles.panel}>
       <p className={styles.lead}>
         共有URLを複数まとめて貼り付けてください（1回につき{MAX}
-        件まで）。タグは「登録時に付けるタグ」だけが付きます。
-        細かいタグやキーはあとから編集できます。
+        件まで）。下で選んだタグが、取り込む曲すべてに付きます。付け忘れても、あとから「タグの一括変更」で直せます。
       </p>
       <label htmlFor="bulk-urls" className={styles.label}>
         共有URL（改行区切り）
@@ -123,6 +129,23 @@ export function BulkAdd() {
               );
             })}
           </ul>
+          <TagPicker
+            groups={groups}
+            tags={tags}
+            selectedIds={tagIds}
+            newTags={newTags}
+            heading="取り込む曲すべてに付けるタグ"
+            onToggle={(id) =>
+              setTagIds((prev) => {
+                const next = new Set(prev);
+                if (!next.delete(id)) next.add(id);
+                return next;
+              })
+            }
+            onSelect={(id) => setTagIds((prev) => new Set(prev).add(id))}
+            onAddNew={(t) => setNewTags((prev) => [...prev, t])}
+            onRemoveNew={(name) => setNewTags((prev) => prev.filter((t) => t.name !== name))}
+          />
           <button
             type="button"
             className={styles.primary}
@@ -140,6 +163,14 @@ export function BulkAdd() {
           {saved.some((s) => s.status !== "ok") &&
             `（${saved.filter((s) => s.status !== "ok").length}曲は登録済み、または保存できませんでした）`}{" "}
           <Link href="/">セトリを見る</Link>
+          {saved.some((s) => s.id) && (
+            <>
+              {" ／ "}
+              <Link href={`/bulk?ids=${saved.flatMap((s) => (s.id ? [s.id] : [])).join(",")}`}>
+                登録した曲のタグをまとめて変更
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>

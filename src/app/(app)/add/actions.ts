@@ -139,15 +139,16 @@ export async function lookupManyAction(inputs: string[]): Promise<BulkItem[]> {
   return out;
 }
 
-/** まとめて登録の保存。タグは「登録時に付けるタグ」（user_settings.default_tag_ids）だけを付ける */
-export async function saveManyAction(drafts: unknown[]): Promise<BulkSaveItem[]> {
-  const { supabase, userId } = await requireUser();
-  const { data: settings } = await supabase
-    .from("user_settings")
-    .select("default_tag_ids")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const tagIds = settings?.default_tag_ids ?? [];
+/**
+ * まとめて登録の保存。全曲に、画面で選んだタグ（既存タグIDと新規タグ名）を付ける。
+ * 検証は toRegisterPayload が曲ごとに行う（UUIDでないID・長すぎるタグ名などは捨てる）。
+ */
+export async function saveManyAction(
+  drafts: unknown[],
+  tagIds: unknown = [],
+  newTags: unknown = [],
+): Promise<BulkSaveItem[]> {
+  const { supabase } = await requireUser();
 
   const out: BulkSaveItem[] = [];
   for (const draft of (Array.isArray(drafts) ? drafts : []).slice(0, MAX_BULK)) {
@@ -155,10 +156,11 @@ export async function saveManyAction(drafts: unknown[]): Promise<BulkSaveItem[]>
       typeof (draft as { title?: unknown })?.title === "string"
         ? (draft as { title: string }).title
         : "";
-    const res = await register(supabase, { draft, songKey: null, memo: "", tagIds, newTags: [] });
+    const res = await register(supabase, { draft, songKey: 0, memo: "", tagIds, newTags });
     out.push({
       title,
       status: res.status === "ok" ? "ok" : res.status === "duplicate" ? "duplicate" : "error",
+      ...(res.status === "ok" ? { id: res.id } : {}),
     });
   }
   return out;

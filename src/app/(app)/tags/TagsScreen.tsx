@@ -109,6 +109,9 @@ export function TagsScreen({ groups, tags }: Props) {
           </svg>
         </Link>
         <h1>タグ</h1>
+        <Link href="/bulk" className={styles.bulkLink}>
+          曲のタグを一括変更
+        </Link>
         <button
           type="button"
           className={styles.newButton}

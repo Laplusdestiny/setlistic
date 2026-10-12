@@ -1084,6 +1084,107 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  describe("bulk_edit_song_tags（タグの一括変更）", () => {
+    const j = (v: unknown) => sql.json(v as never);
+    const W = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const X = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    const ids: string[] = [];
+    const tg: Record<string, string> = {};
+    let theirTag: string;
+    let theirSong: string;
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${W}, 'authenticated', 'authenticated', 'w@test.invalid'),
+        (${X}, 'authenticated', 'authenticated', 'x@test.invalid')`;
+      for (const t of await sql`select id, name from tags where user_id = ${W}`) tg[t.name] = t.id;
+      for (let i = 0; i < 4; i++) {
+        const [s] =
+          await sql`insert into songs (user_id, title, artist) values (${W}, ${"一括" + i}, 'a') returning id`;
+        ids.push(s.id);
+      }
+      await sql`insert into song_tags (song_id, tag_id, user_id) values (${ids[0]}, ${tg["練習中"]}, ${W}), (${ids[1]}, ${tg["練習中"]}, ${W}), (${ids[1]}, ${tg["歌える"]}, ${W})`;
+      theirTag = (await sql`select id from tags where user_id = ${X} limit 1`)[0].id;
+      theirSong = (
+        await sql`insert into songs (user_id, title, artist) values (${X}, 'x', 'x') returning id`
+      )[0].id;
+    });
+
+    const tagsOf = async (tx: postgres.TransactionSql, song: string) =>
+      (
+        await tx`select t.name from song_tags st join tags t on t.id = st.tag_id where st.song_id = ${song} order by t.name`
+      ).map((r) => r.name);
+
+    it("既存タグ・新規タグをまとめて付け、別のタグをまとめて外す", async () => {
+      await as(W, async (tx) => {
+        const n =
+          await tx`select bulk_edit_song_tags(${ids}::uuid[], ${[tg["十八番"]]}::uuid[], ${j([{ name: "まとめて付けた", normalized: "まとめて付けた" }])}, ${[tg["練習中"]]}::uuid[]) as n`;
+        expect(n[0].n).toBe(4);
+        expect(await tagsOf(tx, ids[0])).toEqual(["まとめて付けた", "十八番"]); // 練習中は外れた
+        expect(await tagsOf(tx, ids[1])).toEqual(["まとめて付けた", "十八番", "歌える"]);
+        expect(await tagsOf(tx, ids[3])).toEqual(["まとめて付けた", "十八番"]);
+      });
+    });
+
+    it("同じ操作を繰り返しても重複しない・タグも増えない", async () => {
+      await as(W, async (tx) => {
+        await tx`select bulk_edit_song_tags(${ids}::uuid[], ${[tg["歌える"]]}::uuid[], ${j([{ name: "ＭＡＭＡ", normalized: "mama" }])})`;
+        await tx`select bulk_edit_song_tags(${ids}::uuid[], ${[tg["歌える"]]}::uuid[], ${j([{ name: "mama", normalized: "mama" }])})`;
+        const [c] = await tx`select count(*)::int as n from tags where normalized_name = 'mama'`;
+        expect(c.n).toBe(1);
+        const [d] =
+          await tx`select count(*)::int as n from song_tags where song_id = ${ids[2]} and tag_id = ${tg["歌える"]}`;
+        expect(d.n).toBe(1);
+      });
+    });
+
+    it("曲がなければ 0 を返して何もしない", async () => {
+      await as(W, async (tx) => {
+        expect(
+          (await tx`select bulk_edit_song_tags('{}'::uuid[], ${[tg["歌える"]]}::uuid[]) as n`)[0].n,
+        ).toBe(0);
+      });
+    });
+
+    it("他人の曲が混ざると全体が失敗し、自分の曲も変わらない", async () => {
+      await as(W, async (tx) => {
+        await expect(
+          tx`select bulk_edit_song_tags(${[ids[0], theirSong]}::uuid[], ${[tg["歌える"]]}::uuid[])`,
+        ).rejects.toMatchObject({ code: "P0002" });
+      });
+      const [r] =
+        await sql`select count(*)::int as n from song_tags where song_id = ${ids[0]} and tag_id = ${tg["歌える"]}`;
+      expect(r.n).toBe(0);
+    });
+
+    it("他人のタグIDは付けられない（全体が失敗）。他人の曲のタグも外せない", async () => {
+      await as(W, (tx) =>
+        rejects(tx`select bulk_edit_song_tags(${ids}::uuid[], ${[theirTag]}::uuid[])`),
+      );
+      await sql`insert into song_tags (song_id, tag_id, user_id) values (${theirSong}, ${theirTag}, ${X}) on conflict do nothing`;
+      await as(W, async (tx) => {
+        await expect(
+          tx`select bulk_edit_song_tags(${[theirSong]}::uuid[], '{}'::uuid[], '[]'::jsonb, ${[theirTag]}::uuid[])`,
+        ).rejects.toMatchObject({ code: "P0002" });
+      });
+      const [r] = await sql`select count(*)::int as n from song_tags where song_id = ${theirSong}`;
+      expect(r.n).toBe(1);
+    });
+
+    it("501曲以上は拒否、未ログインも拒否", async () => {
+      const many = Array.from(
+        { length: 501 },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      );
+      await as(W, async (tx) => {
+        await expect(tx`select bulk_edit_song_tags(${many}::uuid[])`).rejects.toMatchObject({
+          code: "22023",
+        });
+      });
+      await as(null, (tx) => rejects(tx`select bulk_edit_song_tags(${ids}::uuid[])`));
+    });
+  });
+
   it("health_ping は未ログイン(anon)でも呼べて、時刻だけを返す", async () => {
     await as(null, async (tx) => {
       const [r] = await tx`select health_ping() as t`;

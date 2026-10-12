@@ -23,6 +23,11 @@ export type BulkItem = {
   repeated?: boolean;
 };
 
-export type BulkSaveItem = { title: string; status: "ok" | "duplicate" | "error" };
+export type BulkSaveItem = {
+  title: string;
+  status: "ok" | "duplicate" | "error";
+  /** 登録できた曲のID（一括変更画面へ進むため） */
+  id?: string;
+};
 
 export type { GroupOption, TagOption } from "@/lib/tags/types";

@@ -57,6 +57,13 @@
       "when": 1791781871153,
       "tag": "0007_health_ping",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791783258838,
+      "tag": "0008_bulk_edit_song_tags",
+      "breakpoints": true
     }
   ]
 }

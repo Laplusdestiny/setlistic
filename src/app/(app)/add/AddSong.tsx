@@ -230,12 +230,35 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Pro
 
       {mode === "bulk" ? (
         <div className={`${styles.body} ${styles.bulkBody}`}>
-          <BulkAdd />
+          <BulkAdd groups={groups} tags={tags} defaultTagIds={defaultTagIds} />
         </div>
       ) : (
         <>
           <div className={styles.body}>
             <div className={`${styles.panel} ${styles.inputPanel}`}>
+              <div className={styles.methods} role="group" aria-label="登録のしかた">
+                <button
+                  type="button"
+                  aria-pressed={panel === "url"}
+                  onClick={() => setPanel("url")}
+                >
+                  <strong>URLから</strong>
+                  <small>共有URLを貼る</small>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={panel === "search"}
+                  onClick={() => setPanel("search")}
+                >
+                  <strong>曲名で探す</strong>
+                  <small>URLがないとき</small>
+                </button>
+                <button type="button" aria-pressed={false} onClick={() => begin(BLANK, "manual")}>
+                  <strong>手入力</strong>
+                  <small>自分で書く</small>
+                </button>
+              </div>
+
               {panel === "url" ? (
                 <>
                   <h2 className="visually-hidden">URLから登録</h2>
@@ -311,43 +334,10 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Pro
                       ))}
                     </ul>
                   </section>
-
-                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => setPanel("search")}
-                    >
-                      曲名で探して登録
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => begin(BLANK, "manual")}
-                    >
-                      URLなしで手入力する
-                    </button>
-                  </div>
                 </>
               ) : (
                 <>
                   <SearchPanel onPick={(d) => begin(d, "search")} />
-                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => setPanel("url")}
-                    >
-                      URLから登録に戻る
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => begin(BLANK, "manual")}
-                    >
-                      手入力する
-                    </button>
-                  </div>
                 </>
               )}
             </div>

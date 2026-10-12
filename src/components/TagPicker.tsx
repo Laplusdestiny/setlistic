@@ -16,6 +16,8 @@ type Props = {
   onRemoveNew: (name: string) => void;
   /** 既存タグを選択状態にする */
   onSelect: (id: string) => void;
+  /** 見出し（既定は「タグ」） */
+  heading?: string;
 };
 
 export function TagPicker({
@@ -27,6 +29,7 @@ export function TagPicker({
   onAddNew,
   onRemoveNew,
   onSelect,
+  heading = "タグ",
 }: Props) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +77,7 @@ export function TagPicker({
   return (
     <section className={styles.panel} aria-labelledby={`${listId}-h`}>
       <h2 id={`${listId}-h`} className={styles.sectionTitle}>
-        タグ
+        {heading}
       </h2>
       <div className={styles.chips}>
         {byGroup.map(({ group, tags: ts }) => (
