@@ -1,5 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
-import { orderSpecs, type SortKey } from "./sort";
+import { toRpcParams, type SearchConditions } from "../search/conditions";
+import { toSavedSearch, type SavedSearch } from "../search/saved";
+import type { SortKey } from "./sort";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -50,25 +52,52 @@ function toSongRow(r: RawSong): SongRow {
   };
 }
 
-/** セトリ一覧。RLS により自分の曲だけが返る */
-export async function listSongs(
-  supabase: Client,
-  opts: { sort: SortKey; tagId?: string | null },
-): Promise<SongRow[]> {
-  // タグで絞り込んでも、各曲の全タグを表示できるよう、絞り込み用の埋め込みは別名にする
-  let q = opts.tagId
-    ? supabase
-        .from("songs")
-        .select(`${COLUMNS}, filter:song_tags!inner(tag_id)`)
-        .eq("filter.tag_id", opts.tagId)
-    : supabase.from("songs").select(COLUMNS);
+/** 検索結果（search_songs が返す行） */
+type SearchRow = {
+  id: string;
+  title: string;
+  artist: string;
+  song_key: number | null;
+  memo: string | null;
+  apple_url: string | null;
+  last_sung_at: string | null;
+  sung_count: number;
+  tags: { id: string; name: string }[] | null;
+};
 
-  for (const o of orderSpecs(opts.sort)) {
-    q = q.order(o.column, { ascending: o.ascending, nullsFirst: o.nullsFirst });
-  }
-  const { data, error } = await q.limit(5000);
+/**
+ * 条件に合う曲を DB 関数 search_songs で取得する（条件なしなら全曲）。
+ * security invoker なので RLS が効き、自分の曲だけが返る。
+ */
+export async function searchSongs(
+  supabase: Client,
+  conditions: SearchConditions,
+  defaultSort: SortKey,
+): Promise<SongRow[]> {
+  const { data, error } = await supabase.rpc("search_songs", {
+    p: toRpcParams(conditions, defaultSort),
+  });
   if (error) throw new Error("曲の読み込みに失敗しました");
-  return ((data ?? []) as unknown as RawSong[]).map(toSongRow);
+  return ((data ?? []) as SearchRow[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    artist: r.artist,
+    songKey: r.song_key,
+    memo: r.memo,
+    appleUrl: r.apple_url,
+    lastSungAt: r.last_sung_at,
+    sungCount: r.sung_count,
+    tags: r.tags ?? [],
+  }));
+}
+
+export async function listSavedSearches(supabase: Client): Promise<SavedSearch[]> {
+  const { data } = await supabase
+    .from("saved_searches")
+    .select("id, name, conditions")
+    .order("sort_order")
+    .order("name");
+  return (data ?? []).map(toSavedSearch);
 }
 
 export async function getSong(supabase: Client, id: string): Promise<SongRow | null> {

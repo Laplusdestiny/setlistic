@@ -1,6 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
+import {
+  EMPTY_CONDITIONS,
+  normalizeConditions,
+  toRpcParams,
+  type SearchConditions,
+} from "../lib/search/conditions";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // 使い捨ての Postgres（docker / CI の service container）が必要。
@@ -416,6 +422,287 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
         const tags = await tx`select 1 from song_tags where song_id = ${id}`;
         expect(tags).toHaveLength(1);
       });
+    });
+  });
+
+  describe("search_songs（検索・絞り込み）", () => {
+    const S = "55555555-5555-4555-8555-555555555555"; // 検索テスト専用ユーザー
+    const O = "66666666-6666-4666-8666-666666666666"; // 別ユーザー（分離の確認）
+    const tag: Record<string, string> = {};
+    const id: Record<string, string> = {};
+
+    const search = async (over: Partial<SearchConditions>, userId = S) => {
+      const params = toRpcParams(
+        normalizeConditions({ ...EMPTY_CONDITIONS, ...over }),
+        "created_desc",
+      );
+      return as(userId, async (tx) => {
+        const rows = await tx`select * from search_songs(${sql.json(params as never)})`;
+        return rows.map((r) => r.title as string);
+      });
+    };
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${S}, 'authenticated', 'authenticated', 's@test.invalid'),
+        (${O}, 'authenticated', 'authenticated', 'o@test.invalid')`;
+      const tags = await sql`select id, name from tags where user_id = ${S}`;
+      for (const t of tags) tag[t.name] = t.id;
+      for (const name of ["盛り上げ", "バラード", "アニソン"]) {
+        const [t] = await sql`insert into tags (user_id, name, normalized_name)
+          values (${S}, ${name}, ${name}) returning id`;
+        tag[name] = t.id;
+      }
+      await sql`insert into tag_aliases (tag_id, user_id, alias, normalized_alias)
+        values (${tag["十八番"]}, ${S}, 'おはこ', 'おはこ')`;
+
+      const mk = async (key: string, v: Record<string, unknown>, tagNames: string[] = []) => {
+        const [r] =
+          await sql`insert into songs (user_id, title, artist, album, genre, memo, release_date, duration_ms, song_key, last_sung_at, sung_count, created_at)
+          values (${S}, ${v.title as string}, ${(v.artist as string) ?? "a"}, ${(v.album as string) ?? null},
+            ${(v.genre as string) ?? null}, ${(v.memo as string) ?? null}, ${(v.release as string) ?? null},
+            ${(v.duration as number) ?? null}, ${(v.key as number) ?? null}, null, 0, ${v.created as string})
+          returning id`;
+        id[key] = r.id;
+        for (const t of tagNames)
+          await sql`insert into song_tags (song_id, tag_id, user_id) values (${r.id}, ${tag[t]}, ${S})`;
+      };
+      await mk(
+        "yoru",
+        {
+          title: "夜に駆ける",
+          artist: "YOASOBI",
+          album: "THE BOOK",
+          genre: "J-Pop",
+          release: "2019-12-15",
+          duration: 261000,
+          key: -2,
+          created: "2026-01-01",
+          memo: "サビ前で息継ぎ",
+        },
+        ["十八番", "盛り上げ"],
+      );
+      await mk(
+        "zankoku",
+        {
+          title: "残酷な天使のテーゼ",
+          artist: "高橋洋子",
+          genre: "アニメ",
+          release: "1995-10-25",
+          duration: 252000,
+          key: 0,
+          created: "2026-01-02",
+        },
+        ["十八番", "盛り上げ", "バラード", "アニソン"],
+      );
+      await mk(
+        "marigold",
+        {
+          title: "マリーゴールド",
+          artist: "あいみょん",
+          genre: "J-Pop",
+          release: "2018-08-08",
+          duration: 290000,
+          key: 1,
+          created: "2026-01-03",
+        },
+        ["十八番", "バラード"],
+      );
+      await mk(
+        "hakujitsu",
+        {
+          title: "白日",
+          artist: "King Gnu",
+          genre: "J-Pop",
+          release: "2019-01-16",
+          duration: 193000,
+          key: -3,
+          created: "2026-01-04",
+        },
+        ["練習中"],
+      );
+      await mk(
+        "lemon",
+        {
+          title: "Lemon",
+          artist: "米津玄師",
+          genre: "J-Pop",
+          release: "2018-03-14",
+          duration: 255000,
+          created: "2026-01-05",
+        },
+        ["バラード"],
+      );
+      await mk("short", { title: "短い曲", artist: "x", duration: 120000, created: "2026-01-06" });
+      await mk("long", { title: "長い曲", artist: "y", duration: 360000, created: "2026-01-07" });
+      await sql`insert into songs (user_id, title, artist) values (${O}, '別ユーザーの夜', 'x')`;
+      // 歌唱記録：夜に駆ける=最新が余裕(1)、残酷な天使=最新が辛い(5)、マリーゴールド=最新が普通(3)、白日=余裕だったが前は辛かった
+      const log = (song: string, date: string, ease: number) =>
+        sql`insert into sing_logs (user_id, song_id, sung_at, ease) values (${S}, ${id[song]}, ${date}, ${ease})`;
+      await log("yoru", "2026-03-01", 1);
+      await log("zankoku", "2026-03-02", 5);
+      await log("marigold", "2026-03-03", 3);
+      await log("hakujitsu", "2026-02-01", 5);
+      await log("hakujitsu", "2026-03-04", 2);
+    });
+
+    it("条件なしなら自分の全曲（新しい順）。他人の曲は含まれない", async () => {
+      const r = await search({});
+      expect(r).toHaveLength(7);
+      expect(r[0]).toBe("長い曲");
+      expect(r).not.toContain("別ユーザーの夜");
+    });
+
+    it("他のユーザーからは検索結果に出ない", async () => {
+      expect(await search({}, O)).toEqual(["別ユーザーの夜"]);
+      expect(await search({ q: "夜に駆ける" }, O)).toEqual([]);
+    });
+
+    it("タグAND：十八番 AND 盛り上げ", async () => {
+      const r = await search({ tagMode: "and", include: [tag["十八番"], tag["盛り上げ"]] });
+      expect(r.sort()).toEqual(["夜に駆ける", "残酷な天使のテーゼ"].sort());
+    });
+
+    it("受け入れ条件：十八番 AND 盛り上げ、ただしバラードを除く", async () => {
+      const r = await search({
+        tagMode: "and",
+        include: [tag["十八番"], tag["盛り上げ"]],
+        exclude: [tag["バラード"]],
+      });
+      expect(r).toEqual(["夜に駆ける"]);
+    });
+
+    it("タグOR：十八番 OR 練習中", async () => {
+      const r = await search({ tagMode: "or", include: [tag["十八番"], tag["練習中"]] });
+      expect(r).toHaveLength(4);
+    });
+
+    it("除外のみ：バラードを除く", async () => {
+      const r = await search({ exclude: [tag["バラード"]] });
+      expect(r).not.toContain("Lemon");
+      expect(r).not.toContain("マリーゴールド");
+      expect(r).not.toContain("残酷な天使のテーゼ");
+      expect(r).toHaveLength(4);
+    });
+
+    it("フリーワードは曲名・アーティスト・アルバム・メモ・タグ名・別名を横断する", async () => {
+      expect(await search({ q: "夜に" })).toEqual(["夜に駆ける"]); // 曲名
+      expect(await search({ q: "king" })).toEqual(["白日"]); // アーティスト（大文字小文字）
+      expect(await search({ q: "the book" })).toEqual(["夜に駆ける"]); // アルバム
+      expect(await search({ q: "息継ぎ" })).toEqual(["夜に駆ける"]); // メモ
+      expect((await search({ q: "アニソン" })).sort()).toEqual(["残酷な天使のテーゼ"]); // タグ名
+      expect((await search({ q: "おはこ" })).sort()).toEqual(
+        ["夜に駆ける", "残酷な天使のテーゼ", "マリーゴールド"].sort(),
+      ); // タグの別名
+    });
+
+    it("全角英数・半角カナの揺れを吸収し、語はAND、ワイルドカード文字は文字として扱う", async () => {
+      expect(await search({ q: "ＹＯＡＳＯＢＩ" })).toEqual(["夜に駆ける"]);
+      expect(await search({ q: "yoasobi 夜" })).toEqual(["夜に駆ける"]);
+      expect(await search({ q: "yoasobi 白日" })).toEqual([]);
+      expect(await search({ q: "%" })).toEqual([]);
+      expect(await search({ q: "_" })).toEqual([]);
+    });
+
+    it("アーティスト・ジャンル", async () => {
+      expect(await search({ artist: "あいみょん" })).toEqual(["マリーゴールド"]);
+      expect((await search({ genre: "j-pop" })).sort()).toEqual(
+        ["Lemon", "マリーゴールド", "夜に駆ける", "白日"].sort(),
+      );
+    });
+
+    it("リリース年代（未設定の曲は除外）", async () => {
+      expect((await search({ decades: [2010] })).sort()).toEqual(
+        ["Lemon", "マリーゴールド", "夜に駆ける", "白日"].sort(),
+      );
+      expect(await search({ decades: [1990] })).toEqual(["残酷な天使のテーゼ"]);
+      expect(await search({ decades: [2020] })).toEqual([]);
+    });
+
+    it("曲の長さ", async () => {
+      expect(await search({ durations: ["lt3"] })).toEqual(["短い曲"]);
+      expect(await search({ durations: ["gte5"] })).toEqual(["長い曲"]);
+      expect((await search({ durations: ["3to4"] })).sort()).toEqual(["白日"]);
+      expect((await search({ durations: ["4to5", "gte5"] })).sort()).toEqual(
+        ["Lemon", "マリーゴールド", "夜に駆ける", "残酷な天使のテーゼ", "長い曲"].sort(),
+      );
+    });
+
+    it("キー", async () => {
+      expect((await search({ keys: ["down"] })).sort()).toEqual(["夜に駆ける", "白日"].sort());
+      expect(await search({ keys: ["zero"] })).toEqual(["残酷な天使のテーゼ"]);
+      expect(await search({ keys: ["up"] })).toEqual(["マリーゴールド"]);
+    });
+
+    it("直近（最新の記録）の歌いやすさ", async () => {
+      expect((await search({ lastEase: "easy" })).sort()).toEqual(["夜に駆ける", "白日"].sort()); // 白日は最新が2
+      expect(await search({ lastEase: "hard" })).toEqual(["残酷な天使のテーゼ"]);
+      expect(await search({ lastEase: "normal" })).toEqual(["マリーゴールド"]);
+      const notHard = await search({ lastEase: "not_hard" });
+      expect(notHard).not.toContain("残酷な天使のテーゼ");
+      expect(notHard).toContain("Lemon"); // 記録なしは「辛かった曲を除く」に含む
+    });
+
+    it("条件の組み合わせ：Jポップかつ4分以上かつバラード", async () => {
+      expect(
+        await search({ genre: "j-pop", durations: ["4to5", "gte5"], include: [tag["バラード"]] }),
+      ).toEqual(expect.arrayContaining(["Lemon", "マリーゴールド"]));
+    });
+
+    it("並び替え：最近歌っていない順（未歌唱が先頭）・歌った回数・曲名・アーティスト", async () => {
+      await sql`update songs set last_sung_at = '2026-03-01', sung_count = 3 where id = ${id.yoru}`;
+      await sql`update songs set last_sung_at = '2026-02-01', sung_count = 5 where id = ${id.hakujitsu}`;
+      // 未歌唱（作成の新しい順）が先頭、そのあと最後に歌った日が古い順
+      expect(await search({ sort: "last_sung_asc" })).toEqual([
+        "長い曲",
+        "短い曲",
+        "Lemon",
+        "白日",
+        "夜に駆ける",
+        "残酷な天使のテーゼ",
+        "マリーゴールド",
+      ]);
+      expect((await search({ sort: "sung_count_desc" })).slice(0, 2)).toEqual([
+        "白日",
+        "夜に駆ける",
+      ]);
+      expect((await search({ sort: "title_asc" }))[0]).toBe("Lemon");
+      expect((await search({ sort: "created_asc" }))[0]).toBe("夜に駆ける");
+    });
+
+    it("不正な並び順は既定（新しい順）にフォールバックする", async () => {
+      const r = await as(S, async (tx) => {
+        const rows = await tx`select title from search_songs('{"sort":"drop table songs"}'::jsonb)`;
+        return rows.map((x) => x.title);
+      });
+      expect(r[0]).toBe("長い曲");
+    });
+
+    it("未ログイン(anon)は実行できない", async () => {
+      await as(null, (tx) => rejects(tx`select * from search_songs('{}'::jsonb)`));
+    });
+
+    it("1,000曲でも1秒以内に絞り込める", async () => {
+      await sql`insert into songs (user_id, title, artist, album, memo, release_date, duration_ms, song_key)
+        select ${S}, '曲' || g, 'アーティスト' || (g % 50), 'アルバム' || (g % 100), 'メモ' || g,
+               date '2000-01-01' + (g % 9000), 120000 + (g % 200) * 1000, (g % 15) - 7
+        from generate_series(1, 1000) g`;
+      await sql`insert into song_tags (song_id, tag_id, user_id)
+        select s.id, ${tag["十八番"]}, ${S} from songs s where s.user_id = ${S} and s.title like '曲%' and right(s.title, 1) in ('1','3')`;
+      const t0 = performance.now();
+      const r = await search({
+        q: "アーティスト1 メモ",
+        include: [tag["十八番"]],
+        exclude: [tag["バラード"]],
+        durations: ["3to4", "4to5"],
+        sort: "title_asc",
+      });
+      const ms = performance.now() - t0;
+      expect(r.length).toBeGreaterThan(0);
+      expect(ms).toBeLessThan(1000);
+      const t1 = performance.now();
+      expect(await search({})).toHaveLength(1007);
+      expect(performance.now() - t1).toBeLessThan(1000);
     });
   });
 

@@ -1,0 +1,141 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupName {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldset legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+/* タグのチップ：含める＝黒地、除外＝赤枠＋取り消し線 */
+.tagChip {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tagChip[data-state="include"] {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-primary);
+}
+
+.tagChip[data-state="exclude"] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: #e9e3d6;
+  border-radius: var(--radius-control);
+}
+
+.segment button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.segment button[aria-pressed="true"] {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.advanced {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+}
+
+.advanced summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 14px 16px;
+}
+
+.radios {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.radios label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.radios label + label {
+  border-top: 1px solid var(--color-divider);
+}
+
+.radios input {
+  width: 20px;
+  height: 20px;
+}
