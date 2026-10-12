@@ -8,10 +8,12 @@ import {
   recordSingAction,
   updateSongAction,
 } from "@/app/(app)/songs/actions";
+import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { formatDateJa } from "@/lib/format";
 import { formatKey } from "@/lib/songs/key";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
+import { FieldInputs } from "./FieldInputs";
 import { KeyStepper } from "./KeyStepper";
 import { TagPicker } from "./TagPicker";
 import form from "./form.module.css";
@@ -21,6 +23,8 @@ type Props = {
   song: SongRow;
   groups: GroupOption[];
   allTags: TagOption[];
+  /** カスタム項目の定義（非表示のものも含めて渡す。表示側で絞る） */
+  fields: CustomField[];
   initialSing: SingState;
   /** 今日の日付（日本時間, YYYY-MM-DD）。サーバーで決めて渡す */
   today: string;
@@ -30,7 +34,15 @@ type Props = {
 
 const EASE_LABELS = ["余裕", "歌いやすい", "ふつう", "やや辛い", "辛かった"];
 
-export function SongDetail({ song, groups, allTags, initialSing, today, onDeleted }: Props) {
+export function SongDetail({
+  song,
+  groups,
+  allTags,
+  fields,
+  initialSing,
+  today,
+  onDeleted,
+}: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
@@ -44,6 +56,8 @@ export function SongDetail({ song, groups, allTags, initialSing, today, onDelete
   const [artist, setArtist] = useState(song.artist);
   const [songKey, setSongKey] = useState(song.songKey ?? 0);
   const [memo, setMemo] = useState(song.memo ?? "");
+  const shownFields = visibleFields(fields);
+  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [selected, setSelected] = useState(() => new Set(song.tags.map((t) => t.id)));
   const [newTags, setNewTags] = useState<NewTag[]>([]);
 
@@ -57,6 +71,7 @@ export function SongDetail({ song, groups, allTags, initialSing, today, onDelete
     setArtist(song.artist);
     setSongKey(song.songKey ?? 0);
     setMemo(song.memo ?? "");
+    setFieldValues(Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null])));
     setSelected(new Set(song.tags.map((t) => t.id)));
     setNewTags([]);
     setError(null);
@@ -72,6 +87,7 @@ export function SongDetail({ song, groups, allTags, initialSing, today, onDelete
         artist,
         songKey,
         memo,
+        fields: fieldValues,
         tagIds: [...selected],
         newTags,
       });
@@ -191,6 +207,12 @@ export function SongDetail({ song, groups, allTags, initialSing, today, onDelete
           placeholder="サビ前で息継ぎ、など"
         />
 
+        <FieldInputs
+          fields={shownFields}
+          values={fieldValues}
+          onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
+        />
+
         {error && (
           <p role="alert" className={styles.error}>
             {error}
@@ -246,6 +268,20 @@ export function SongDetail({ song, groups, allTags, initialSing, today, onDelete
           <dd className={styles.date}>{sing.lastSungAt ? formatDateJa(sing.lastSungAt) : "—"}</dd>
         </div>
       </dl>
+
+      {shownFields.some((f) => formatFieldValue(f, song.fields[f.id]) !== "") && (
+        <dl className={styles.fieldList} aria-label="項目">
+          {shownFields.map((f) => {
+            const text = formatFieldValue(f, song.fields[f.id]);
+            return text ? (
+              <div key={f.id}>
+                <dt>{f.name}</dt>
+                <dd>{text}</dd>
+              </div>
+            ) : null;
+          })}
+        </dl>
+      )}
 
       {song.memo && (
         <section className={styles.memo}>

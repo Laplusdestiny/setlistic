@@ -1,6 +1,8 @@
 "use server";
 
+import { sanitizeFieldValues } from "@/lib/custom-fields";
 import { lookupTrack, searchTracks } from "@/lib/songs/itunes";
+import { listCustomFields } from "@/lib/songs/queries";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
 import { toRegisterPayload } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
@@ -91,10 +93,15 @@ async function register(supabase: Client, raw: unknown): Promise<SaveResult> {
   const payload = toRegisterPayload(raw);
   if (!payload.ok) return { status: "error", message: payload.error };
 
+  // カスタム項目の値は、サーバーで項目の定義に照らして整える（型・選択肢に合わないものは捨てる）
+  const defs = await listCustomFields(supabase);
+  const fields = sanitizeFieldValues(defs, (raw as { fields?: unknown }).fields);
+
   const { data, error } = await supabase.rpc("register_song", {
     p_song: payload.value.song,
     p_tag_ids: payload.value.tagIds,
     p_new_tags: payload.value.newTags,
+    p_fields: fields,
   });
 
   if (error) {

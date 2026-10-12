@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SongDetail } from "@/components/SongDetail";
+import type { CustomField } from "@/lib/custom-fields";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
 import styles from "./song-page.module.css";
@@ -13,10 +14,11 @@ type Props = {
   today: string;
   allTags: TagOption[];
   groups: GroupOption[];
+  fields: CustomField[];
 };
 
 /** スマホ向けの曲詳細ページ。PC では一覧の右パネルで同じ表示をする */
-export function SongPageView({ song, sing, today, allTags, groups }: Props) {
+export function SongPageView({ song, sing, today, allTags, groups, fields }: Props) {
   const router = useRouter();
   return (
     <div className={styles.page}>
@@ -42,6 +44,7 @@ export function SongPageView({ song, sing, today, allTags, groups }: Props) {
           song={song}
           groups={groups}
           allTags={allTags}
+          fields={fields}
           initialSing={sing}
           today={today}
           onDeleted={() => router.replace("/")}

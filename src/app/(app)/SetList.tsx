@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { signOut } from "@/app/login/actions";
+import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { ConditionsForm } from "@/components/ConditionsForm";
 import { SaveSearchForm } from "@/components/SaveSearchForm";
 import { SavedSearchList } from "@/components/SavedSearchList";
@@ -35,6 +36,10 @@ type Props = {
   tags: TagWithCount[];
   groups: GroupOption[];
   saved: SavedSearch[];
+  /** カスタム項目の定義 */
+  fields: CustomField[];
+  /** 一覧に出す基本項目（"key" / "tags"） */
+  listColumns: string[];
   today: string;
 };
 
@@ -54,6 +59,8 @@ export function SetList({
   tags,
   groups,
   saved,
+  fields,
+  listColumns,
   today,
 }: Props) {
   const router = useRouter();
@@ -95,6 +102,9 @@ export function SetList({
   const change = (next: SearchConditions) => apply(next, draft);
 
   const sort = conditions.sort ?? defaultSort;
+  const showKey = listColumns.includes("key");
+  const showTags = listColumns.includes("tags");
+  const listFields = visibleFields(fields).filter((f) => f.showInList);
   const tagName = (id: string) => tags.find((t) => t.id === id)?.name;
   const active = hasConditions(conditions);
   const sortMenu = useRef<HTMLDetailsElement>(null);
@@ -388,15 +398,28 @@ export function SetList({
                     <span className={styles.songMain}>
                       <span className={styles.songTitle}>{s.title}</span>
                       <span className={styles.songArtist}>{s.artist}</span>
+                      {listFields.length > 0 && (
+                        <span className={styles.songFields}>
+                          {listFields.map((f) => {
+                            const text = formatFieldValue(f, s.fields[f.id]);
+                            return text ? (
+                              <span key={f.id}>
+                                {f.name} {text}
+                              </span>
+                            ) : null;
+                          })}
+                        </span>
+                      )}
                     </span>
                     <span className={styles.songTags}>
-                      {s.tags.map((t) => (
-                        <span key={t.id} className={styles.tag}>
-                          #{t.name}
-                        </span>
-                      ))}
+                      {showTags &&
+                        s.tags.map((t) => (
+                          <span key={t.id} className={styles.tag}>
+                            #{t.name}
+                          </span>
+                        ))}
                     </span>
-                    {s.songKey !== null && (
+                    {showKey && s.songKey !== null && (
                       <span className={styles.key}>キー {formatKey(s.songKey)}</span>
                     )}
                   </Link>
@@ -412,6 +435,7 @@ export function SetList({
               song={selected}
               groups={groups}
               allTags={tags.map(({ id, name, groupId }) => ({ id, name, groupId }))}
+              fields={fields}
               today={today}
               onDeleted={() => setSelectedId(null)}
             />
@@ -470,7 +494,41 @@ export function SetList({
             <path d="M12 5v14M5 12h14" />
           </svg>
         </Link>
-        <div className={styles.tabGroup} />
+        <div className={styles.tabGroup}>
+          <Link href="/tags">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12V4h8l10 10-8 8z" />
+              <circle cx="7.5" cy="8.5" r="1.3" />
+            </svg>
+            タグ
+          </Link>
+          <Link href="/settings">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+            </svg>
+            設定
+          </Link>
+        </div>
       </nav>
     </div>
   );

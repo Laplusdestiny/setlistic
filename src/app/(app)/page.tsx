@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { todayJst } from "@/lib/format";
 import { conditionsFromParams } from "@/lib/search/conditions";
-import { listSavedSearches, listTagsWithCount, searchSongs } from "@/lib/songs/queries";
-import { parseSort } from "@/lib/songs/sort";
+import {
+  getUserSettings,
+  listCustomFields,
+  listSavedSearches,
+  listTagsWithCount,
+  searchSongs,
+} from "@/lib/songs/queries";
 import { requireUser } from "@/lib/supabase/user";
 import { SetList } from "./SetList";
 import styles from "./home.module.css";
@@ -23,24 +28,29 @@ export default function HomePage({ searchParams }: { searchParams: Search }) {
 async function HomeLoader({ searchParams }: { searchParams: Search }) {
   const sp = await searchParams;
   const first = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : null);
-  const conditions = conditionsFromParams({ get: first });
   const { supabase, userId } = await requireUser();
 
-  // 並び順の既定は設定（user_settings.list_sort）。URL の ?sort= を優先する
-  const { data: settings } = await supabase
-    .from("user_settings")
-    .select("list_sort")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const defaultSort = parseSort(settings?.list_sort);
+  // 並び順の既定・一覧に出す項目は設定（user_settings）。URL の ?sort= を優先する
+  const settings = await getUserSettings(supabase, userId);
+  const defaultSort = settings.listSort;
 
-  const [songs, tags, groups, saved, totalRes] = await Promise.all([
-    searchSongs(supabase, conditions, defaultSort),
+  const [tags, groups, saved, fields, totalRes] = await Promise.all([
     listTagsWithCount(supabase),
     supabase.from("tag_groups").select("id, name").order("sort_order"),
     listSavedSearches(supabase),
+    listCustomFields(supabase),
     supabase.from("songs").select("id", { count: "exact", head: true }),
   ]);
+
+  // 削除・統合で存在しなくなったタグ（古いURL・履歴）は条件から外す（AND が常に空になるのを防ぐ）
+  const parsed = conditionsFromParams({ get: first });
+  const exists = new Set(tags.map((t) => t.id));
+  const conditions = {
+    ...parsed,
+    include: parsed.include.filter((id) => exists.has(id)),
+    exclude: parsed.exclude.filter((id) => exists.has(id)),
+  };
+  const songs = await searchSongs(supabase, conditions, defaultSort);
 
   return (
     <SetList
@@ -51,6 +61,8 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
       tags={tags}
       groups={(groups.data ?? []).map((g) => ({ id: g.id, name: g.name }))}
       saved={saved}
+      fields={fields}
+      listColumns={settings.listColumns}
       today={todayJst()}
     />
   );

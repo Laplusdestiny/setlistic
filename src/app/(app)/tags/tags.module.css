@@ -1,0 +1,495 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: 100dvh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 20px 8px;
+}
+
+.header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  border-radius: var(--radius-nav);
+}
+
+.newButton,
+.dark {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dark:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 20px 12px;
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: #e9e3d6;
+  border-radius: var(--radius-control);
+}
+
+.segment button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segment button[aria-pressed="true"] {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.search,
+.input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-search);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.input {
+  border-radius: 10px;
+  background: #fff;
+}
+
+.create {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 20px 12px;
+  padding: 14px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-search);
+}
+
+.create label,
+.field > label,
+.field > span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline > .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 20px 96px;
+}
+
+.lists {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.groupHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.groupTools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.groupTools button {
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.text,
+.groupTools .text {
+  color: var(--color-primary);
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.textDanger {
+  color: var(--color-danger) !important;
+}
+
+.groupTools button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.chip:hover {
+  color: var(--color-ink);
+  background: var(--color-selected-row);
+}
+
+.chip span {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  background: #f0ebe0;
+  border-radius: var(--radius-chip);
+  padding: 1px 8px;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-search);
+  overflow: hidden;
+}
+
+.rows li {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 6px 0 4px;
+}
+
+.rows li + li {
+  border-top: 1px solid var(--color-divider);
+}
+
+.rows li[data-selected] {
+  background: var(--color-tag-bg);
+}
+
+.rowEmpty {
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  padding-left: 14px !important;
+}
+
+.move {
+  display: flex;
+}
+
+.move button {
+  width: 36px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-ink-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.move button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.rowMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowMain small {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.edit {
+  min-width: 48px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.note,
+.empty,
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+.empty {
+  font-size: 14px;
+}
+
+.error {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.okMessage {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-success);
+}
+
+.aside {
+  display: none;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editorHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorHead h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aliases li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 12px;
+  background: var(--color-tag-bg);
+  color: var(--color-tag-fg);
+  border-radius: var(--radius-chip);
+  font-size: 13px;
+}
+
+.aliases button {
+  min-width: 44px;
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.danger {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--color-danger);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dialog {
+  width: min(94vw, 460px);
+  max-height: 90dvh;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.dialog::backdrop {
+  background: rgb(30 28 24 / 0.45);
+}
+
+@media (min-width: 900px) {
+  .back {
+    display: none;
+  }
+  .header {
+    padding: 28px 32px 8px;
+  }
+  .header h1 {
+    font-size: 22px;
+  }
+  .controls {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 32px 16px;
+  }
+  .segment {
+    width: 280px;
+    flex: none;
+  }
+  .create {
+    margin: 0 32px 16px;
+    flex-direction: row;
+  }
+  .create > form {
+    flex: 1;
+  }
+  .body {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 0 32px 32px;
+  }
+  .aside {
+    display: block;
+    flex: 0 0 360px;
+    position: sticky;
+    top: 16px;
+    padding: 22px;
+    background: var(--color-paper);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-sizing: border-box;
+  }
+  .error {
+    margin: 0 32px 12px;
+  }
+}

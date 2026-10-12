@@ -58,6 +58,18 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     return result as T;
   }
 
+  /** as() と同じ権限で実行し、コミットする（後続のテストで結果を使う場合） */
+  async function asCommit<T>(
+    userId: string,
+    fn: (tx: postgres.TransactionSql) => Promise<T>,
+  ): Promise<T> {
+    return (await sql.begin(async (tx) => {
+      await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId })}, true)`;
+      await tx`set local role authenticated`;
+      return fn(tx);
+    })) as T;
+  }
+
   const rejects = async (p: PromiseLike<unknown>) => {
     // 42501 = insufficient_privilege（RLS の with check 違反を含む）
     await expect(p).rejects.toMatchObject({ code: "42501" });
@@ -703,6 +715,372 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
       const t1 = performance.now();
       expect(await search({})).toHaveLength(1007);
       expect(performance.now() - t1).toBeLessThan(1000);
+    });
+  });
+
+  describe("Phase 5：カスタム項目・タグ管理・エクスポート/インポート・アカウント削除", () => {
+    const U1 = "77777777-7777-4777-8777-777777777777";
+    const U2 = "88888888-8888-4888-8888-888888888888";
+    const U3 = "99999999-9999-4999-8999-999999999999";
+    const j = (v: unknown) => sql.json(v as never);
+
+    const mkUser = (id: string, mail: string) =>
+      sql`insert into auth.users (id, aud, role, email) values (${id}, 'authenticated', 'authenticated', ${mail})`;
+    const tagId = async (user: string, name: string) =>
+      (await sql`select id from tags where user_id = ${user} and name = ${name}`)[0].id as string;
+    const field = async (
+      user: string,
+      name: string,
+      type: string,
+      extra: Record<string, unknown> = {},
+    ) => {
+      const [r] =
+        await sql`insert into custom_fields (user_id, name, field_type, options, show_in_list, hidden, sort_order)
+        values (${user}, ${name}, ${type}, ${j(extra.options ?? null)}, ${(extra.show as boolean) ?? false}, ${(extra.hidden as boolean) ?? false}, ${(extra.order as number) ?? 0})
+        returning id`;
+      return r.id as string;
+    };
+
+    beforeAll(async () => {
+      await mkUser(U1, "u1@test.invalid");
+      await mkUser(U2, "u2@test.invalid");
+      await mkUser(U3, "u3@test.invalid");
+    });
+
+    describe("カスタム項目の値", () => {
+      it("登録・更新で値を保存し、null で削除、渡さなかった項目は触らない。検索結果にも含まれる", async () => {
+        const fScore = await field(U1, "最高点", "number");
+        const fMachine = await field(U1, "機種", "select", { options: ["DAM", "JOYSOUND"] });
+        await as(U1, async (tx) => {
+          const [{ id }] =
+            await tx`select register_song(${j({ title: "f", artist: "a" })}, '{}'::uuid[], '[]'::jsonb,
+            ${j({ [fScore]: 92, [fMachine]: "DAM" })}) as id`;
+          const vals = async () =>
+            (
+              await tx`select f.name, v.value from song_field_values v join custom_fields f on f.id = v.field_id where v.song_id = ${id} order by f.name`
+            ).map((r) => [r.name, r.value]);
+          expect(await vals()).toEqual([
+            ["最高点", 92],
+            ["機種", "DAM"],
+          ]);
+
+          await tx`select update_song(${id}, ${j({ title: "f", artist: "a" })}, '{}'::uuid[], '[]'::jsonb, ${j({ [fScore]: 95 })})`;
+          expect(await vals()).toEqual([
+            ["最高点", 95],
+            ["機種", "DAM"],
+          ]); // 機種は触らない
+
+          await tx`select update_song(${id}, ${j({ title: "f", artist: "a" })}, '{}'::uuid[], '[]'::jsonb, ${j({ [fMachine]: null })})`;
+          expect(await vals()).toEqual([["最高点", 95]]);
+
+          const [row] = await tx`select fields from search_songs('{}'::jsonb) where id = ${id}`;
+          expect(row.fields).toEqual({ [fScore]: 95 });
+        });
+      });
+
+      it("他人の項目IDは使えない（全体が失敗する）", async () => {
+        const other = await field(U2, "他人の項目", "text");
+        await as(U1, (tx) =>
+          rejects(
+            tx`select register_song(${j({ title: "x", artist: "a" })}, '{}'::uuid[], '[]'::jsonb, ${j({ [other]: "hack" })})`,
+          ),
+        );
+      });
+    });
+
+    describe("タグの統合・削除・並べ替え", () => {
+      it("統合：曲の紐づけ・別名を移し、元の名前を別名に残し、検索条件と登録時タグも付け替える", async () => {
+        const mk = async (title: string, tags: string[]) => {
+          const [s] =
+            await sql`insert into songs (user_id, title, artist) values (${U1}, ${title}, 'a') returning id`;
+          for (const t of tags) {
+            const id = (await sql`select ensure_tag_by_name(${t}) as id`)[0].id;
+            await sql`insert into song_tags (song_id, tag_id, user_id) values (${s.id}, ${id}, ${U1}) on conflict do nothing`;
+          }
+          return s.id as string;
+        };
+        // ensure_tag_by_name は auth.uid() を使うので、このテストでは直接タグを作る
+        const mkTag = async (name: string) =>
+          (
+            await sql`insert into tags (user_id, name, normalized_name) values (${U1}, ${name}, ${name.toLowerCase()}) returning id`
+          )[0].id as string;
+        const src = await mkTag("おはこ");
+        const tgt = await mkTag("得意");
+        const s1 = (
+          await sql`insert into songs (user_id, title, artist) values (${U1}, 'm1', 'a') returning id`
+        )[0].id;
+        const s2 = (
+          await sql`insert into songs (user_id, title, artist) values (${U1}, 'm2', 'a') returning id`
+        )[0].id;
+        await sql`insert into song_tags (song_id, tag_id, user_id) values (${s1}, ${src}, ${U1}), (${s1}, ${tgt}, ${U1}), (${s2}, ${src}, ${U1})`;
+        await sql`insert into tag_aliases (tag_id, user_id, alias, normalized_alias) values (${src}, ${U1}, 'おは', 'おは')`;
+        await sql`update user_settings set default_tag_ids = ${[src]}::uuid[] where user_id = ${U1}`;
+        await sql`insert into saved_searches (user_id, name, conditions) values (${U1}, 'q', ${j({ include: [src], exclude: [] })})`;
+        void mk;
+
+        await as(U1, async (tx) => {
+          await tx`select merge_tags(${src}, ${tgt})`;
+          const rows =
+            await tx`select s.title, array_agg(t.name order by t.name) as tags from songs s
+            join song_tags st on st.song_id = s.id join tags t on t.id = st.tag_id
+            where s.title in ('m1','m2') group by s.title order by s.title`;
+          expect(rows.map((r) => [r.title, r.tags])).toEqual([
+            ["m1", ["得意"]],
+            ["m2", ["得意"]],
+          ]); // m1 は重複せず1つ
+          expect(await tx`select 1 from tags where id = ${src}`).toHaveLength(0);
+          const aliases =
+            await tx`select alias from tag_aliases where tag_id = ${tgt} order by alias`;
+          expect(aliases.map((a) => a.alias)).toEqual(["おは", "おはこ"]);
+          const [st] = await tx`select default_tag_ids from user_settings where user_id = ${U1}`;
+          expect(st.default_tag_ids).toEqual([tgt]);
+          const [ss] = await tx`select conditions from saved_searches where name = 'q'`;
+          expect(ss.conditions.include).toEqual([tgt]);
+        });
+      });
+
+      it("統合：自分自身・他人のタグ・存在しないタグは拒否", async () => {
+        const mine = (
+          await sql`insert into tags (user_id, name, normalized_name) values (${U1}, 'mine', 'mine') returning id`
+        )[0].id;
+        const theirs = (
+          await sql`insert into tags (user_id, name, normalized_name) values (${U2}, 'theirs', 'theirs') returning id`
+        )[0].id;
+        await as(U1, async (tx) => {
+          await expect(tx`select merge_tags(${mine}, ${mine})`).rejects.toMatchObject({
+            code: "22023",
+          });
+        });
+        await as(U1, async (tx) => {
+          await expect(tx`select merge_tags(${mine}, ${theirs})`).rejects.toMatchObject({
+            code: "P0002",
+          });
+        });
+        await as(U1, async (tx) => {
+          await expect(tx`select merge_tags(${theirs}, ${mine})`).rejects.toMatchObject({
+            code: "P0002",
+          });
+        });
+        expect(await sql`select 1 from tags where id = ${theirs}`).toHaveLength(1);
+      });
+
+      it("削除：曲は残り、検索条件・登録時タグから外れる。他人のタグは消せない", async () => {
+        const t = (
+          await sql`insert into tags (user_id, name, normalized_name) values (${U1}, 'del', 'del') returning id`
+        )[0].id;
+        const keep = (
+          await sql`insert into tags (user_id, name, normalized_name) values (${U1}, 'keep', 'keep') returning id`
+        )[0].id;
+        const song = (
+          await sql`insert into songs (user_id, title, artist) values (${U1}, 'd1', 'a') returning id`
+        )[0].id;
+        await sql`insert into song_tags (song_id, tag_id, user_id) values (${song}, ${t}, ${U1}), (${song}, ${keep}, ${U1})`;
+        await sql`update user_settings set default_tag_ids = ${[t, keep]}::uuid[] where user_id = ${U1}`;
+        await sql`insert into saved_searches (user_id, name, conditions) values (${U1}, 'q2', ${j({ include: [t, keep], exclude: [t] })})`;
+        const theirs = (await sql`select id from tags where user_id = ${U2} limit 1`)[0].id;
+
+        await as(U1, async (tx) => {
+          await tx`select delete_tag(${t})`;
+          expect(await tx`select 1 from songs where id = ${song}`).toHaveLength(1);
+          const tags =
+            await tx`select t.name from song_tags st join tags t on t.id = st.tag_id where st.song_id = ${song}`;
+          expect(tags.map((x) => x.name)).toEqual(["keep"]);
+          const [st] = await tx`select default_tag_ids from user_settings where user_id = ${U1}`;
+          expect(st.default_tag_ids).toEqual([keep]);
+          const [ss] = await tx`select conditions from saved_searches where name = 'q2'`;
+          expect(ss.conditions).toEqual({ include: [keep], exclude: [] });
+        });
+        await as(U1, async (tx) => {
+          await expect(tx`select delete_tag(${theirs})`).rejects.toMatchObject({ code: "P0002" });
+        });
+      });
+
+      it("並べ替え：渡した順に sort_order が付き、他人の行は動かない", async () => {
+        const g = async (user: string, name: string) =>
+          (
+            await sql`insert into tag_groups (user_id, name, sort_order) values (${user}, ${name}, 0) returning id`
+          )[0].id as string;
+        const [a, b, c] = [await g(U1, "ga"), await g(U1, "gb"), await g(U1, "gc")];
+        const theirs = await g(U2, "gz");
+        await as(U1, async (tx) => {
+          await tx`select reorder_tag_groups(${[c, a, b, theirs]}::uuid[])`;
+          const rows =
+            await tx`select name from tag_groups where name in ('ga','gb','gc') order by sort_order`;
+          expect(rows.map((r) => r.name)).toEqual(["gc", "ga", "gb"]);
+        });
+        const [z] = await sql`select sort_order from tag_groups where id = ${theirs}`;
+        expect(z.sort_order).toBe(0);
+      });
+    });
+
+    describe("エクスポート → インポート", () => {
+      // 比較用：ID・時刻など環境で変わる値を除く
+      const comparable = (d: Record<string, unknown>) => {
+        const { exported_at: _t, ...rest } = d;
+        void _t;
+        return JSON.parse(JSON.stringify(rest));
+      };
+
+      it("エクスポートしたJSONを別アカウントにインポートすると同じ内容になる", async () => {
+        // U2 にひととおりのデータを作る
+        await sql`insert into tag_groups (user_id, name, sort_order) values (${U2}, '独自グループ', 9) on conflict do nothing`;
+        const grp = (
+          await sql`select id from tag_groups where user_id = ${U2} and name = '独自グループ'`
+        )[0].id;
+        const tFav = await tagId(U2, "十八番");
+        const tCustom = (
+          await sql`insert into tags (user_id, group_id, name, normalized_name, sort_order) values (${U2}, ${grp}, 'Ｊ-ＰＯＰ', 'j-pop', 0) returning id`
+        )[0].id;
+        await sql`insert into tag_aliases (tag_id, user_id, alias, normalized_alias) values (${tFav}, ${U2}, 'おはこ', 'おはこ')`;
+        const fNum = await field(U2, "最高点2", "number", { show: true, order: 1 });
+        const fSel = await field(U2, "機種2", "select", { options: ["DAM", "JOYSOUND"], order: 2 });
+        const fMulti = await field(U2, "得意な場面", "multi_select", {
+          options: ["盛り上げ", "締め"],
+          hidden: true,
+          order: 3,
+        });
+        const fChk = await field(U2, "歌詞覚えた", "checkbox", { order: 4 });
+        const fDate = await field(U2, "初めて歌った日", "date", { order: 5 });
+        const fTxt = await field(U2, "コメント", "text", { order: 6 });
+
+        const [s1] =
+          await sql`insert into songs (user_id, apple_track_id, title, artist, album, genre, artwork_url, duration_ms, release_date, apple_url, source_service, source_url, song_key, memo, created_at)
+          values (${U2}, 4242, '夜に駆ける', 'YOASOBI', 'THE BOOK', 'J-Pop', 'https://example.com/a.jpg', 261000, '2019-12-15', 'https://music.apple.com/jp/song/4242', 'apple_music', 'https://music.apple.com/jp/song/4242', -2, 'サビ前で息継ぎ', '2026-02-01T00:00:00Z') returning id`;
+        const [s2] =
+          await sql`insert into songs (user_id, title, artist, source_service, created_at) values (${U2}, '手入力の曲', 'x', 'manual', '2026-02-02T00:00:00Z') returning id`;
+        const [s3] =
+          await sql`insert into songs (user_id, title, artist, source_service, created_at) values (${U2}, '手入力の曲', 'x', 'manual', '2026-02-03T00:00:00Z') returning id`;
+        void s3;
+        for (const t of [tFav, tCustom])
+          await sql`insert into song_tags (song_id, tag_id, user_id) values (${s1.id}, ${t}, ${U2})`;
+        await sql`insert into song_field_values (song_id, field_id, user_id, value) values
+          (${s1.id}, ${fNum}, ${U2}, '92'::jsonb), (${s1.id}, ${fSel}, ${U2}, '"DAM"'::jsonb),
+          (${s1.id}, ${fMulti}, ${U2}, '["盛り上げ","締め"]'::jsonb), (${s1.id}, ${fChk}, ${U2}, 'true'::jsonb),
+          (${s1.id}, ${fDate}, ${U2}, '"2026-01-05"'::jsonb), (${s1.id}, ${fTxt}, ${U2}, '"よい曲"'::jsonb)`;
+        await sql`insert into sing_logs (user_id, song_id, sung_at, ease, note) values
+          (${U2}, ${s1.id}, '2026-03-01', 2, '調子よい'), (${U2}, ${s1.id}, '2026-04-01', null, null), (${U2}, ${s2.id}, '2026-04-02', 5, null)`;
+        await sql`update user_settings set list_sort = 'title_asc', list_columns = '["key"]'::jsonb, default_tag_ids = ${[tFav]}::uuid[] where user_id = ${U2}`;
+
+        const exported = await as(U2, async (tx) => (await tx`select export_data() as d`)[0].d);
+        expect(exported).toMatchObject({ app: "setlistic", version: 1 });
+        expect(exported.songs).toHaveLength(3);
+        expect(JSON.stringify(exported)).not.toContain(U2); // IDは含めない
+
+        const result = await asCommit(
+          U3,
+          async (tx) => (await tx`select import_data(${j(exported)}) as r`)[0].r,
+        );
+        expect(result).toMatchObject({ songs_added: 3, songs_skipped: 0, fields_added: 7 }); // U2 の項目7つ（他のテストで作った1つを含む）
+
+        const again = await as(U3, async (tx) => (await tx`select export_data() as d`)[0].d);
+        expect(comparable(again)).toEqual(comparable(exported));
+
+        // stats はトリガーで再計算されている
+        const [stat] =
+          await sql`select sung_count, last_sung_at::text as last from songs where user_id = ${U3} and apple_track_id = 4242`;
+        expect(stat).toEqual({ sung_count: 2, last: "2026-04-01" });
+        // 別アカウント側にはU2のIDが混ざっていない
+        expect(
+          await sql`select 1 from songs where user_id = ${U3} and title = '手入力の曲'`,
+        ).toHaveLength(2);
+      });
+
+      it("同じJSONを再度インポートしても重複しない（曲は取り込み済み扱い、タグ・項目も増えない）", async () => {
+        const exported = await as(U2, async (tx) => (await tx`select export_data() as d`)[0].d);
+        const [before] =
+          await sql`select (select count(*) from songs where user_id = ${U3})::int as songs, (select count(*) from tags where user_id = ${U3})::int as tags`;
+        const r = await asCommit(
+          U3,
+          async (tx) => (await tx`select import_data(${j(exported)}) as r`)[0].r,
+        );
+        expect(r).toMatchObject({
+          songs_added: 0,
+          songs_skipped: 3,
+          tags_added: 0,
+          fields_added: 0,
+        });
+        const [after] =
+          await sql`select (select count(*) from songs where user_id = ${U3})::int as songs, (select count(*) from tags where user_id = ${U3})::int as tags`;
+        expect(after).toEqual(before);
+      });
+
+      it("既存のデータは消えず、型の合わない項目値は取り込まない", async () => {
+        const payload = {
+          custom_fields: [{ name: "最高点2", field_type: "text" }], // 既存は number。既存を再利用する
+          songs: [{ title: "型違い", artist: "a", fields: { 最高点2: "文字列" } }],
+        };
+        const before = await sql`select count(*)::int as n from songs where user_id = ${U3}`;
+        await asCommit(U3, async (tx) => {
+          await tx`select import_data(${j(payload)})`;
+        });
+        const [v] =
+          await sql`select count(*)::int as n from song_field_values v join songs s on s.id = v.song_id where s.title = '型違い' and s.user_id = ${U3}`;
+        expect(v.n).toBe(0); // number 項目に文字列は入らない
+        const after = await sql`select count(*)::int as n from songs where user_id = ${U3}`;
+        expect(after[0].n).toBe(before[0].n + 1);
+      });
+
+      it("途中で失敗したら全体が取り消される（原子的）", async () => {
+        const before =
+          await sql`select (select count(*) from songs where user_id = ${U1})::int as songs, (select count(*) from tags where user_id = ${U1})::int as tags`;
+        const payload = {
+          tags: [{ name: "インポート途中のタグ" }],
+          songs: [
+            { title: "入るはずの曲", artist: "a" },
+            { artist: "タイトル欠落" }, // title が null で NOT NULL 違反
+          ],
+        };
+        await as(U1, async (tx) => {
+          await expect(tx`select import_data(${j(payload)})`).rejects.toMatchObject({
+            code: "23502",
+          });
+        });
+        const after =
+          await sql`select (select count(*) from songs where user_id = ${U1})::int as songs, (select count(*) from tags where user_id = ${U1})::int as tags`;
+        expect(after).toEqual(before);
+      });
+
+      it("anon は実行できない", async () => {
+        await as(null, (tx) => rejects(tx`select export_data()`));
+        await as(null, (tx) => rejects(tx`select import_data('{}'::jsonb)`));
+      });
+    });
+
+    describe("アカウント削除", () => {
+      it("delete_my_account で本人のデータが全テーブルから消え、他人のデータは残る", async () => {
+        const V = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+        await mkUser(V, "v@test.invalid");
+        const f = await field(V, "削除テスト項目", "text");
+        const [s] =
+          await sql`insert into songs (user_id, title, artist) values (${V}, 'bye', 'a') returning id`;
+        const t = await tagId(V, "十八番");
+        await sql`insert into song_tags (song_id, tag_id, user_id) values (${s.id}, ${t}, ${V})`;
+        await sql`insert into song_field_values (song_id, field_id, user_id, value) values (${s.id}, ${f}, ${V}, '"x"')`;
+        await sql`insert into sing_logs (user_id, song_id) values (${V}, ${s.id})`;
+        await sql`insert into saved_searches (user_id, name, conditions) values (${V}, 'q', '{}')`;
+        await sql`insert into tag_aliases (tag_id, user_id, alias, normalized_alias) values (${t}, ${V}, 'a', 'a')`;
+        const others = await sql`select count(*)::int as n from songs where user_id <> ${V}`;
+
+        await asCommit(V, async (tx) => {
+          await tx`select delete_my_account()`;
+        });
+
+        expect(await sql`select 1 from auth.users where id = ${V}`).toHaveLength(0);
+        for (const table of USER_TABLES) {
+          const [{ n }] =
+            await sql`select count(*)::int as n from ${sql(table)} where user_id = ${V}`;
+          expect(n, table).toBe(0);
+        }
+        const after = await sql`select count(*)::int as n from songs where user_id <> ${V}`;
+        expect(after[0].n).toBe(others[0].n);
+      });
+
+      it("他人のアカウントは消せない（呼び出し元の行だけ）／未ログインは実行不可", async () => {
+        const before = await sql`select count(*)::int as n from auth.users`;
+        await as(null, (tx) => rejects(tx`select delete_my_account()`));
+        const after = await sql`select count(*)::int as n from auth.users`;
+        expect(after[0].n).toBe(before[0].n);
+      });
     });
   });
 

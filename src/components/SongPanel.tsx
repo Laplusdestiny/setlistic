@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadSingStateAction } from "@/app/(app)/songs/actions";
+import type { CustomField } from "@/lib/custom-fields";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
 import { SongDetail } from "./SongDetail";
@@ -10,6 +11,7 @@ type Props = {
   song: SongRow;
   groups: GroupOption[];
   allTags: TagOption[];
+  fields: CustomField[];
   today: string;
   onDeleted: () => void;
 };
@@ -20,7 +22,7 @@ export function SongPanel(props: Props) {
   return <Loaded key={props.song.id} {...props} />;
 }
 
-function Loaded({ song, groups, allTags, today, onDeleted }: Props) {
+function Loaded({ song, groups, allTags, fields, today, onDeleted }: Props) {
   const [sing, setSing] = useState<SingState | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -46,6 +48,7 @@ function Loaded({ song, groups, allTags, today, onDeleted }: Props) {
       song={song}
       groups={groups}
       allTags={allTags}
+      fields={fields}
       initialSing={sing}
       today={today}
       onDeleted={onDeleted}

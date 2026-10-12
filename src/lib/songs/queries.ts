@@ -1,7 +1,8 @@
 import type { createClient } from "@/lib/supabase/server";
 import { toRpcParams, type SearchConditions } from "../search/conditions";
 import { toSavedSearch, type SavedSearch } from "../search/saved";
-import type { SortKey } from "./sort";
+import { FIELD_TYPES, type CustomField } from "../custom-fields";
+import { parseSort, type SortKey } from "./sort";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -15,6 +16,8 @@ export type SongRow = {
   lastSungAt: string | null;
   sungCount: number;
   tags: { id: string; name: string }[];
+  /** カスタム項目の値（項目ID → 値） */
+  fields: Record<string, unknown>;
 };
 
 export type SingLogRow = { id: string; sungAt: string; ease: number | null; note: string | null };
@@ -31,10 +34,11 @@ type RawSong = {
   last_sung_at: string | null;
   sung_count: number;
   tags: { tag: { id: string; name: string } | null }[] | null;
+  field_values: { field_id: string; value: unknown }[] | null;
 };
 
 const COLUMNS =
-  "id, title, artist, song_key, memo, apple_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name))";
+  "id, title, artist, song_key, memo, apple_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name)), field_values:song_field_values(field_id, value)";
 
 function toSongRow(r: RawSong): SongRow {
   return {
@@ -49,6 +53,7 @@ function toSongRow(r: RawSong): SongRow {
     tags: (r.tags ?? [])
       .flatMap((t) => (t.tag ? [t.tag] : []))
       .sort((a, b) => a.name.localeCompare(b.name, "ja")),
+    fields: Object.fromEntries((r.field_values ?? []).map((v) => [v.field_id, v.value])),
   };
 }
 
@@ -63,6 +68,7 @@ type SearchRow = {
   last_sung_at: string | null;
   sung_count: number;
   tags: { id: string; name: string }[] | null;
+  fields: Record<string, unknown> | null;
 };
 
 /**
@@ -88,6 +94,7 @@ export async function searchSongs(
     lastSungAt: r.last_sung_at,
     sungCount: r.sung_count,
     tags: r.tags ?? [],
+    fields: r.fields ?? {},
   }));
 }
 
@@ -143,4 +150,56 @@ export async function listTagsWithCount(supabase: Client): Promise<TagWithCount[
     groupId: t.group_id,
     count: (t.uses as { count: number }[] | null)?.[0]?.count ?? 0,
   }));
+}
+
+type FieldRow = {
+  id: string;
+  name: string;
+  field_type: string;
+  options: unknown;
+  sort_order: number;
+  show_in_list: boolean;
+  hidden: boolean;
+};
+
+export async function listCustomFields(supabase: Client): Promise<CustomField[]> {
+  const { data } = await supabase
+    .from("custom_fields")
+    .select("id, name, field_type, options, sort_order, show_in_list, hidden")
+    .order("sort_order")
+    .order("name");
+  return ((data ?? []) as FieldRow[]).flatMap((f) => {
+    const type = FIELD_TYPES.find((t) => t === f.field_type);
+    if (!type) return [];
+    return [
+      {
+        id: f.id,
+        name: f.name,
+        type,
+        options: Array.isArray(f.options)
+          ? f.options.filter((o): o is string => typeof o === "string")
+          : [],
+        sortOrder: f.sort_order,
+        showInList: f.show_in_list,
+        hidden: f.hidden,
+      },
+    ];
+  });
+}
+
+export type UserSettings = { listSort: SortKey; listColumns: string[]; defaultTagIds: string[] };
+
+export async function getUserSettings(supabase: Client, userId: string): Promise<UserSettings> {
+  const { data } = await supabase
+    .from("user_settings")
+    .select("list_sort, list_columns, default_tag_ids")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return {
+    listSort: parseSort(data?.list_sort),
+    listColumns: Array.isArray(data?.list_columns)
+      ? (data.list_columns as unknown[]).filter((c): c is string => typeof c === "string")
+      : ["key", "tags"],
+    defaultTagIds: data?.default_tag_ids ?? [],
+  };
 }

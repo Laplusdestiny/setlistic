@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { signInWithGoogle } from "./actions";
 import styles from "./login.module.css";
@@ -11,11 +12,16 @@ const ERRORS: Record<string, string> = {
 };
 
 async function LoginForm({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  const { error, next } = await searchParams;
+  const { error, next, deleted } = await searchParams;
   const message = error ? (ERRORS[error] ?? ERRORS.failed) : null;
 
   return (
     <form action={signInWithGoogle} className={styles.form}>
+      {deleted === "1" && (
+        <p role="status" className={styles.notice}>
+          アカウントと、すべてのデータを削除しました。
+        </p>
+      )}
       {message && (
         <p role="alert" className={styles.error}>
           {message}
@@ -52,7 +58,8 @@ export default function LoginPage({
       </Suspense>
 
       <p className={styles.terms}>
-        続行すると利用規約とプライバシーポリシーに同意したものとみなされます
+        続行すると <Link href="/terms">利用規約</Link> と{" "}
+        <Link href="/privacy">プライバシーポリシー</Link> に同意したものとみなされます
       </p>
     </main>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { listCustomFields } from "@/lib/songs/queries";
 import { requireUser } from "@/lib/supabase/user";
 import { AddSong } from "./AddSong";
 import type { GroupOption, TagOption } from "./types";
@@ -20,10 +21,11 @@ async function AddLoader({ searchParams }: { searchParams: Promise<{ url?: strin
   const { url } = await searchParams;
   const { supabase, userId } = await requireUser();
 
-  const [groups, tags, settings] = await Promise.all([
+  const [groups, tags, settings, fields] = await Promise.all([
     supabase.from("tag_groups").select("id, name").order("sort_order"),
     supabase.from("tags").select("id, name, group_id").order("sort_order"),
     supabase.from("user_settings").select("default_tag_ids").eq("user_id", userId).maybeSingle(),
+    listCustomFields(supabase),
   ]);
 
   const groupOptions: GroupOption[] = (groups.data ?? []).map((g) => ({ id: g.id, name: g.name }));
@@ -39,6 +41,7 @@ async function AddLoader({ searchParams }: { searchParams: Promise<{ url?: strin
       groups={groupOptions}
       tags={tagOptions}
       defaultTagIds={settings.data?.default_tag_ids ?? []}
+      fields={fields}
     />
   );
 }

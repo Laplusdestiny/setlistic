@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import styles from "./sidebar.module.css";
 
-// タグ管理・設定は Phase 5 で追加する
-const ITEMS = [{ href: "/", label: "セトリ（曲一覧）" }] as const;
+const ITEMS = [
+  { href: "/", label: "セトリ（曲一覧）" },
+  { href: "/tags", label: "タグ管理" },
+  { href: "/settings", label: "設定" },
+] as const;
 
 /** PC 用の左サイドバー（スマホでは非表示。スマホはタブバーを使う） */
 export function Sidebar() {
@@ -32,7 +35,7 @@ export function Sidebar() {
       {ITEMS.map((item) => {
         const active =
           item.href === "/"
-            ? pathname === "/" || pathname.startsWith("/songs")
+            ? pathname === "/" || pathname.startsWith("/songs") || pathname.startsWith("/search")
             : pathname.startsWith(item.href);
         return (
           <Link

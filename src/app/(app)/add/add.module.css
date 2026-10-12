@@ -596,3 +596,10 @@
     display: flex;
   }
 }
+
+.fieldsBox {
+  padding: 14px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-search);
+}

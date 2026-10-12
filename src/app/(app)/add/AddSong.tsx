@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { visibleFields, type CustomField } from "@/lib/custom-fields";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
 import type { SongDraft } from "@/lib/songs/types";
 import { normalizeTagName } from "@/lib/tags/normalize";
@@ -10,6 +11,7 @@ import { lookupFromUrl, saveSongAction } from "./actions";
 import { BulkAdd } from "./BulkAdd";
 import { lookupErrorMessage } from "./messages";
 import { SearchPanel } from "./SearchPanel";
+import { FieldInputs } from "@/components/FieldInputs";
 import { KeyStepper } from "@/components/KeyStepper";
 import { TagPicker } from "@/components/TagPicker";
 import type { NewTag } from "@/lib/tags/types";
@@ -21,6 +23,7 @@ type Props = {
   groups: GroupOption[];
   tags: TagOption[];
   defaultTagIds: string[];
+  fields: CustomField[];
 };
 
 type Source = "url" | "search" | "manual";
@@ -39,7 +42,7 @@ const BLANK: SongDraft = {
   sourceUrl: null,
 };
 
-export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
+export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [panel, setPanel] = useState<"url" | "search">("url");
@@ -58,6 +61,8 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
   const [newTags, setNewTags] = useState<NewTag[]>([]);
   const [songKey, setSongKey] = useState<number>(0);
   const [memo, setMemo] = useState("");
+  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
+  const shownFields = visibleFields(fields);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -75,6 +80,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
     setMessage(null);
     setSongKey(0);
     setMemo("");
+    setFieldValues({});
 
     // 登録時に付けるタグ ＋ Apple Music のジャンル（提案。外せる）
     const ids = new Set(defaultTagIds);
@@ -115,6 +121,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
     setNewTags([]);
     setSongKey(0);
     setMemo("");
+    setFieldValues({});
     setLookupError(null);
     setSaveError(null);
     setMessage(note);
@@ -128,6 +135,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
         draft,
         songKey,
         memo,
+        fields: fieldValues,
         tagIds: [...selected],
         newTags,
       });
@@ -441,6 +449,22 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
                         />
                       </div>
                     </div>
+                    {shownFields.length > 0 && (
+                      <div className={styles.fieldsBox}>
+                        <FieldInputs
+                          fields={shownFields}
+                          values={fieldValues}
+                          onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
+                        />
+                      </div>
+                    )}
+                    <Link
+                      href="/settings#fields"
+                      className={styles.linkButton}
+                      style={{ alignSelf: "flex-start" }}
+                    >
+                      ＋ 項目を追加・編集（設定）
+                    </Link>
                   </section>
 
                   {saveError && (

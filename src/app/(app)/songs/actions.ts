@@ -1,7 +1,8 @@
 "use server";
 
+import { sanitizeFieldValues } from "@/lib/custom-fields";
 import { todayJst } from "@/lib/format";
-import { getSingState, type SingState } from "@/lib/songs/queries";
+import { getSingState, listCustomFields, type SingState } from "@/lib/songs/queries";
 import { toSingLogPayload } from "@/lib/songs/sing-log";
 import { toUpdatePayload, UUID_PATTERN } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
@@ -14,11 +15,15 @@ export async function updateSongAction(raw: unknown): Promise<{ status: "ok" } |
   const payload = toUpdatePayload(raw);
   if (!payload.ok) return { status: "error", message: payload.error };
 
+  const defs = await listCustomFields(supabase);
+  const fields = sanitizeFieldValues(defs, (raw as { fields?: unknown }).fields);
+
   const { error } = await supabase.rpc("update_song", {
     p_id: payload.value.id,
     p_song: payload.value.song,
     p_tag_ids: payload.value.tagIds,
     p_new_tags: payload.value.newTags,
+    p_fields: fields,
   });
   if (error) {
     return error.code === "P0002" ? { status: "error", message: "曲が見つかりません。" } : FAIL;
