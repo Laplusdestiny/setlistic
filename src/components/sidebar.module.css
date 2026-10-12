@@ -62,8 +62,11 @@
     color: var(--color-on-primary);
   }
 
+  /* 画面の最下部ではなく、メニューのすぐ下に置く（下端は見落としやすい） */
   .logout {
-    margin-top: auto;
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-divider);
   }
 
   .logout button {

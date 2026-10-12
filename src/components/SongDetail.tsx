@@ -19,8 +19,6 @@ import styles from "./song-detail.module.css";
 
 type Props = {
   song: SongRow;
-  /** 「SET LIST No.01」の番号。分からなければ省略 */
-  number?: string;
   groups: GroupOption[];
   allTags: TagOption[];
   initialSing: SingState;
@@ -32,15 +30,7 @@ type Props = {
 
 const EASE_LABELS = ["余裕", "歌いやすい", "ふつう", "やや辛い", "辛かった"];
 
-export function SongDetail({
-  song,
-  number,
-  groups,
-  allTags,
-  initialSing,
-  today,
-  onDeleted,
-}: Props) {
+export function SongDetail({ song, groups, allTags, initialSing, today, onDeleted }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
@@ -230,7 +220,7 @@ export function SongDetail({
   return (
     <div className={styles.root}>
       <div className={styles.head}>
-        <span className={styles.pill}>SET LIST{number ? ` No.${number}` : ""}</span>
+        <span className={styles.pill}>SET LIST</span>
         <h1 className={styles.title}>{song.title}</h1>
         <p className={styles.artist}>{song.artist}</p>
         {song.tags.length > 0 && (

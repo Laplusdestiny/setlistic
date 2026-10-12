@@ -21,7 +21,6 @@ type Props = {
   groups: GroupOption[];
   tags: TagOption[];
   defaultTagIds: string[];
-  nextNumber: number;
 };
 
 type Source = "url" | "search" | "manual";
@@ -40,7 +39,7 @@ const BLANK: SongDraft = {
   sourceUrl: null,
 };
 
-export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }: Props) {
+export function AddSong({ initialUrl, groups, tags, defaultTagIds }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [panel, setPanel] = useState<"url" | "search">("url");
@@ -149,7 +148,6 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
   const canSave =
     Boolean(draft && draft.title.trim() && draft.artist.trim() && !duplicate) && !pending;
   const step = draft ? "confirm" : "input";
-  const number = String(nextNumber).padStart(2, "0");
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -354,9 +352,6 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, nextNumber }:
               ) : (
                 <>
                   <div className={`${styles.card} ${styles.preview}`}>
-                    <span className={styles.number} aria-hidden="true">
-                      {number}
-                    </span>
                     <div className={styles.previewBody}>
                       {source !== "manual" && (
                         <span className={styles.fetched}>

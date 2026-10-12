@@ -199,10 +199,10 @@
 
 .row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "no main key"
-    "no tags key";
+    "main key"
+    "tags key";
   column-gap: 12px;
   row-gap: 4px;
   align-items: start;
@@ -220,14 +220,6 @@
 .row:hover {
   color: var(--color-ink);
   background: var(--color-selected-row);
-}
-
-.no {
-  grid-area: no;
-  padding-top: 2px;
-  font-family: var(--font-hand);
-  font-size: 20px;
-  color: var(--color-primary);
 }
 
 .songMain {
@@ -315,14 +307,15 @@
 }
 
 /* ───────── スマホのタブバー ───────── */
+/* 左・中央（＋）・右の3列。＋は常に画面中央。検索・タグ・設定は左右の列に足す */
 .tabbar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 5;
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
   background: var(--color-paper);
@@ -339,6 +332,10 @@
   font-size: 11px;
   color: var(--color-ink-muted);
   text-decoration: none;
+}
+
+.tabbar a:first-child {
+  justify-self: center;
 }
 
 .tabbar a[aria-current="page"] {
@@ -394,8 +391,8 @@
     min-width: 0;
   }
   .row {
-    grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 72px;
-    grid-template-areas: "no main tags key";
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 72px;
+    grid-template-areas: "main tags key";
     align-items: center;
   }
   .key {

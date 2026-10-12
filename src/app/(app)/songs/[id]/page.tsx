@@ -10,24 +10,17 @@ import { SongPageView } from "./SongPageView";
 export const metadata: Metadata = { title: "曲の詳細" };
 
 type Params = Promise<{ id: string }>;
-type Search = Promise<{ no?: string }>;
 
-export default function SongPage({
-  params,
-  searchParams,
-}: {
-  params: Params;
-  searchParams: Search;
-}) {
+export default function SongPage({ params }: { params: Params }) {
   return (
     <Suspense fallback={<div style={{ minHeight: "60dvh" }} aria-busy="true" />}>
-      <SongLoader params={params} searchParams={searchParams} />
+      <SongLoader params={params} />
     </Suspense>
   );
 }
 
-async function SongLoader({ params, searchParams }: { params: Params; searchParams: Search }) {
-  const [{ id }, { no }] = await Promise.all([params, searchParams]);
+async function SongLoader({ params }: { params: Params }) {
+  const { id } = await params;
   if (!UUID_PATTERN.test(id)) notFound();
 
   const { supabase } = await requireUser();
@@ -43,8 +36,6 @@ async function SongLoader({ params, searchParams }: { params: Params; searchPara
   return (
     <SongPageView
       song={song}
-      // 一覧での位置（?no=）。数字2桁だけ受け付ける
-      number={typeof no === "string" && /^\d{1,4}$/.test(no) ? no.padStart(2, "0") : undefined}
       sing={sing}
       today={todayJst()}
       allTags={tags.map(({ id, name, groupId }) => ({ id, name, groupId }))}

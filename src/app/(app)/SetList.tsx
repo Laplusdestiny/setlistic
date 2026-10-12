@@ -37,11 +37,7 @@ function href(sort: SortKey, defaultSort: SortKey, tagId: string | null) {
 export function SetList({ songs, total, sort, defaultSort, tagId, tags, groups, today }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE);
-  const selectedIndex = Math.max(
-    0,
-    songs.findIndex((s) => s.id === selectedId),
-  );
-  const selected = songs[selectedIndex];
+  const selected = songs.find((s) => s.id === selectedId) ?? songs[0];
 
   const chips = [...tags]
     .filter((t) => t.count > 0 || t.id === tagId)
@@ -167,20 +163,16 @@ export function SetList({ songs, total, sort, defaultSort, tagId, tags, groups, 
             </div>
           ) : (
             <ol className={styles.list}>
-              {songs.map((s, i) => {
-                const no = String(i + 1).padStart(2, "0");
+              {songs.map((s) => {
                 return (
                   <li key={s.id}>
                     <Link
-                      href={`/songs/${s.id}?no=${i + 1}`}
+                      href={`/songs/${s.id}`}
                       className={styles.row}
                       data-selected={s.id === selected?.id ? "" : undefined}
                       aria-current={s.id === selected?.id ? "true" : undefined}
                       onClick={(e) => onRowClick(e, s.id)}
                     >
-                      <span className={styles.no} aria-hidden="true">
-                        {no}
-                      </span>
                       <span className={styles.songMain}>
                         <span className={styles.songTitle}>{s.title}</span>
                         <span className={styles.songArtist}>{s.artist}</span>
@@ -207,7 +199,6 @@ export function SetList({ songs, total, sort, defaultSort, tagId, tags, groups, 
           {!wide ? null : selected ? (
             <SongPanel
               song={selected}
-              number={String(selectedIndex + 1).padStart(2, "0")}
               groups={groups}
               allTags={tags.map(({ id, name, groupId }) => ({ id, name, groupId }))}
               today={today}

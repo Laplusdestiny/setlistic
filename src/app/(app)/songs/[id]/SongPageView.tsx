@@ -9,7 +9,6 @@ import styles from "./song-page.module.css";
 
 type Props = {
   song: SongRow;
-  number?: string;
   sing: SingState;
   today: string;
   allTags: TagOption[];
@@ -17,7 +16,7 @@ type Props = {
 };
 
 /** スマホ向けの曲詳細ページ。PC では一覧の右パネルで同じ表示をする */
-export function SongPageView({ song, number, sing, today, allTags, groups }: Props) {
+export function SongPageView({ song, sing, today, allTags, groups }: Props) {
   const router = useRouter();
   return (
     <div className={styles.page}>
@@ -41,7 +40,6 @@ export function SongPageView({ song, number, sing, today, allTags, groups }: Pro
         <SongDetail
           key={song.id}
           song={song}
-          number={number}
           groups={groups}
           allTags={allTags}
           initialSing={sing}

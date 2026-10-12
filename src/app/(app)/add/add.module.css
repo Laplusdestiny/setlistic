@@ -284,14 +284,6 @@
   gap: 14px;
 }
 
-.number {
-  font-family: var(--font-hand);
-  font-size: 26px;
-  color: var(--color-primary);
-  width: 36px;
-  flex: none;
-}
-
 .previewBody {
   display: flex;
   flex-direction: column;

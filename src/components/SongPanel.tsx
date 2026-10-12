@@ -8,7 +8,6 @@ import { SongDetail } from "./SongDetail";
 
 type Props = {
   song: SongRow;
-  number: string;
   groups: GroupOption[];
   allTags: TagOption[];
   today: string;
@@ -21,7 +20,7 @@ export function SongPanel(props: Props) {
   return <Loaded key={props.song.id} {...props} />;
 }
 
-function Loaded({ song, number, groups, allTags, today, onDeleted }: Props) {
+function Loaded({ song, groups, allTags, today, onDeleted }: Props) {
   const [sing, setSing] = useState<SingState | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -45,7 +44,6 @@ function Loaded({ song, number, groups, allTags, today, onDeleted }: Props) {
   return (
     <SongDetail
       song={song}
-      number={number}
       groups={groups}
       allTags={allTags}
       initialSing={sing}
