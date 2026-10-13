@@ -30,17 +30,17 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
   const first = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : null);
   const { supabase, userId } = await requireUser();
 
-  // 並び順の既定・一覧に出す項目は設定（user_settings）。URL の ?sort= を優先する
-  const settings = await getUserSettings(supabase, userId);
-  const defaultSort = settings.listSort;
-
-  const [tags, groups, saved, fields, totalRes] = await Promise.all([
+  // 並び順の既定・一覧に出す項目は設定（user_settings）。URL の ?sort= を優先する。
+  // 設定も他と同時に取り、Supabase への往復を減らす
+  const [settings, tags, groups, saved, fields, totalRes] = await Promise.all([
+    getUserSettings(supabase, userId),
     listTagsWithCount(supabase),
     supabase.from("tag_groups").select("id, name").order("sort_order"),
     listSavedSearches(supabase),
     listCustomFields(supabase),
     supabase.from("songs").select("id", { count: "exact", head: true }),
   ]);
+  const defaultSort = settings.listSort;
 
   // 削除・統合で存在しなくなったタグ（古いURL・履歴）は条件から外す（AND が常に空になるのを防ぐ）
   const parsed = conditionsFromParams({ get: first });
