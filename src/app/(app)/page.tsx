@@ -10,8 +10,8 @@ import {
   searchSongs,
 } from "@/lib/songs/queries";
 import { requireUser } from "@/lib/supabase/user";
+import { HomeSkeleton } from "./HomeSkeleton";
 import { SetList } from "./SetList";
-import styles from "./home.module.css";
 
 export const metadata: Metadata = { title: "セトリ" };
 
@@ -19,7 +19,7 @@ type Search = Promise<Record<string, string | string[] | undefined>>;
 
 export default function HomePage({ searchParams }: { searchParams: Search }) {
   return (
-    <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
+    <Suspense fallback={<HomeSkeleton />}>
       <HomeLoader searchParams={searchParams} />
     </Suspense>
   );

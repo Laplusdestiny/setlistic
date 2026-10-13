@@ -26,7 +26,7 @@ import { saveSearchAction } from "@/app/(app)/search/actions";
 import { loadSingStateAction } from "@/app/(app)/songs/actions";
 import { SavedSearchList } from "./SavedSearchList";
 import { SaveSearchForm } from "./SaveSearchForm";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, SidebarSkeleton } from "./Sidebar";
 import { SongPanel } from "./SongPanel";
 import { TagPicker } from "./TagPicker";
 
@@ -203,6 +203,12 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(current()).toEqual(expected);
     expect(screen.getByRole("button", { name: "ログアウト" })).toBeInTheDocument();
+  });
+
+  it("読み込み中の骨組みは読み上げず、リンクも持たない", () => {
+    const { container } = render(<SidebarSkeleton />);
+    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });
 

@@ -87,3 +87,20 @@
     background: var(--color-selected-row);
   }
 }
+
+/* 読み込み中（SidebarSkeleton）の骨組み。色はセトリの骨組み（skeleton.module.css）と合わせる */
+@media (min-width: 900px) {
+  .bone {
+    display: block;
+    height: 14px;
+    margin: 15px 12px;
+    border-radius: 6px;
+    background: #e2dbcb;
+  }
+
+  .boneLogo {
+    width: 60%;
+    height: 22px;
+    margin: 0 10px 22px;
+  }
+}
