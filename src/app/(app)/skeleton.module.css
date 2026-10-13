@@ -1,0 +1,173 @@
+/* セトリの読み込み中の表示（HomeSkeleton）。見た目は home.module.css の部品をそのまま使い、
+   ここではグレーのバーと、最初に重ねるアイコンの層だけを定義する */
+.root {
+  position: relative;
+  min-height: 100dvh;
+}
+
+.search span {
+  font-size: 16px;
+}
+
+/* ───────── 骨組みのバー ───────── */
+.bar {
+  display: block;
+  border-radius: 6px;
+  background: #e2dbcb;
+  animation: pulse 1.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i, 0) * 0.1s);
+}
+
+.chip {
+  flex: none;
+  height: 44px;
+  border-radius: var(--radius-chip);
+}
+
+.count {
+  width: 72px;
+  height: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.num {
+  flex: none;
+  font-family: var(--font-hand);
+  font-size: 14px;
+  color: var(--color-ink-faint);
+  opacity: 0.6;
+}
+
+.lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  width: 60%;
+  height: 14px;
+}
+
+.artist {
+  width: 36%;
+  height: 10px;
+}
+
+.row:nth-child(even) .title {
+  width: 48%;
+}
+
+.row:nth-child(3n) .artist {
+  width: 28%;
+}
+
+/* ───────── 最初に重ねるアイコンの層 ───────── */
+/* 0.8秒後にフェードアウトして消える。タップは下（タブバーなど）に通す */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--color-bg);
+  pointer-events: none;
+  animation: overlay-out 0.35s ease 0.8s forwards;
+}
+
+.icon {
+  display: block;
+  width: 112px;
+  height: 112px;
+  border-radius: 26px;
+  transform-origin: 50% 85%;
+  animation: sway 1.6s ease-in-out infinite alternate;
+}
+
+.dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1f2a44;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes sway {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlay-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* 動きを減らす設定では、揺れ・点滅・明滅・フェードを止める。アイコンの層は時間が来たら即座に消す */
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .icon,
+  .dots span {
+    animation: none;
+  }
+  .dots span {
+    opacity: 0.6;
+  }
+  .overlay {
+    animation-duration: 0.01s;
+  }
+}

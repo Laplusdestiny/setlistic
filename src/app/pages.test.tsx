@@ -74,6 +74,13 @@ const tagRows = {
 };
 
 describe("HomePage", () => {
+  it("読み込み中はセトリの骨組みを出す", () => {
+    const page = HomePage({ searchParams: params({}) });
+    const html = renderToStaticMarkup((page.props as { fallback: ReactElement }).fallback);
+    expect(html).toContain('role="status"');
+    expect(html).toContain("曲リストを読み込み中");
+  });
+
   it("URL の条件から、存在しないタグを外して一覧を描く", async () => {
     setup({
       tables: {

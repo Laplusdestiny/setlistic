@@ -61,3 +61,15 @@ export function Sidebar() {
     </nav>
   );
 }
+
+/** サイドバーの読み込み中の表示。同じ位置・同じトーンで骨組みだけを出す */
+export function SidebarSkeleton() {
+  return (
+    <div className={styles.sidebar} aria-hidden="true">
+      <span className={`${styles.bone} ${styles.boneLogo}`} />
+      {ITEMS.map((item) => (
+        <span key={item.href} className={styles.bone} />
+      ))}
+    </div>
+  );
+}
