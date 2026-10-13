@@ -73,6 +73,18 @@
   color: var(--color-ink);
 }
 
+/* iOS Safari の日付入力は標準の見た目と固有の最小幅を持ち、width: 100% を無視して親からはみ出す（Issue #22） */
+.input[type="date"] {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 標準の見た目を外すと iOS では値が中央寄せになるので、ほかの入力欄に合わせて左寄せにする */
+.input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .textarea {
   padding: 10px 12px;
   resize: vertical;
