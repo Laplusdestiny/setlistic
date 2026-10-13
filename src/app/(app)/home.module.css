@@ -24,7 +24,11 @@
 }
 
 /* ───────── ヘッダー ───────── */
+/* フェードイン（.enter）の transform で各要素が別々の重なりになり、
+   後ろにあるタグのチップが並び替えメニューの上に来てしまうので、ヘッダーを前に出す */
 .header {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

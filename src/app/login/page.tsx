@@ -53,7 +53,11 @@ export default function LoginPage({
         <p className={styles.tagline}>歌える曲を、自分だけのセトリに。</p>
         <p className={styles.invite}>
           <strong>招待制</strong>
-          <span>招待された方のGoogleアカウントだけがログインできます。</span>
+          <span>
+            <span className={styles.phrase}>招待された方の</span>
+            <span className={styles.phrase}>Googleアカウントだけが</span>
+            <span className={styles.phrase}>ログインできます。</span>
+          </span>
         </p>
       </div>
 
@@ -62,8 +66,13 @@ export default function LoginPage({
       </Suspense>
 
       <p className={styles.terms}>
-        続行すると <Link href="/terms">利用規約</Link> と{" "}
-        <Link href="/privacy">プライバシーポリシー</Link> に同意したものとみなされます
+        <span className={styles.phrase}>
+          続行すると <Link href="/terms">利用規約</Link> と
+        </span>{" "}
+        <span className={styles.phrase}>
+          <Link href="/privacy">プライバシーポリシー</Link> に
+        </span>
+        <span className={styles.phrase}>同意したものとみなされます</span>
       </p>
     </main>
   );

@@ -128,3 +128,8 @@
   color: var(--color-ink);
   letter-spacing: 0.08em;
 }
+
+/* 日本語の文が単語の途中で折り返さないよう、文節ごとにまとめて折り返す */
+.phrase {
+  display: inline-block;
+}
