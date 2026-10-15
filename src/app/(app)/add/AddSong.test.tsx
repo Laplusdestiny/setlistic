@@ -179,6 +179,28 @@ describe("AddSong: 保存", () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
+  // cacheComponents では画面が Activity で隠されるだけで state が残る。
+  // 次に開いたとき前の曲の確認画面が出ないよう、移動前に入力を空に戻す（Issue #28）
+  it("セトリに追加したあとは入力を空に戻してから移動する", async () => {
+    vi.mocked(saveSongAction).mockResolvedValue({ status: "ok", id: "new" });
+    setup();
+    await fetchFromUrl();
+    await userEvent.type(await screen.findByLabelText("メモ"), "低め");
+    await userEvent.click(screen.getByRole("button", { name: "セトリに追加" }));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
+    expect(screen.getByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
+    expect(screen.getByLabelText("共有URL")).toHaveValue("");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("キャンセルしたときも入力を空に戻す", async () => {
+    setup();
+    await fetchFromUrl();
+    await userEvent.click(await screen.findByRole("link", { name: "キャンセル" }));
+    expect(await screen.findByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
+    expect(screen.getByLabelText("共有URL")).toHaveValue("");
+  });
+
   it("保存して続けて登録すると、入力欄に戻ってメッセージを出す", async () => {
     vi.mocked(saveSongAction).mockResolvedValue({ status: "ok", id: "new" });
     setup();
