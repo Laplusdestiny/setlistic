@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { startTransition, useMemo, useState, useTransition } from "react";
 import { visibleFields, type CustomField } from "@/lib/custom-fields";
 import { quotaFullMessage, quotaStatus, type Quota } from "@/lib/songs/quota";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
@@ -181,6 +181,18 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
     setMessage(note);
   }
 
+  /**
+   * セトリへ戻る。cacheComponents ではこの画面は Activity で隠されるだけで state が残るため、
+   * 入力を空に戻してから移動する（次に開いたとき前の曲の確認画面が出ないように。Issue #28）
+   */
+  function leave() {
+    start(() => {
+      reset(null);
+      router.push("/");
+      router.refresh();
+    });
+  }
+
   function save(andContinue: boolean) {
     if (!draft) return;
     setSaveError(null);
@@ -195,10 +207,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
       });
       if (res.status === "ok") {
         if (andContinue) reset(`「${draft.title}」を追加しました。続けて登録できます。`);
-        else {
-          router.push("/");
-          router.refresh();
-        }
+        else leave();
       } else if (res.status === "limit") {
         setSaveError(quotaFullMessage(quota?.max ?? 0));
       } else if (res.status === "duplicate") {
@@ -546,6 +555,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                 href="/"
                 className={`${styles.secondary} ${styles.onlyWide}`}
                 style={{ textDecoration: "none" }}
+                onClick={() => startTransition(() => reset(null))}
               >
                 キャンセル
               </Link>
