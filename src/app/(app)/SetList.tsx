@@ -14,7 +14,6 @@ import {
   describeConditions,
   EMPTY_CONDITIONS,
   hasConditions,
-  pickRandom,
   type SearchConditions,
 } from "@/lib/search/conditions";
 import { suggestSearchName, type SavedSearch } from "@/lib/search/saved";
@@ -25,6 +24,7 @@ import type { SortKey } from "@/lib/songs/sort";
 import type { GroupOption } from "@/lib/tags/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { HomeTabBar } from "./HomeTabBar";
+import { drawSlot, RandomSlot, type SlotDraw } from "./RandomSlot";
 import { deleteSavedSearchAction } from "./search/actions";
 import styles from "./home.module.css";
 
@@ -153,13 +153,18 @@ export function SetList({
     }
   }, []);
 
+  // ランダム：当選曲を先に決めてから演出のダイアログを開く
+  const [draw, setDraw] = useState<SlotDraw | null>(null);
   function random() {
-    const s = pickRandom(songs);
-    if (!s) return;
+    const d = drawSlot(songs);
+    if (d) setDraw(d);
+  }
+  function decide(id: string) {
+    setDraw(null);
     if (wide) {
-      setSelectedId(s.id);
-      document.getElementById(`song-${s.id}`)?.scrollIntoView({ block: "center" });
-    } else router.push(`/songs/${s.id}`);
+      setSelectedId(id);
+      document.getElementById(`song-${id}`)?.scrollIntoView({ block: "center" });
+    } else router.push(`/songs/${id}`);
   }
 
   const reset = () => change({ ...EMPTY_CONDITIONS, sort: draft.sort });
@@ -450,6 +455,8 @@ export function SetList({
           )}
         </aside>
       </div>
+
+      <RandomSlot target={draw} onDecide={decide} onRetry={random} onClose={() => setDraw(null)} />
 
       <HomeTabBar searchHref={conditionsToHref(draft, "/search")} />
     </div>
