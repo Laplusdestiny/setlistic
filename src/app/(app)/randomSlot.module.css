@@ -28,10 +28,11 @@
   text-align: center;
 }
 
+/* 上の余白はスタンプの置き場。曲名と重ならないよう、演出中から空けておく（止まったときに曲名がずれない） */
 .frame {
   position: relative;
   overflow: hidden;
-  padding: 22px 16px;
+  padding: 40px 16px 22px;
   border: 1px dashed var(--color-divider-dashed);
   border-radius: var(--radius-control);
   background: var(--color-bg);
@@ -74,8 +75,8 @@
 
 .stamp {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   padding: 2px 8px;
   border: 2px solid var(--color-danger);
   border-radius: var(--radius-badge);
