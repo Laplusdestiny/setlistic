@@ -283,3 +283,39 @@ export function pickRandom<T>(items: readonly T[], rng: () => number = Math.rand
   if (items.length === 0) return null;
   return items[Math.min(items.length - 1, Math.floor(rng() * items.length))];
 }
+
+/**
+ * ランダム演出（スロット）の切り替え間隔（ミリ秒）。後ろほど長くなり、合計が total になる。
+ * count 個の間隔を返す（count + 1 個の候補を順に出すときの、候補どうしの間）
+ */
+export function slotIntervals(count: number, total: number): number[] {
+  if (count <= 0) return [];
+  // 1 + 4t² の重みで減速させる（最後の間隔は最初の5倍）
+  const weights = Array.from({ length: count }, (_, i) => {
+    const t = count === 1 ? 0 : i / (count - 1);
+    return 1 + 4 * t * t;
+  });
+  const sum = weights.reduce((a, b) => a + b, 0);
+  return weights.map((w) => (w / sum) * total);
+}
+
+/**
+ * ランダム演出で順に出す候補の列。長さ length で、最後は winner。
+ * 候補が2件以上あれば、同じものが続けて出ない
+ */
+export function slotSequence<T>(
+  items: readonly T[],
+  winner: T,
+  length: number,
+  rng: () => number = Math.random,
+): T[] {
+  if (length <= 0) return [];
+  const seq: T[] = [winner];
+  // 当選から逆向きに、直後と違うものを選んで前に足していく
+  while (seq.length < length) {
+    const next = seq[0];
+    const rest = items.filter((x) => x !== next);
+    seq.unshift(pickRandom(rest, rng) ?? next);
+  }
+  return seq;
+}

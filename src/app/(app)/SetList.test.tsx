@@ -210,20 +210,25 @@ describe("SetList: 並び替え", () => {
 });
 
 describe("SetList: ランダム・キーボード", () => {
-  it("スマホではランダムに選んだ曲のページへ", async () => {
+  it("スマホではランダムに選んだ曲を「これにする」でページへ", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0.99);
     setup();
     await userEvent.click(screen.getByRole("button", { name: /ランダム/ }));
+    expect(router.push).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText("タップでスキップ"));
+    await userEvent.click(screen.getByRole("button", { name: "これにする" }));
     expect(router.push).toHaveBeenCalledWith("/songs/s2");
     vi.mocked(Math.random).mockRestore();
   });
 
-  it("PC ではランダムに選んだ曲を右パネルに出す", async () => {
+  it("PC ではランダムに選んだ曲を「これにする」で右パネルに出す", async () => {
     setViewportWidth(1000);
     vi.spyOn(Math, "random").mockReturnValue(0.99);
     Element.prototype.scrollIntoView = vi.fn();
     setup();
     await userEvent.click(screen.getByRole("button", { name: /ランダム/ }));
+    await userEvent.click(screen.getByText("タップでスキップ"));
+    await userEvent.click(screen.getByRole("button", { name: "これにする" }));
     expect(screen.getByText("パネル:群青")).toBeInTheDocument();
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
     expect(router.push).not.toHaveBeenCalled();

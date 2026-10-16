@@ -11,6 +11,8 @@ import {
   normalizeConditions,
   normalizeSearchText,
   pickRandom,
+  slotIntervals,
+  slotSequence,
   splitWords,
   tagState,
   toRpcParams,
@@ -228,6 +230,42 @@ describe("pickRandom", () => {
     expect(pickRandom(xs, () => 0.5)).toBe("b");
     expect(pickRandom(xs, () => 0.999999)).toBe("c");
     expect(pickRandom(xs, () => 1)).toBe("c");
+  });
+});
+
+describe("slotIntervals", () => {
+  it("後ろほど長くなり、合計が total になる", () => {
+    const xs = slotIntervals(15, 1500);
+    expect(xs).toHaveLength(15);
+    for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1]);
+    expect(xs.reduce((a, b) => a + b, 0)).toBeCloseTo(1500);
+  });
+  it("0個なら空、1個なら total そのまま", () => {
+    expect(slotIntervals(0, 1500)).toEqual([]);
+    expect(slotIntervals(1, 1500)).toEqual([1500]);
+  });
+});
+
+describe("slotSequence", () => {
+  const xs = ["a", "b", "c"];
+  it("当選で終わり、同じものが続かない", () => {
+    for (const r of [0, 0.5, 0.999999]) {
+      const seq = slotSequence(xs, "b", 16, () => r);
+      expect(seq).toHaveLength(16);
+      expect(seq.at(-1)).toBe("b");
+      for (let i = 1; i < seq.length; i++) expect(seq[i]).not.toBe(seq[i - 1]);
+    }
+  });
+  it("Math.random でも同じ性質", () => {
+    const seq = slotSequence(xs, "c", 16);
+    expect(seq.at(-1)).toBe("c");
+    for (let i = 1; i < seq.length; i++) expect(seq[i]).not.toBe(seq[i - 1]);
+  });
+  it("候補が1件だけなら、それを繰り返す", () => {
+    expect(slotSequence(["a"], "a", 3)).toEqual(["a", "a", "a"]);
+  });
+  it("長さ0なら空", () => {
+    expect(slotSequence(xs, "a", 0)).toEqual([]);
   });
 });
 

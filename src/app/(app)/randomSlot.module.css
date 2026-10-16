@@ -1,0 +1,174 @@
+/* ランダムに1曲選ぶときのスロット演出（RandomSlot） */
+
+.dialog {
+  width: min(92vw, 400px);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.dialog::backdrop {
+  background: rgb(30 28 24 / 0.45);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.frame {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 16px;
+  border: 1px dashed var(--color-divider-dashed);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  text-align: center;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+
+[data-state="result"] .frame {
+  border: 2px solid var(--color-primary);
+  background: var(--color-paper);
+}
+
+.reel {
+  min-height: 3.4em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.artist {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 13px;
+}
+
+[data-state="spinning"] .reel {
+  color: var(--color-ink-muted);
+}
+
+.stamp {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 2px 8px;
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius-badge);
+  color: var(--color-danger);
+  font-family: var(--font-hand);
+  font-size: 12px;
+  font-weight: 600;
+  transform: rotate(-8deg);
+  animation: stamp 0.25s ease-out both;
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.8);
+  }
+}
+
+.hint {
+  min-height: 50px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-muted);
+  font-size: 12px;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.buttons > * {
+  flex: 1;
+}
+
+.primary,
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+}
+
+.primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+.secondary:hover {
+  background: var(--color-selected-row);
+}
+
+/* PC は少し大きく見せる */
+@media (min-width: 900px) {
+  .dialog {
+    width: 460px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .artist {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame {
+    transition: none;
+  }
+
+  .stamp {
+    animation: none;
+  }
+}
