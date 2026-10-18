@@ -85,6 +85,13 @@
       "when": 1791785328047,
       "tag": "0011_song_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792296552250,
+      "tag": "0012_tutorial_completed",
+      "breakpoints": true
     }
   ]
 }

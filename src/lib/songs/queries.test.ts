@@ -7,6 +7,7 @@ import {
   getSongQuota,
   getUserSettings,
   isAppAdmin,
+  isTutorialPending,
   listCustomFields,
   listSavedSearches,
   listTagsWithCount,
@@ -214,6 +215,24 @@ describe("listCustomFields", () => {
         hidden: false,
       },
     ]);
+  });
+});
+
+describe("isTutorialPending", () => {
+  it("完了日時が null ならまだ。入っていれば済み", async () => {
+    let { sb, c } = client({
+      tables: { user_settings: { data: { tutorial_completed_at: null } } },
+    });
+    expect(await isTutorialPending(c, "user-1")).toBe(true);
+    expect(sb.argsOf("user_settings", "eq")).toEqual([["user_id", "user-1"]]);
+    ({ sb, c } = client({
+      tables: { user_settings: { data: { tutorial_completed_at: "2026-10-18T00:00:00Z" } } },
+    }));
+    expect(await isTutorialPending(c, "user-1")).toBe(false);
+  });
+
+  it("設定の行が読めなければ済みとみなす", async () => {
+    expect(await isTutorialPending(client({}).c, "user-1")).toBe(false);
   });
 });
 

@@ -177,6 +177,13 @@ describe("SongDetail: 歌唱記録", () => {
 });
 
 describe("SongDetail: 編集", () => {
+  it("initialEditing なら、現在の値で編集フォームを開いた状態で始める", () => {
+    setup({ initialEditing: true });
+    expect(screen.getByRole("heading", { name: "曲を編集" })).toBeInTheDocument();
+    expect(screen.getByLabelText("曲名")).toHaveValue("夜に駆ける");
+    expect(screen.getByLabelText("項目f1")).toHaveValue("高め");
+  });
+
   it("現在の値でフォームを開き、変更を保存する", async () => {
     vi.mocked(updateSongAction).mockResolvedValue({ status: "ok" });
     setup();

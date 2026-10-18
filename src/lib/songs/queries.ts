@@ -212,6 +212,19 @@ export async function getUserSettings(supabase: Client, userId: string): Promise
   };
 }
 
+/**
+ * 初回のチュートリアルがまだか（ホームを開いたらチュートリアルへ送る）。
+ * 設定の行が読めないときは「済み」とみなす（読めないたびにチュートリアルへ送り続けないため）
+ */
+export async function isTutorialPending(supabase: Client, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("user_settings")
+    .select("tutorial_completed_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data ? data.tutorial_completed_at === null : false;
+}
+
 /** 自分の登録曲数と上限（上限は DB の max_songs_per_user() が決める） */
 export async function getSongQuota(supabase: Client): Promise<Quota | null> {
   const { data } = await supabase.rpc("song_quota");

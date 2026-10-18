@@ -8,6 +8,7 @@ import { quotaFullMessage, quotaStatus, type Quota } from "@/lib/songs/quota";
 import { parseMusicUrl } from "@/lib/songs/apple-url";
 import type { SongDraft } from "@/lib/songs/types";
 import { normalizeTagName } from "@/lib/tags/normalize";
+import { SUPPORTED_SERVICE_NAMES } from "@/lib/songs/services";
 import { lookupFromUrl, saveSongAction } from "./actions";
 import { BulkAdd } from "./BulkAdd";
 import { lookupErrorMessage, SERVICE_NAMES } from "./messages";
@@ -403,7 +404,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                       対応サービス
                     </h2>
                     <ul className={styles.services}>
-                      {["Apple Music", "Spotify", "YouTube Music"].map((s) => (
+                      {SUPPORTED_SERVICE_NAMES.map((s) => (
                         <li key={s} className={styles.service}>
                           {s}
                           <small>対応</small>

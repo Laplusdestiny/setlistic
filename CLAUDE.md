@@ -18,8 +18,8 @@ Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし�
 
 ## 現在の状況
 
-- MVP（`docs/implementation-plan.md` の Phase 0〜6）は実装済み。その後、タグ候補・タグ一括変更・招待の管理画面・曲数上限・OGP・カラオケ機種タグ・Spotify / YouTube Music からの登録・テストとカバレッジ（Codecov）を追加した
-- これからの機能は **GitHub Issues** で管理している（共有 #6、ジャケット画像 #7、ダークテーマ #3、かな揺れ #2、Siri ショートカット #5、カスタム項目検索 #9、練習の優先順位 #11、分析ページ #1、ヘルプ #18 など）。着手前に `gh issue view <番号>` で内容を確認する
+- MVP（`docs/implementation-plan.md` の Phase 0〜6）は実装済み。その後、タグ候補・タグ一括変更・招待の管理画面・初回チュートリアルとヘルプ（#18）・曲数上限・OGP・カラオケ機種タグ・Spotify / YouTube Music からの登録・テストとカバレッジ（Codecov）を追加した
+- これからの機能は **GitHub Issues** で管理している（共有 #6、ジャケット画像 #7、ダークテーマ #3、かな揺れ #2、Siri ショートカット #5、カスタム項目検索 #9、練習の優先順位 #11、分析ページ #1 など）。着手前に `gh issue view <番号>` で内容を確認する
 
 ## 技術構成
 
@@ -70,6 +70,8 @@ Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし�
 | --- | --- |
 | `src/app/(app)/` | ログイン後の画面（ホーム、`add` `bulk` `songs/[id]` `search` `tags` `settings` `admin/invites`）。各画面の更新処理は同じ階層の `actions.ts`（Server Actions） |
 | `src/app/api/` | `export` `import` `health`（Vercel Cron が週1回呼ぶ Supabase 一時停止対策） |
+| `src/app/welcome/` | 初回チュートリアル（`?step=` で手順。完了は `user_settings.tutorial_completed_at`） |
+| `src/app/help/` | ヘルプ（ログイン不要）。節の id は `src/lib/help.ts` |
 | `src/app/(legal)/` | 利用規約・プライバシーポリシー（草案） |
 | `src/components/` | 共通コンポーネントと CSS Modules |
 | `src/lib/` | 純粋関数とデータ処理（`songs` `tags` `search` `data` `supabase` `auth`）。テストは同じ場所に `*.test.ts` |

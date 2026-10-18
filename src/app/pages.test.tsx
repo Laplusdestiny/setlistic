@@ -15,6 +15,9 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
+  redirect: vi.fn((to: string) => {
+    throw new Error(`REDIRECT ${to}`);
+  }),
   useRouter: () => ({}),
   usePathname: () => "/",
 }));
@@ -23,6 +26,10 @@ vi.mock("next/font/google", () => ({
   Klee_One: () => ({ variable: "font-klee" }),
 }));
 vi.mock("@/app/login/actions", () => ({ signInWithGoogle: vi.fn(), signOut: vi.fn() }));
+vi.mock("@/app/welcome/actions", () => ({
+  completeTutorialAction: vi.fn(),
+  registerFirstSongAction: vi.fn(),
+}));
 
 import { requireUser } from "@/lib/supabase/user";
 import AddPage from "./(app)/add/page";
@@ -37,10 +44,12 @@ import TagsPage from "./(app)/tags/page";
 import LegalLayout from "./(legal)/layout";
 import PrivacyPage from "./(legal)/privacy/page";
 import TermsPage from "./(legal)/terms/page";
+import HelpPage from "./help/page";
 import RootLayout, { metadata, viewport } from "./layout";
 import LoginPage from "./login/page";
 import manifest from "./manifest";
 import NotFound from "./not-found";
+import WelcomePage from "./welcome/page";
 
 const SONG = "11111111-1111-4111-8111-111111111111";
 const T1 = "22222222-2222-4222-8222-222222222222";
@@ -103,6 +112,11 @@ describe("HomePage", () => {
     });
     expect((props.conditions as { q: string; include: string[] }).q).toBe("夜");
     expect((props.conditions as { include: string[] }).include).not.toContain("deleted");
+  });
+
+  it("チュートリアルを終えていなければチュートリアルへ送る", async () => {
+    setup({ tables: { user_settings: { data: { tutorial_completed_at: null } } } });
+    await expect(load(HomePage({ searchParams: params({}) }))).rejects.toThrow("REDIRECT /welcome");
   });
 
   it("件数が取れなければ検索結果の件数", async () => {
@@ -239,8 +253,12 @@ describe("SettingsPage", () => {
 
 describe("SongPage", () => {
   it("UUID でない・見つからない曲は 404", async () => {
-    await expect(load(SongPage({ params: params({ id: "x" }) }))).rejects.toThrow("NOT_FOUND");
-    await expect(load(SongPage({ params: params({ id: SONG }) }))).rejects.toThrow("NOT_FOUND");
+    await expect(
+      load(SongPage({ params: params({ id: "x" }), searchParams: params({}) })),
+    ).rejects.toThrow("NOT_FOUND");
+    await expect(
+      load(SongPage({ params: params({ id: SONG }), searchParams: params({}) })),
+    ).rejects.toThrow("NOT_FOUND");
   });
 
   it("曲・記録・タグを渡す", async () => {
@@ -253,15 +271,54 @@ describe("SongPage", () => {
         tags: tagRows,
       },
     });
-    const props = await load(SongPage({ params: params({ id: SONG }) }));
+    const props = await load(SongPage({ params: params({ id: SONG }), searchParams: params({}) }));
     expect(props).toMatchObject({
       song: { id: SONG, title: "t" },
       today: "2026-10-12",
       allTags: [{ id: T1, name: "十八番", groupId: "g1", aliases: ["b", "a"] }],
       groups: [{ id: "g1", name: "ジャンル" }],
+      editing: false,
     });
     setup({ tables: { songs: { data: { id: SONG, title: "t", artist: "a", sung_count: 0 } } } });
-    expect((await load(SongPage({ params: params({ id: SONG }) }))).groups).toEqual([]);
+    expect(
+      (await load(SongPage({ params: params({ id: SONG }), searchParams: params({}) }))).groups,
+    ).toEqual([]);
+  });
+
+  it("?edit=1 なら編集フォームを開いた状態で始める", async () => {
+    setup({ tables: { songs: { data: { id: SONG, title: "t", artist: "a", sung_count: 0 } } } });
+    const props = await load(
+      SongPage({ params: params({ id: SONG }), searchParams: params({ edit: "1" }) }),
+    );
+    expect(props.editing).toBe(true);
+  });
+});
+
+describe("WelcomePage", () => {
+  it("?step= の手順を描く。知らない値は最初の手順", async () => {
+    expect(await load(WelcomePage({ searchParams: params({ step: "register" }) }))).toEqual({
+      step: "register",
+      song: null,
+    });
+    expect(await load(WelcomePage({ searchParams: params({ step: ["x"] }) }))).toEqual({
+      step: "welcome",
+      song: null,
+    });
+  });
+
+  it("完了の手順は登録した曲を渡す。曲が無ければ登録の手順へ", async () => {
+    setup({ tables: { songs: { data: { id: SONG, title: "t", artist: "a", sung_count: 0 } } } });
+    expect(await load(WelcomePage({ searchParams: params({ step: "done", song: SONG }) }))).toEqual(
+      { step: "done", song: { id: SONG, title: "t", artist: "a" } },
+    );
+
+    await expect(
+      load(WelcomePage({ searchParams: params({ step: "done", song: "x" }) })),
+    ).rejects.toThrow("REDIRECT /welcome?step=register");
+    setup();
+    await expect(
+      load(WelcomePage({ searchParams: params({ step: "done", song: SONG }) })),
+    ).rejects.toThrow("REDIRECT /welcome?step=register");
   });
 });
 
@@ -330,6 +387,17 @@ describe("静的なページ・レイアウト", () => {
       expect(html).toContain("草案");
       expect(html).toContain("<h1>");
     }
+  });
+
+  it("ヘルプは目次と各節を持ち、困りごとから節へリンクする", () => {
+    const html = renderToStaticMarkup(HelpPage());
+    expect(html).toContain("<h1>使い方・ヘルプ</h1>");
+    for (const id of ["trouble", "services", "random", "home-screen", "account", "contact"]) {
+      expect(html).toContain(`id="${id}"`);
+    }
+    expect(html).toContain('href="/help#services"');
+    expect(html).toContain('href="/welcome"');
+    expect(html).toContain("YouTube Music");
   });
 
   it("404 はセトリへのリンク", () => {

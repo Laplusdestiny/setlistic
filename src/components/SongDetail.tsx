@@ -30,6 +30,8 @@ type Props = {
   today: string;
   /** 削除後の遷移などを呼び出し側が決める */
   onDeleted: () => void;
+  /** 編集フォームを開いた状態で始める（チュートリアルの「タグを付ける」から来たとき） */
+  initialEditing?: boolean;
 };
 
 const EASE_LABELS = ["余裕", "歌いやすい", "ふつう", "やや辛い", "辛かった"];
@@ -42,10 +44,11 @@ export function SongDetail({
   initialSing,
   today,
   onDeleted,
+  initialEditing = false,
 }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [singOpen, setSingOpen] = useState(false);
   const [sing, setSing] = useState(initialSing);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +60,11 @@ export function SongDetail({
   const [songKey, setSongKey] = useState(song.songKey ?? 0);
   const [memo, setMemo] = useState(song.memo ?? "");
   const shownFields = visibleFields(fields);
-  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
+  const currentFieldValues = () =>
+    Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null]));
+  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
+    initialEditing ? currentFieldValues() : {},
+  );
   const [selected, setSelected] = useState(() => new Set(song.tags.map((t) => t.id)));
   const [newTags, setNewTags] = useState<NewTag[]>([]);
 
@@ -71,7 +78,7 @@ export function SongDetail({
     setArtist(song.artist);
     setSongKey(song.songKey ?? 0);
     setMemo(song.memo ?? "");
-    setFieldValues(Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null])));
+    setFieldValues(currentFieldValues());
     setSelected(new Set(song.tags.map((t) => t.id)));
     setNewTags([]);
     setError(null);

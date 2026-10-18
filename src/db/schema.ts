@@ -250,6 +250,9 @@ export const userSettings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'`),
+    // 初回のチュートリアルを終えた（スキップ含む）日時。null のあいだはホームを開くとチュートリアルへ送る。
+    // 端末ではなくアカウント単位で持つ（PC とスマホで二重に出さない）
+    tutorialCompletedAt: timestamp("tutorial_completed_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [ownRows("user_settings")],

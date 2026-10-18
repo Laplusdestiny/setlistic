@@ -7,7 +7,9 @@ import { signOut } from "@/app/login/actions";
 import type { CustomField } from "@/lib/custom-fields";
 import type { UserSettings } from "@/lib/songs/queries";
 import { quotaStatus, type Quota } from "@/lib/songs/quota";
+import { HELP_PATH } from "@/lib/help";
 import { SORT_KEYS, SORT_LABELS } from "@/lib/songs/sort";
+import { TUTORIAL_PATH } from "@/lib/tutorial";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
 import { DangerSection } from "./DangerSection";
 import { DataSection } from "./DataSection";
@@ -105,6 +107,8 @@ export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin,
           <section className={styles.card} aria-labelledby="links-h">
             <h2 id="links-h">そのほか</h2>
             <p className={styles.links}>
+              <Link href={HELP_PATH}>ヘルプ（使い方・困ったとき）</Link>
+              <Link href={TUTORIAL_PATH}>チュートリアルをもう一度見る</Link>
               {isAdmin && <Link href="/admin/invites">招待の管理（友人を招待する）</Link>}
               <Link href="/tags">タグの管理</Link>
               <Link href="/bulk">タグの一括変更（複数の曲にまとめて付ける・外す）</Link>
