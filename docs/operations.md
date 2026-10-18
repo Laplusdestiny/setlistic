@@ -19,7 +19,7 @@ Setlistic を運用するときの手順と、確認の仕方。月0円の構成
 
 - 動作の確認：Vercel ダッシュボード → Project → Settings → Cron Jobs で、実行履歴が見られる。ログは `vercel logs --project setlistic --scope laplus-destiny`
 - 失敗すると 503 を返し、ログに `[health] DB に接続できませんでした` が出る（`--level error` で絞れる）
-- 手動で試す：`curl -H "Authorization: Bearer $CRON_SECRET" https://setlistic.vercel.app/api/health` → `{"ok":true,...}`
+- 手動で試す：`curl -H "Authorization: Bearer $CRON_SECRET" https://setlistic.laplusdestiny.com/api/health` → `{"ok":true,...}`
 - 万一停止したら：Supabase ダッシュボードの `setlistic` プロジェクトで「Restore project」。停止から一定期間内なら、データはそのまま戻る。復旧までアプリは開けない
 - Vercel Hobby の Cron は1日1回までの制限があるが、週1回なので問題ない
 
@@ -65,7 +65,7 @@ CI（GitHub Actions）が、push と PR のたびに `npm run test:coverage` を
 1. **Google の OAuth 同意画面が「テスト」状態でないか**：Google Cloud Console → Google Auth Platform（OAuth 同意画面）。「テスト」のままだと、登録したテストユーザー以外（最大100人）はログインできない。招待する人を、テストユーザーとして追加するか、公開ステータスを「本番環境」にする（メールとプロフィールだけの権限なら審査は不要）
 2. **「Before User Created」フックが有効か**：Supabase ダッシュボード → Authentication → Auth Hooks。許可していない Google アカウントでログインして、「招待制です」と出て拒否されることを一度確認する
 3. **利用規約・プライバシーポリシー（`/terms` `/privacy`）が確定しているか**（連絡先を含む）。招待した人は、これに同意して使う
-4. 独自ドメイン（`setlistic.laplusdestiny.com`）を使うなら、Supabase の Site URL / Redirect URLs にも追加してある
+4. 独自ドメイン（`setlistic.laplusdestiny.com`）が、Supabase の Site URL / Redirect URLs に入っている（「独自ドメイン」の節）
 
 ### 1人を招待する手順（アプリの「招待の管理」画面）
 
@@ -107,6 +107,20 @@ insert into public.allowed_emails (email_hash) values ('<上で出た64文字>')
 
 - 上限の値は DB の関数 `max_songs_per_user()` の1か所だけ。変えるときは、この関数を新しい値で置き換えるマイグレーションを作る（利用規約の記載「2,000曲」も合わせて直す）
 - 目安：一覧は全曲を1画面で扱う作りで、1,000曲で1秒以内を確認済み。無料枠（DB 500MB）に対して、数十人が上限まで使っても足りる
+
+## 独自ドメイン（setlistic.laplusdestiny.com）
+
+正規URLは `https://setlistic.laplusdestiny.com`（コード上は `src/lib/site.ts` の `SITE_ORIGIN`。OGP の絶対URLと、Spotify などへ名乗る User-Agent に使う）。`setlistic.vercel.app` へのアクセスは、`vercel.json` の `redirects` で独自ドメインへ 308 転送する。ただし `/api/health` は転送しない（Vercel Cron が転送先を追わずに終わるのを避けるため）。プレビュー（`setlistic-*-laplus-destiny.vercel.app`）は転送しない。
+
+設定する場所：
+
+1. **DNS**（`laplusdestiny.com` を管理しているサービス）：`setlistic` の CNAME を、Vercel の Domains 画面に表示される値（例：`xxxx.vercel-dns-017.com` または `cname.vercel-dns.com`）に向ける
+2. **Vercel**：Project → Settings → Domains に `setlistic.laplusdestiny.com` を追加し、Production に割り当てる。「Valid Configuration」になり、SSL 証明書が発行されたことを確認する
+3. **Supabase**：Authentication → URL Configuration
+   - Site URL：`https://setlistic.laplusdestiny.com`
+   - Redirect URLs：`https://setlistic.laplusdestiny.com/**`（`setlistic.vercel.app` は転送されるので不要。消してよい）
+4. **Google Cloud**：OAuth クライアントの「承認済みのリダイレクト URI」は Supabase のコールバックのままでよい（変更不要）。OAuth 同意画面の「承認済みドメイン」とアプリのホームページ・プライバシーポリシーのURLを使っているなら、`laplusdestiny.com` と `https://setlistic.laplusdestiny.com/privacy` などに合わせる
+5. **確認**：`curl -sI https://setlistic.vercel.app/` が `308` で `location: https://setlistic.laplusdestiny.com/` を返す。独自ドメインで Google ログインでき、ログイン後も独自ドメインのままである。ホーム画面に追加済みの端末は、独自ドメインで追加し直す（PWA は URL ごとに別物になるため）
 
 ## 認証まわりの設定
 
