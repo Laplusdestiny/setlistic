@@ -9,7 +9,7 @@
 
 Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし、店でスマホからその場で多観点で探せるWebアプリ。PCではまとめて登録・整理する。
 
-- 公開URL：`setlistic.laplusdestiny.com`（Vercel の `setlistic.vercel.app` でも動く）
+- 公開URL：`setlistic.laplusdestiny.com`（Vercel の `setlistic.vercel.app` は `vercel.json` の `redirects` で独自ドメインへ転送する。正規URLは `src/lib/site.ts`）
 - 利用者：オーナー＋招待制の友人数十人まで。一般公開はしない
 - 提供形態：レスポンシブWeb（スマホはホーム画面追加でPWA風に使う）＋PC用3ペインレイアウト
 - UI言語：日本語のみ

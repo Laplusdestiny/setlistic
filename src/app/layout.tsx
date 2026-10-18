@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Klee_One, Zen_Kaku_Gothic_New } from "next/font/google";
+import { SITE_ORIGIN } from "@/lib/site";
 import "./globals.css";
 
 const zenKaku = Zen_Kaku_Gothic_New({
@@ -16,10 +17,8 @@ const klee = Klee_One({
 
 const DESCRIPTION = "カラオケで歌える曲を登録・タグ付けして、店でその場で探せるセトリ管理アプリ";
 
-// OGP画像などを絶対URLにするための基準。Vercel では本番ドメイン（独自ドメインがあればそれ）が入る
-const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : "http://localhost:3000";
+// OGP画像などを絶対URLにするための基準。Vercel 上（本番・プレビュー）では常に独自ドメインを正とする
+const SITE_URL = process.env.VERCEL ? SITE_ORIGIN : "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
