@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { helpHref } from "@/lib/help";
 import { signInWithGoogle } from "./actions";
 import styles from "./login.module.css";
 
@@ -24,7 +25,7 @@ async function LoginForm({ searchParams }: { searchParams: Promise<Record<string
       )}
       {message && (
         <p role="alert" className={styles.error}>
-          {message}
+          {message} <Link href={helpHref("account")}>ログインできないとき</Link>
         </p>
       )}
       <input type="hidden" name="next" value={next ?? "/"} />

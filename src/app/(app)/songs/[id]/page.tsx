@@ -10,17 +10,25 @@ import { SongPageView } from "./SongPageView";
 export const metadata: Metadata = { title: "曲の詳細" };
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ edit?: string | string[] }>;
 
-export default function SongPage({ params }: { params: Params }) {
+// `?edit=1` は編集フォームを開いた状態で表示する（チュートリアルの「タグを付ける」から来るとき）
+export default function SongPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: Search;
+}) {
   return (
     <Suspense fallback={<div style={{ minHeight: "60dvh" }} aria-busy="true" />}>
-      <SongLoader params={params} />
+      <SongLoader params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function SongLoader({ params }: { params: Params }) {
-  const { id } = await params;
+async function SongLoader({ params, searchParams }: { params: Params; searchParams: Search }) {
+  const [{ id }, { edit }] = await Promise.all([params, searchParams]);
   if (!UUID_PATTERN.test(id)) notFound();
 
   const { supabase } = await requireUser();
@@ -42,6 +50,7 @@ async function SongLoader({ params }: { params: Params }) {
       allTags={tags.map(({ id, name, groupId, aliases }) => ({ id, name, groupId, aliases }))}
       fields={fields}
       groups={(groups.data ?? []).map((g) => ({ id: g.id, name: g.name }))}
+      editing={edit === "1"}
     />
   );
 }

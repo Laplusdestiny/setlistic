@@ -15,10 +15,20 @@ type Props = {
   allTags: TagOption[];
   groups: GroupOption[];
   fields: CustomField[];
+  /** 編集フォームを開いた状態で始める */
+  editing?: boolean;
 };
 
 /** スマホ向けの曲詳細ページ。PC では一覧の右パネルで同じ表示をする */
-export function SongPageView({ song, sing, today, allTags, groups, fields }: Props) {
+export function SongPageView({
+  song,
+  sing,
+  today,
+  allTags,
+  groups,
+  fields,
+  editing = false,
+}: Props) {
   const router = useRouter();
   return (
     <div className={styles.page}>
@@ -48,6 +58,7 @@ export function SongPageView({ song, sing, today, allTags, groups, fields }: Pro
           initialSing={sing}
           today={today}
           onDeleted={() => router.replace("/")}
+          initialEditing={editing}
         />
       </div>
     </div>

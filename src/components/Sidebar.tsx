@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/", label: "セトリ（曲一覧）" },
   { href: "/tags", label: "タグ管理" },
   { href: "/settings", label: "設定" },
+  { href: "/help", label: "ヘルプ" },
 ] as const;
 
 /** PC 用の左サイドバー（スマホでは非表示。スマホはタブバーを使う） */

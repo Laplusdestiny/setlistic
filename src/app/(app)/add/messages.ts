@@ -1,3 +1,4 @@
+import { supportedServicesText } from "@/lib/songs/services";
 import type { LookupError } from "./types";
 
 export const SERVICE_NAMES: Record<string, string> = {
@@ -19,7 +20,7 @@ export function lookupErrorMessage(reason: LookupError, service?: string | null)
     case "unsupported_service":
       return service && SERVICE_NAMES[service]
         ? `${SERVICE_NAMES[service]} のURLにはまだ対応していません。曲名で探して登録できます。`
-        : "対応していないURLです。Apple Music・Spotify・YouTube Music の曲URLを貼り付けるか、曲名で探してください。";
+        : `対応していないURLです。${supportedServicesText()} の曲URLを貼り付けるか、曲名で探してください。`;
     case "not_found":
       return "曲が見つかりませんでした。曲名で探すか、手入力で登録できます。";
     case "network":

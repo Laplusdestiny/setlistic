@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { todayJst } from "@/lib/format";
 import { conditionsFromParams } from "@/lib/search/conditions";
 import {
   getUserSettings,
+  isTutorialPending,
   listCustomFields,
   listSavedSearches,
   listTagsWithCount,
   searchSongs,
 } from "@/lib/songs/queries";
 import { requireUser } from "@/lib/supabase/user";
+import { TUTORIAL_PATH } from "@/lib/tutorial";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { SetList } from "./SetList";
 
@@ -32,7 +35,8 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
 
   // 並び順の既定・一覧に出す項目は設定（user_settings）。URL の ?sort= を優先する。
   // 設定も他と同時に取り、Supabase への往復を減らす
-  const [settings, tags, groups, saved, fields, totalRes] = await Promise.all([
+  const [tutorialPending, settings, tags, groups, saved, fields, totalRes] = await Promise.all([
+    isTutorialPending(supabase, userId),
     getUserSettings(supabase, userId),
     listTagsWithCount(supabase),
     supabase.from("tag_groups").select("id, name").order("sort_order"),
@@ -40,6 +44,8 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
     listCustomFields(supabase),
     supabase.from("songs").select("id", { count: "exact", head: true }),
   ]);
+  // 初めてのユーザーは、まずチュートリアルへ（終えるかスキップするまで）
+  if (tutorialPending) redirect(TUTORIAL_PATH);
   const defaultSort = settings.listSort;
 
   // 削除・統合で存在しなくなったタグ（古いURL・履歴）は条件から外す（AND が常に空になるのを防ぐ）

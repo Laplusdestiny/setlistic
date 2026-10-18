@@ -120,6 +120,20 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     expect(names.map((r) => r.name)).toEqual(["十八番", "歌える", "練習中", "歌いたい"]);
   });
 
+  it("新しいユーザーはチュートリアル未完了で始まり、完了の記録は本人の行だけに書ける", async () => {
+    const [st] = await sql`select tutorial_completed_at from user_settings where user_id = ${A}`;
+    expect(st.tutorial_completed_at).toBeNull();
+    await as(B, async (tx) => {
+      const other =
+        await tx`update user_settings set tutorial_completed_at = now() where user_id = ${A} returning user_id`;
+      expect(other).toHaveLength(0);
+      const own =
+        await tx`update user_settings set tutorial_completed_at = now() where user_id = ${B} and tutorial_completed_at is null returning tutorial_completed_at`;
+      expect(own).toHaveLength(1);
+      expect(own[0].tutorial_completed_at).not.toBeNull();
+    });
+  });
+
   it("本人は自分の行を読み書きできる", async () => {
     await as(A, async (tx) => {
       const rows = await tx`select id from songs`;
