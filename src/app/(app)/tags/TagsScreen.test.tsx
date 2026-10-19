@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setViewportWidth } from "@/test/media";
@@ -11,6 +11,7 @@ vi.mock("./actions", () => ({
   createGroupAction: vi.fn(),
   createTagAction: vi.fn(),
   deleteGroupAction: vi.fn(),
+  placeTagAction: vi.fn(),
   renameGroupAction: vi.fn(),
   reorderGroupsAction: vi.fn(),
   reorderTagsAction: vi.fn(),
@@ -32,6 +33,7 @@ import {
   createGroupAction,
   createTagAction,
   deleteGroupAction,
+  placeTagAction,
   renameGroupAction,
   reorderGroupsAction,
   reorderTagsAction,
@@ -246,6 +248,186 @@ describe("TagsScreen: 管理", () => {
     setup({ tags: [...tags, t("k1", "DAM", null), t("k2", "JOYSOUND", null)] });
     await manage();
     expect(screen.queryByRole("button", { name: /カラオケ機種のタグ/ })).toBeNull();
+  });
+});
+
+describe("TagsScreen: ドラッグで並べ替え", () => {
+  // 行の高さ 50、グループの間 50 で縦に並べる（気分 0〜100、ジャンル 150〜200、マイタグ 250〜300）
+  const rect = (top: number, height: number) =>
+    ({ top, bottom: top + height, height, left: 0, right: 300, width: 300 }) as DOMRect;
+  let layout: ReturnType<typeof vi.spyOn>;
+  let scrollBy: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    layout = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      let top = 0;
+      for (const ul of document.querySelectorAll("[data-drop-group]")) {
+        const rows = [...ul.children];
+        if (ul === this) return rect(top, rows.length * 50);
+        const i = rows.indexOf(this);
+        if (i >= 0) return rect(top + i * 50, 50);
+        top += rows.length * 50 + 50;
+      }
+      return rect(0, 0);
+    });
+    scrollBy = vi.fn();
+    window.scrollBy = scrollBy as never;
+    vi.mocked(placeTagAction).mockResolvedValue(ok);
+  });
+  afterEach(() => layout.mockRestore());
+
+  const row = (name: string) =>
+    screen.getByRole("button", { name: `#${name}を編集` }).closest("li") as HTMLElement;
+  const names = (group: string) =>
+    within(section(group))
+      .queryAllByRole("button", { name: /を編集$/ })
+      .map((b) => b.getAttribute("aria-label")?.slice(1, -3));
+  const mouse = { pointerId: 1, pointerType: "mouse", button: 0 };
+  const touch = { pointerId: 2, pointerType: "touch", button: 0 };
+  const press = (name: string, y: number, init: object = mouse) =>
+    fireEvent.pointerDown(within(row(name)).getByText(`#${name}`), {
+      ...init,
+      clientX: 10,
+      clientY: y,
+    });
+  const moveTo = (y: number, init: object = mouse) =>
+    fireEvent.pointerMove(window, { ...init, clientX: 10, clientY: y });
+  const release = (init: object = mouse) => fireEvent.pointerUp(window, init);
+
+  it("PC はドラッグで同じグループの中を並べ替え、離すまで行を強調する", async () => {
+    setup();
+    await manage();
+    press("盛り上げ", 25);
+    moveTo(27); // まだクリックの範囲
+    expect(row("盛り上げ")).not.toHaveAttribute("data-dragging");
+    moveTo(90);
+    expect(row("盛り上げ")).toHaveAttribute("data-dragging");
+    expect(names("気分")).toEqual(["しっとり", "盛り上げ"]);
+    release();
+    // 離したときのクリックでは編集を開かない
+    fireEvent.click(within(row("盛り上げ")).getByText("#盛り上げ"));
+    expect(screen.queryByText("編集中:盛り上げ")).toBeNull();
+    expect(placeTagAction).toHaveBeenCalledWith({ id: "t1", groupId: "g1", ids: ["t2", "t1"] });
+    expect(row("盛り上げ")).not.toHaveAttribute("data-dragging");
+    // 保存して読み直すまで、ドロップした並びのまま
+    expect(names("気分")).toEqual(["しっとり", "盛り上げ"]);
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
+    // その次のクリックは普通に編集を開く
+    await userEvent.click(within(row("盛り上げ")).getByText("#盛り上げ"));
+    expect(screen.getByText("編集中:盛り上げ")).toBeInTheDocument();
+  });
+
+  it("別のグループ・マイタグへ移す", async () => {
+    setup();
+    await manage();
+    press("アニソン", 175);
+    moveTo(10);
+    expect(names("気分")).toEqual(["アニソン", "盛り上げ", "しっとり"]);
+    expect(names("ジャンル")).toEqual([]);
+    release();
+    expect(placeTagAction).toHaveBeenLastCalledWith({
+      id: "t3",
+      groupId: "g1",
+      ids: ["t3", "t1", "t2"],
+    });
+
+    press("十八番", 275);
+    moveTo(500); // いちばん下のさらに下はマイタグの末尾
+    release();
+    expect(placeTagAction).toHaveBeenCalledTimes(1); // 動いていなければ保存しない
+  });
+
+  it("保存に失敗したら元の並びに戻してメッセージ", async () => {
+    vi.mocked(placeTagAction).mockResolvedValue({
+      status: "error",
+      message: "保存できませんでした",
+    });
+    setup();
+    await manage();
+    press("盛り上げ", 25);
+    moveTo(90);
+    release();
+    expect(await screen.findByRole("alert")).toHaveTextContent("保存できませんでした");
+    expect(names("気分")).toEqual(["盛り上げ", "しっとり"]);
+  });
+
+  it("Esc・pointercancel で取り消す。↑↓ボタン・右クリックからは始めない", async () => {
+    setup();
+    await manage();
+    press("盛り上げ", 25);
+    moveTo(90);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(names("気分")).toEqual(["盛り上げ", "しっとり"]);
+    release();
+
+    press("盛り上げ", 25);
+    moveTo(90);
+    fireEvent.pointerCancel(window, mouse);
+    release();
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "#盛り上げを下へ" }), mouse);
+    moveTo(90);
+    release();
+    fireEvent.pointerDown(within(row("盛り上げ")).getByText("#盛り上げ"), { ...mouse, button: 2 });
+    moveTo(90);
+    release();
+    expect(row("盛り上げ")).not.toHaveAttribute("data-dragging");
+    expect(placeTagAction).not.toHaveBeenCalled();
+  });
+
+  it("検索中・探すモードではドラッグしない", async () => {
+    setup();
+    await manage();
+    await userEvent.type(screen.getByLabelText("タグを検索"), "盛り");
+    press("盛り上げ", 25);
+    moveTo(90);
+    release();
+    expect(placeTagAction).not.toHaveBeenCalled();
+  });
+
+  it("スマホは長押ししてから動かす。すぐ動かしたらスクロールとみなす", async () => {
+    vi.useFakeTimers();
+    try {
+      setup();
+      fireEvent.click(screen.getByRole("button", { name: "管理" }));
+      const vibrate = vi.fn();
+      Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
+
+      // すぐに動かすとスクロール
+      press("盛り上げ", 25, touch);
+      moveTo(60, touch);
+      act(() => vi.advanceTimersByTime(500));
+      expect(row("盛り上げ")).not.toHaveAttribute("data-dragging");
+      release(touch);
+
+      press("盛り上げ", 25, touch);
+      const contextMenu = fireEvent.contextMenu(row("盛り上げ"));
+      expect(contextMenu).toBe(false); // 長押しのメニューを出さない
+      act(() => vi.advanceTimersByTime(400));
+      expect(row("盛り上げ")).toHaveAttribute("data-dragging");
+      expect(vibrate).toHaveBeenCalled();
+      // ドラッグ中は画面をスクロールさせない
+      const tm = new Event("touchmove", { cancelable: true });
+      window.dispatchEvent(tm);
+      expect(tm.defaultPrevented).toBe(true);
+      moveTo(90, touch);
+      release(touch);
+      expect(placeTagAction).toHaveBeenCalledWith({ id: "t1", groupId: "g1", ids: ["t2", "t1"] });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("画面の端に近づくと自動でスクロールする", async () => {
+    setup();
+    await manage();
+    press("十八番", 275);
+    moveTo(window.innerHeight - 10);
+    await vi.waitFor(() => expect(scrollBy).toHaveBeenCalledWith(0, 8));
+    moveTo(10);
+    await vi.waitFor(() => expect(scrollBy).toHaveBeenCalledWith(0, -8));
+    release();
   });
 });
 

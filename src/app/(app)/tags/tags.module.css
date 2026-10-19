@@ -281,6 +281,29 @@
   background: var(--color-tag-bg);
 }
 
+/* 長押しで文字の選択や端末のメニューが出ないようにする */
+.rows[data-draggable] li {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.rows li[data-dragging] {
+  position: relative;
+  background: var(--color-tag-bg);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.grip {
+  flex: none;
+  width: 14px;
+  padding-left: 4px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+}
+
 .rowEmpty {
   color: var(--color-ink-muted);
   font-size: 13px;

@@ -13,6 +13,7 @@ import {
   deleteTagAction,
   mergeTagsAction,
   moveTagAction,
+  placeTagAction,
   removeAliasAction,
   renameGroupAction,
   renameTagAction,
@@ -207,6 +208,37 @@ describe("RPC を呼ぶ操作", () => {
     expect(await action("x" as never)).toEqual(err("並べ替えできませんでした"));
     setup({ rpc: { [rpc]: { error: { code: "XX000" } } } });
     expect(await action([T1])).toEqual(FAILED);
+  });
+});
+
+describe("placeTagAction", () => {
+  it("グループを付け替えてから、そのグループを ids の順に並べる", async () => {
+    expect(await placeTagAction({ id: T1, groupId: G1, ids: [T2, T1] })).toEqual(ok);
+    expect(sb.argsOf("tags", "update")).toEqual([[{ group_id: G1 }]]);
+    expect(sb.rpcCalls).toEqual([{ name: "reorder_tags", args: { p_ids: [T2, T1] } }]);
+  });
+
+  it("「マイタグ」（null）へも移せる", async () => {
+    expect(await placeTagAction({ id: T1, groupId: null, ids: [T1] })).toEqual(ok);
+    expect(sb.argsOf("tags", "update")).toEqual([[{ group_id: null }]]);
+  });
+
+  it("不正な入力は何もしない", async () => {
+    const bad = err("並べ替えできませんでした");
+    expect(await placeTagAction({ id: "x", groupId: null, ids: ["x"] })).toEqual(bad);
+    expect(await placeTagAction({ id: T1, groupId: "x", ids: [T1] })).toEqual(bad);
+    expect(await placeTagAction({ id: T1, groupId: G1, ids: [T2] })).toEqual(bad);
+    expect(await placeTagAction({ id: T1, groupId: G1, ids: "x" as never })).toEqual(bad);
+    expect(sb.calls).toEqual([]);
+    expect(sb.rpcCalls).toEqual([]);
+  });
+
+  it("失敗したら FAILED", async () => {
+    setup({ tables: { tags: [{ error: { code: "XX000" } }] } });
+    expect(await placeTagAction({ id: T1, groupId: G1, ids: [T1] })).toEqual(FAILED);
+    expect(sb.rpcCalls).toEqual([]);
+    setup({ rpc: { reorder_tags: { error: { code: "XX000" } } } });
+    expect(await placeTagAction({ id: T1, groupId: G1, ids: [T1] })).toEqual(FAILED);
   });
 });
 
