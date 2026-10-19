@@ -252,7 +252,8 @@ describe("TagsScreen: 管理", () => {
 });
 
 describe("TagsScreen: ドラッグで並べ替え", () => {
-  // 行の高さ 50、グループの間 50 で縦に並べる（気分 0〜100、ジャンル 150〜200、マイタグ 250〜300）
+  // 行の高さ 50、グループの間 50 で縦に並べる（気分 0〜100、ジャンル 150〜200、マイタグ 250〜300）。
+  // ドラッグ中の行は --drag-y だけずれて見える
   const rect = (top: number, height: number) =>
     ({ top, bottom: top + height, height, left: 0, right: 300, width: 300 }) as DOMRect;
   let layout: ReturnType<typeof vi.spyOn>;
@@ -266,7 +267,8 @@ describe("TagsScreen: ドラッグで並べ替え", () => {
         const rows = [...ul.children];
         if (ul === this) return rect(top, rows.length * 50);
         const i = rows.indexOf(this);
-        if (i >= 0) return rect(top + i * 50, 50);
+        const shift = parseFloat((this as HTMLElement).style.getPropertyValue("--drag-y")) || 0;
+        if (i >= 0) return rect(top + i * 50 + shift, 50);
         top += rows.length * 50 + 50;
       }
       return rect(0, 0);
@@ -301,10 +303,16 @@ describe("TagsScreen: ドラッグで並べ替え", () => {
     press("盛り上げ", 25);
     moveTo(27); // まだクリックの範囲
     expect(row("盛り上げ")).not.toHaveAttribute("data-dragging");
-    moveTo(90);
+    moveTo(60);
     expect(row("盛り上げ")).toHaveAttribute("data-dragging");
+    // つかんだ位置（行の上端から 25）のまま指に付いて動く
+    expect(row("盛り上げ").style.getPropertyValue("--drag-y")).toBe("35px");
+    moveTo(90);
     expect(names("気分")).toEqual(["しっとり", "盛り上げ"]);
+    // 2番目に並び直しても、指の位置からずれない（90 - 25 - 50）
+    expect(row("盛り上げ").style.getPropertyValue("--drag-y")).toBe("15px");
     release();
+    expect(row("盛り上げ").style.getPropertyValue("--drag-y")).toBe("");
     // 離したときのクリックでは編集を開かない
     fireEvent.click(within(row("盛り上げ")).getByText("#盛り上げ"));
     expect(screen.queryByText("編集中:盛り上げ")).toBeNull();
@@ -414,6 +422,32 @@ describe("TagsScreen: ドラッグで並べ替え", () => {
       moveTo(90, touch);
       release(touch);
       expect(placeTagAction).toHaveBeenCalledWith({ id: "t1", groupId: "g1", ids: ["t2", "t1"] });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("スマホで別のグループへ移って行が作り直されても、スクロールを止め続ける", async () => {
+    vi.useFakeTimers();
+    try {
+      setup();
+      fireEvent.click(screen.getByRole("button", { name: "管理" }));
+      const touched = within(row("アニソン")).getByText("#アニソン");
+      press("アニソン", 175, touch);
+      act(() => vi.advanceTimersByTime(400));
+      moveTo(10, touch);
+      expect(names("気分")).toEqual(["アニソン", "盛り上げ", "しっとり"]);
+      expect(touched.isConnected).toBe(false);
+      // 触れた要素が外れると touchmove は window まで届かない
+      const tm = new Event("touchmove", { cancelable: true, bubbles: true });
+      touched.dispatchEvent(tm);
+      expect(tm.defaultPrevented).toBe(true);
+      release(touch);
+      expect(placeTagAction).toHaveBeenCalledWith({
+        id: "t3",
+        groupId: "g1",
+        ids: ["t3", "t1", "t2"],
+      });
     } finally {
       vi.useRealTimers();
     }

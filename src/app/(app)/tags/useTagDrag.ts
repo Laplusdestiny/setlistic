@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -51,9 +52,13 @@ export function findDrop(
   return { groupId: best.dataset.dropGroup || null, index };
 }
 
+/** ドラッグ中の行を指（ポインター）の位置へずらす量を入れる CSS 変数 */
+export const DRAG_Y = "--drag-y";
+
 /**
  * タグの行をドラッグ（PC）・長押ししてから移動（スマホ）で並べ替える。
- * ドラッグ中は drag にドロップ先が入り、離すと onDrop が呼ばれる。Esc で取り消す
+ * ドラッグ中は drag にドロップ先が入り、離すと onDrop が呼ばれる。Esc で取り消す。
+ * 持ち上げた行は、つかんだ位置のまま指に付いて動く（一覧の再描画は入る位置が変わったときだけ）
  */
 export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
   const container = useRef<HTMLDivElement>(null);
@@ -62,6 +67,28 @@ export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
   // 押している最中（長押し待ちを含む）のあと始末。ドラッグ中かどうかも兼ねる
   const pressing = useRef<{ active: boolean; stop: () => void } | null>(null);
   const suppressClick = useRef(false);
+  // つかんだ行：行の上端からつかんだ位置までの距離と、いまの y 座標
+  const grab = useRef<{ tagId: string; offset: number; y: number } | null>(null);
+  // いまずらしている行とずらした量（グループを移ると行の要素が作り直される）
+  const shifted = useRef<{ el: HTMLElement; dy: number } | null>(null);
+
+  /** つかんだ行を、本来の位置から指の位置までずらす */
+  function follow() {
+    const g = grab.current;
+    const el = [...(container.current?.querySelectorAll<HTMLElement>("[data-tag-id]") ?? [])].find(
+      (row) => row.dataset.tagId === g?.tagId,
+    );
+    if (!g || !el) return;
+    const prev = shifted.current?.el === el ? shifted.current.dy : 0;
+    const dy = g.y - g.offset - (el.getBoundingClientRect().top - prev);
+    el.style.setProperty(DRAG_Y, `${dy}px`);
+    shifted.current = { el, dy };
+  }
+
+  // 入る位置が変わって行が並び直したら、ずらす量も付け直す
+  useLayoutEffect(() => {
+    if (drag) follow();
+  });
 
   useEffect(() => {
     onDropRef.current = onDrop;
@@ -86,18 +113,28 @@ export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
     const touch = e.pointerType === "touch";
     const startX = e.clientX;
     const startY = e.clientY;
+    const offset = startY - e.currentTarget.getBoundingClientRect().top;
     let y = startY;
     let current: TagDrop = { tagId, groupId, index: -1 };
     let timer: ReturnType<typeof setTimeout> | undefined;
     let frame = 0;
+    // 別のグループへ移ると行の要素が作り直され、触れた要素の touchmove は window まで届かなくなる。
+    // 触れた要素でも止める
+    const target = e.target as EventTarget;
+    const block = (ev: Event) => {
+      if (state.active) ev.preventDefault();
+    };
     const body = document.body.style;
     const saved = { userSelect: body.userSelect, cursor: body.cursor };
 
     const update = () => {
       const found = container.current && findDrop(container.current, tagId, y);
-      if (!found || (found.groupId === current.groupId && found.index === current.index)) return;
-      current = { tagId, ...found };
-      setDrag(current);
+      if (found && (found.groupId !== current.groupId || found.index !== current.index)) {
+        current = { tagId, ...found };
+        setDrag(current);
+      }
+      if (grab.current) grab.current.y = y;
+      follow();
     };
     const autoScroll = () => {
       const dy = y < EDGE ? -SCROLL_STEP : y > window.innerHeight - EDGE ? SCROLL_STEP : 0;
@@ -109,6 +146,7 @@ export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
     };
     const begin = () => {
       state.active = true;
+      grab.current = { tagId, offset, y };
       body.userSelect = "none";
       body.cursor = "grabbing";
       window.getSelection()?.removeAllRanges();
@@ -123,10 +161,14 @@ export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
       window.removeEventListener("keydown", key);
+      target.removeEventListener("touchmove", block);
       pressing.current = null;
       if (!state.active) return;
       body.userSelect = saved.userSelect;
       body.cursor = saved.cursor;
+      shifted.current?.el.style.removeProperty(DRAG_Y);
+      shifted.current = null;
+      grab.current = null;
       // 離したときのクリック（編集が開く）を1回だけ無視する
       suppressClick.current = true;
       setTimeout(() => (suppressClick.current = false), 0);
@@ -158,6 +200,7 @@ export function useTagDrag(enabled: boolean, onDrop: (drop: TagDrop) => void) {
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", cancel);
     window.addEventListener("keydown", key);
+    target.addEventListener("touchmove", block, { passive: false });
     if (touch) timer = setTimeout(begin, LONG_PRESS_MS);
   }
 
