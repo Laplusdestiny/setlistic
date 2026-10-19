@@ -78,3 +78,26 @@ export function moveItem<T extends { id: string }>(items: T[], id: string, dir: 
   [next[i], next[j]] = [next[j], next[i]];
   return next;
 }
+
+/**
+ * id を groupId のグループの index 番目（グループ内での位置）へ移した並びを返す。
+ * 並び全体はグループごとの表示順として使う（ドラッグでの並べ替え・グループの移動）
+ */
+export function placeItem<T extends { id: string; groupId: string | null }>(
+  items: T[],
+  id: string,
+  groupId: string | null,
+  index: number,
+): T[] {
+  const item = items.find((x) => x.id === id);
+  if (!item) return items;
+  const rest = items.filter((x) => x.id !== id);
+  const members = rest.filter((x) => x.groupId === groupId);
+  const before = members[Math.max(0, index)];
+  const at = before
+    ? rest.indexOf(before)
+    : members.length > 0
+      ? rest.indexOf(members[members.length - 1]) + 1
+      : rest.length;
+  return [...rest.slice(0, at), { ...item, groupId }, ...rest.slice(at)];
+}

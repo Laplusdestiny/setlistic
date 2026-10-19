@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { conditionsToHref, EMPTY_CONDITIONS } from "@/lib/search/conditions";
 import { planKaraokeTags } from "@/lib/tags/karaoke";
-import { GROUP_NAME_MAX, moveItem } from "@/lib/tags/manage";
+import { GROUP_NAME_MAX, moveItem, placeItem } from "@/lib/tags/manage";
 import { normalizeTagName } from "@/lib/tags/normalize";
 import type { GroupOption } from "@/lib/tags/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -14,12 +14,14 @@ import {
   createGroupAction,
   createTagAction,
   deleteGroupAction,
+  placeTagAction,
   renameGroupAction,
   reorderGroupsAction,
   reorderTagsAction,
 } from "./actions";
 import { TagEditor } from "./TagEditor";
 import styles from "./tags.module.css";
+import { useTagDrag, type TagDrop } from "./useTagDrag";
 
 export type ManagedTag = {
   id: string;
@@ -45,10 +47,18 @@ export function TagsScreen({ groups, tags }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
+  // ドロップした並びを、保存して読み直すまで（tags が変わるまで）表示しておく
+  const [placed, setPlaced] = useState<{ base: ManagedTag[]; tags: ManagedTag[] } | null>(null);
 
   const karaoke = planKaraokeTags(groups, tags);
   const selected = tags.find((t) => t.id === selectedId) ?? null;
   const needle = normalizeTagName(q);
+  const shown = placed?.base === tags ? placed.tags : tags;
+  const { container, drag, rowProps } = useTagDrag(
+    mode === "manage" && !needle && !pending,
+    dropTag,
+  );
+  const listed = drag ? placeItem(shown, drag.tagId, drag.groupId, drag.index) : shown;
   const matches = (t: ManagedTag) =>
     !needle ||
     normalizeTagName(t.name).includes(needle) ||
@@ -57,9 +67,9 @@ export function TagsScreen({ groups, tags }: Props) {
   // 表示用のグループ（グループなしのタグは「マイタグ」）
   const sections: { group: GroupOption | null; tags: ManagedTag[] }[] = groups.map((g) => ({
     group: g,
-    tags: tags.filter((t) => t.groupId === g.id && matches(t)),
+    tags: listed.filter((t) => t.groupId === g.id && matches(t)),
   }));
-  const loose = tags.filter(
+  const loose = listed.filter(
     (t) => (!t.groupId || !groups.some((g) => g.id === t.groupId)) && matches(t),
   );
   if (loose.length > 0 || (mode === "manage" && !needle))
@@ -80,6 +90,20 @@ export function TagsScreen({ groups, tags }: Props) {
     run(() => reorderTagsAction(moveItem(groupTags, tagId, dir).map((t) => t.id)));
   const moveGroup = (gid: string, dir: -1 | 1) =>
     run(() => reorderGroupsAction(moveItem(groups, gid, dir).map((g) => g.id)));
+
+  function dropTag({ tagId, groupId, index }: TagDrop) {
+    const from = shown.find((t) => t.id === tagId);
+    const next = placeItem(shown, tagId, groupId, index);
+    const ids = next.filter((t) => t.groupId === groupId).map((t) => t.id);
+    const before = shown.filter((t) => t.groupId === groupId).map((t) => t.id);
+    if (!from || (from.groupId === groupId && ids.join() === before.join())) return;
+    setPlaced({ base: tags, tags: next });
+    run(async () => {
+      const res = await placeTagAction({ id: tagId, groupId, ids });
+      if (res.status !== "ok") setPlaced(null);
+      return res;
+    });
+  }
 
   function openEditor(tagId: string) {
     setSelectedId(tagId);
@@ -181,7 +205,7 @@ export function TagsScreen({ groups, tags }: Props) {
       )}
 
       <div className={styles.body}>
-        <div className={styles.lists}>
+        <div className={styles.lists} ref={container}>
           {tags.length === 0 && (
             <p className={styles.empty}>
               タグはまだありません。曲を登録するときや「＋ 新規」から作れます。
@@ -296,11 +320,25 @@ export function TagsScreen({ groups, tags }: Props) {
                     )}
                   </div>
 
-                  <ul className={styles.rows}>
+                  <ul
+                    className={styles.rows}
+                    data-drop-group={s.group?.id ?? ""}
+                    data-draggable={needle ? undefined : ""}
+                  >
                     {s.tags.length === 0 && <li className={styles.rowEmpty}>タグはありません</li>}
                     {s.tags.map((t, ti) => (
-                      <li key={t.id} data-selected={t.id === selectedId ? "" : undefined}>
-                        <div className={styles.move}>
+                      <li
+                        key={t.id}
+                        data-selected={t.id === selectedId ? "" : undefined}
+                        data-dragging={t.id === drag?.tagId ? "" : undefined}
+                        {...rowProps(t.id, s.group?.id ?? null)}
+                      >
+                        {!needle && (
+                          <span className={styles.grip} aria-hidden="true">
+                            ⠿
+                          </span>
+                        )}
+                        <div className={styles.move} data-no-drag="">
                           <button
                             type="button"
                             aria-label={`#${t.name}を上へ`}
@@ -377,7 +415,8 @@ export function TagsScreen({ groups, tags }: Props) {
 
           {mode === "manage" && (
             <p className={styles.note}>
-              ↑↓ボタンで並べ替え、「＋ 新しいグループ」でグループを作れます。「＋
+              タグはドラッグ（スマホは長押ししてから動かす）か↑↓ボタンで並べ替えられます。別のグループまでドラッグすると、そのグループへ移ります。「＋
+              新しいグループ」でグループを作れます。「＋
               カラオケ機種のタグ」で、曲が入っている機種（DAM・JOYSOUND）を付けるためのタグをまとめて作れます。タグの「編集」では、グループの移動（新しいグループを作って移すことも）・名前変更・統合・削除ができます。タグを削除しても曲は消えません。
             </p>
           )}

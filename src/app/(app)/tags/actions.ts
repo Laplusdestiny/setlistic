@@ -156,6 +156,33 @@ export async function reorderTagsAction(ids: string[]): Promise<Result> {
   return error ? FAILED : ok;
 }
 
+/**
+ * ドラッグでの移動：タグを groupId のグループ（null は「マイタグ」）へ移し、そのグループを ids の順に並べる。
+ * グループの付け替えと並べ替えが別々に失敗しても、タグはどちらかのグループに残る
+ */
+export async function placeTagAction(input: {
+  id: string;
+  groupId: string | null;
+  ids: string[];
+}): Promise<Result> {
+  const { supabase } = await requireUser();
+  if (
+    !isId(input?.id) ||
+    (input.groupId !== null && !isId(input.groupId)) ||
+    !Array.isArray(input.ids) ||
+    !input.ids.every(isId) ||
+    !input.ids.includes(input.id)
+  )
+    return fail("並べ替えできませんでした");
+  const { error } = await supabase
+    .from("tags")
+    .update({ group_id: input.groupId })
+    .eq("id", input.id);
+  if (error) return FAILED;
+  const { error: reorder } = await supabase.rpc("reorder_tags", { p_ids: input.ids });
+  return reorder ? FAILED : ok;
+}
+
 // ───────── グループ ─────────
 
 /** グループの新規作成。tagId を渡すと、そのタグを作ったグループへ移す */

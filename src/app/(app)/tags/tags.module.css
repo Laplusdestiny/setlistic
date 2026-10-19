@@ -281,6 +281,56 @@
   background: var(--color-tag-bg);
 }
 
+/* 長押しで文字の選択や端末のメニューが出ないようにする */
+.rows[data-draggable] li {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 持ち上げた行は浮かせて、指に付いて動かす（ずらす量は useTagDrag が --drag-y に入れる） */
+.rows:has(li[data-dragging]) {
+  overflow: visible;
+}
+
+.rows li {
+  transition:
+    scale 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+.rows li[data-dragging] {
+  position: relative;
+  z-index: 10;
+  translate: 0 var(--drag-y, 0);
+  scale: 1.03;
+  background: var(--color-paper);
+  border-radius: var(--radius-search);
+  box-shadow:
+    0 0 0 2px var(--color-primary),
+    0 10px 24px rgb(0 0 0 / 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rows li {
+    transition: none;
+  }
+
+  .rows li[data-dragging] {
+    scale: none;
+  }
+}
+
+.grip {
+  flex: none;
+  width: 14px;
+  padding-left: 4px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+}
+
 .rowEmpty {
   color: var(--color-ink-muted);
   font-size: 13px;

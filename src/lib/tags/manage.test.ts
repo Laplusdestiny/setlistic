@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moveItem, validateAlias, validateGroupName, validateRename } from "./manage";
+import { moveItem, placeItem, validateAlias, validateGroupName, validateRename } from "./manage";
 
 const tags = [
   { id: "1", name: "十八番" },
@@ -73,5 +73,41 @@ describe("moveItem", () => {
   it("元の配列を変更しない", () => {
     moveItem(xs, "b", -1);
     expect(xs.map((x) => x.id)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("placeItem", () => {
+  const xs = [
+    { id: "a", groupId: "g1" },
+    { id: "x", groupId: "g2" },
+    { id: "b", groupId: "g1" },
+    { id: "c", groupId: "g1" },
+    { id: "y", groupId: null },
+  ];
+  const ids = (items: { id: string }[]) => items.map((x) => x.id);
+  const inGroup = (items: typeof xs, g: string | null) => ids(items.filter((x) => x.groupId === g));
+
+  it("同じグループの中で位置を変える", () => {
+    expect(inGroup(placeItem(xs, "c", "g1", 0), "g1")).toEqual(["c", "a", "b"]);
+    expect(inGroup(placeItem(xs, "a", "g1", 1), "g1")).toEqual(["b", "a", "c"]);
+    expect(inGroup(placeItem(xs, "a", "g1", 2), "g1")).toEqual(["b", "c", "a"]);
+    expect(inGroup(placeItem(xs, "a", "g1", 99), "g1")).toEqual(["b", "c", "a"]);
+  });
+  it("別のグループへ移して、その位置に入れる", () => {
+    const next = placeItem(xs, "b", "g2", 0);
+    expect(next.find((x) => x.id === "b")?.groupId).toBe("g2");
+    expect(inGroup(next, "g2")).toEqual(["b", "x"]);
+    expect(inGroup(next, "g1")).toEqual(["a", "c"]);
+    expect(inGroup(placeItem(xs, "b", null, 1), null)).toEqual(["y", "b"]);
+  });
+  it("タグのないグループへ移せる", () => {
+    const next = placeItem(xs, "a", "g3", 0);
+    expect(inGroup(next, "g3")).toEqual(["a"]);
+    expect(next).toHaveLength(xs.length);
+  });
+  it("知らない id なら変えない。元の配列は変更しない", () => {
+    expect(placeItem(xs, "zz", "g1", 0)).toBe(xs);
+    placeItem(xs, "a", "g2", 0);
+    expect(xs[0]).toEqual({ id: "a", groupId: "g1" });
   });
 });
