@@ -13,6 +13,7 @@ import {
   tagState,
   type SearchConditions,
 } from "@/lib/search/conditions";
+import { PRIORITY_FILTER_LABELS, PRIORITY_FILTERS } from "@/lib/songs/priority";
 import { SORT_KEYS, SORT_LABELS } from "@/lib/songs/sort";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
 import form from "./form.module.css";
@@ -194,6 +195,22 @@ export function ConditionsForm({
                   onClick={() => set({ lastEase: c.lastEase === e ? null : e })}
                 >
                   {LAST_EASE_LABELS[e]}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className={styles.fieldset}>
+            <legend className={form.label}>練習の優先度</legend>
+            <div className={form.chips}>
+              {PRIORITY_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={form.chip}
+                  aria-pressed={c.priority === f}
+                  onClick={() => set({ priority: c.priority === f ? null : f })}
+                >
+                  {PRIORITY_FILTER_LABELS[f]}
                 </button>
               ))}
             </div>

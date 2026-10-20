@@ -107,4 +107,27 @@ describe("ConditionsForm", () => {
     await userEvent.click(hard);
     expect(last().lastEase).toBeNull();
   });
+
+  it("「練習の優先度」に 高だけ・中以上・設定あり のチップがある", async () => {
+    setup({ advancedOpen: true });
+    expect(screen.getByRole("button", { name: "高だけ" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "中以上" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "設定あり" })).toBeInTheDocument();
+  });
+
+  it('「中以上」を押すと priority: "mid"、もう一度押すと null', async () => {
+    const { last } = setup({ advancedOpen: true });
+    const midButton = screen.getByRole("button", { name: "中以上" });
+    await userEvent.click(midButton);
+    expect(last().priority).toBe("mid");
+    expect(midButton).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(midButton);
+    expect(last().priority).toBeNull();
+    expect(midButton).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("並べ替えに「練習の優先度が高い順」がある", async () => {
+    setup({ showSort: true });
+    expect(screen.getByRole("radio", { name: "練習の優先度が高い順" })).toBeInTheDocument();
+  });
 });
