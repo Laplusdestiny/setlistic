@@ -34,11 +34,10 @@
 ### 書き込み
 
 - 曲の詳細から保存するとき：`register_song` / `update_song` が受け取る JSON に `practice_priority` を足す（`song_key` と同じ扱い）。範囲外の値は検証（`src/lib/songs/validate.ts`）で弾く
-- まとめて編集：新しい DB 関数 `bulk_set_practice_priority(p_song_ids uuid[], p_priority smallint) returns integer`
-  - `SECURITY INVOKER`。`WHERE id = ANY(p_song_ids) AND user_id = auth.uid()` で本人の曲だけを更新する
-  - `p_priority` が null なら一括で未設定に戻す
-  - 戻り値は更新した行数
-  - `updated_at` も更新する
+- まとめて編集：既存の DB 関数 `bulk_edit_song_tags` に引数 `p_set_priority boolean DEFAULT false` と `p_priority smallint DEFAULT NULL` を足す（`DROP` → `CREATE`）
+  - タグの変更と同じ1回の呼び出し・同じトランザクションで適用する。他人の曲が混ざっていれば全体が失敗する（`P0002`）という今の挙動もそのまま引き継ぐ
+  - `p_set_priority` が true のときだけ `practice_priority = p_priority` と `updated_at = now()` を更新する。`p_priority` が null なら未設定に戻す
+  - 戻り値（対象にした曲の数）は今のまま
 
 ### 検索・並べ替え
 
@@ -75,7 +74,7 @@
 ### 曲の詳細（`src/components/SongDetail.tsx`）
 
 - 表示：「キー」の近くに「練習の優先度」の行を置き、「高」「中」「低」「—」のどれかを出す
-- 編集：「なし・低・中・高」の4つのボタンが横に並ぶ切り替え（`role="radiogroup"`、各ボタン `role="radio"` と `aria-checked`）。保存は今のフォームと一緒に行う
+- 編集：「なし・低・中・高」の4つのボタンが横に並ぶ切り替え。歌唱記録の「歌いやすさ」のボタンと同じ作り（`fieldset` ＋ `legend`、各ボタンに `aria-pressed`）。保存は今のフォームと一緒に行う
 
 ### ホームの一覧（`src/app/(app)/SetList.tsx`）
 
@@ -92,35 +91,39 @@
   - `priority === "set"` かつ `sort === "priority_asc"` のとき押された状態（`aria-pressed="true"`）。もう一度押すと `priority` と `sort` を外し、設定の既定の並び順に戻る
   - 優先度が付いた曲が1曲もないときは出さない。件数は、ホームの読み込みの `Promise.all` に、`practice_priority` が null でない曲の件数を `count: "exact", head: true` で取る問い合わせを足して得る
 
-### 検索画面（`src/app/(app)/search/SearchScreen.tsx`）
+### 検索の条件フォーム（`src/components/ConditionsForm.tsx`。検索画面と PC の絞り込みパネルで共通）
 
-- 「練習の優先度」の欄を足す：「指定なし・高だけ・中以上・設定あり」から1つ選ぶ
+- 「練習の優先度」の欄を足す：「高だけ・中以上・設定あり」のチップから1つ選ぶ。「直近の歌いやすさ」と同じ作りで、押したチップをもう一度押すと指定なしに戻る
+- 絞り込み中の説明（`describeConditions`）に「練習の優先度：高だけ」などを出し、`hasConditions` / `countConditions` でも条件として数える
 - 並べ替えのメニューに「練習の優先度が高い順」を足す
 
 ### まとめて編集（`src/app/(app)/bulk/BulkEditScreen.tsx`）
 
-- タグの編集の下に「練習の優先度をまとめて変える」欄：「変えない・なし・低・中・高」から選ぶ。「変えない」以外を選んで適用すると、`bulk_set_practice_priority` を呼ぶ Server Action（`bulk/actions.ts`）で選んだ曲に反映する
-- タグの変更と優先度の変更を同時に指定したときは、両方を適用する
+- タグの編集の下に「練習の優先度をまとめて変える」欄：「変えない・なし・低・中・高」から選ぶ（既定は「変えない」）
+- 適用すると、`bulkEditTagsAction`（`bulk/actions.ts`）が `bulk_edit_song_tags` に優先度の引数も渡す。タグの変更と優先度の変更を同時に指定したときは、両方を一度に適用する
+- タグも優先度も変えないときは適用ボタンを押せない（今の `nothingToDo` に優先度を含める）
+- 見出しは「タグ・優先度の一括変更」、説明文も優先度に触れる形に直す
 
 ### ヘルプ（`src/app/help/page.tsx`、節の id は `src/lib/help.ts`）
 
-- 「練習の優先度」の節を足す：付け方（曲の詳細・まとめて編集）、「練習する」チップ、検索での絞り込み、練習が終わったら「なし」に戻すこと
+- 節の id `practice` を `HELP_SECTIONS` に足し、「タグ」の節の次に「練習の優先度」の節を置く：付け方（曲の詳細・まとめて編集）、「練習する」チップ、検索での絞り込み、練習が終わったら「なし」に戻すこと
 - チュートリアルは変えない
 
 ## エラーの扱い
 
 - 範囲外の値は、アプリの検証と DB の CHECK の両方で弾く。Server Action はほかの項目と同じ形式でエラーを返す
-- `bulk_set_practice_priority` に他人の曲の ID が混ざっても、RLS と `user_id = auth.uid()` の条件で更新されない（エラーにはせず、更新した行数に含めない）
+- まとめて編集で他人の曲の ID が混ざっていたら、今と同じく全体を失敗させる（`P0002`）。画面には今と同じ「選んだ曲の一部が見つかりませんでした」を出す
 
 ## テスト
 
 - `src/db/rls.test.ts`（使い捨て Postgres）
-  - 他人の曲の優先度は `update` でも `bulk_set_practice_priority` でも変えられない
+  - 他人の曲の優先度は `update` でも `bulk_edit_song_tags` でも変えられない
+  - `bulk_edit_song_tags`：`p_set_priority` が false なら優先度は変わらない、true ＋ null で未設定に戻る
   - CHECK 制約で 0 と 4 が弾かれる
   - `search_songs`：`priority` の3種類の絞り込み、`priority_asc` の順番（高 → 中 → 低 → 未設定、同じ優先度の中は追加が新しい順）
 - `src/lib/songs/sort.test.ts` / `src/lib/search/conditions.test.ts`（URL との相互変換を含む）/ `src/lib/songs/validate.test.ts` / `src/lib/data/import.test.ts` / `src/lib/data/csv.test.ts` / `src/lib/songs/priority.test.ts`
 - 画面テスト：`SongDetail`（切り替えと保存）、`SetList`（バッジ、「練習する」チップの表示・非表示・押した状態・解除）、`SearchScreen`（欄と並べ替え）、`BulkEditScreen`（適用）
-- `bulk/actions.test.ts`：RPC の呼び出しと「変えない」のときに呼ばないこと
+- `bulk/actions.test.ts` / `src/lib/songs/bulk-tags.test.ts`：優先度の引数の渡し方（「変えない」なら `p_set_priority: false`）と、範囲外の値を弾くこと
 
 ## ドキュメント
 
