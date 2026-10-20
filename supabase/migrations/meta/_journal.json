@@ -92,6 +92,20 @@
       "when": 1792296552250,
       "tag": "0012_tutorial_completed",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792507872084,
+      "tag": "0013_burly_blue_shield",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792507875668,
+      "tag": "0014_practice_priority_functions",
+      "breakpoints": true
     }
   ]
 }

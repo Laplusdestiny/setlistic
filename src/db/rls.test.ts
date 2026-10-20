@@ -1200,6 +1200,175 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  describe("練習の優先度", () => {
+    const P = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
+    const Q = "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2";
+    const j = (v: unknown) => sql.json(v as never);
+    const pids: Record<string, string> = {};
+    let qSong: string;
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${P}, 'authenticated', 'authenticated', 'p@test.invalid'),
+        (${Q}, 'authenticated', 'authenticated', 'q@test.invalid')`;
+      // 優先度 null・3・1・2・1 の曲を、created_at をずらして入れる
+      const rows: [string, number | null, string][] = [
+        ["n", null, "2026-01-01"],
+        ["p3", 3, "2026-01-02"],
+        ["p1old", 1, "2026-01-03"],
+        ["p2", 2, "2026-01-04"],
+        ["p1new", 1, "2026-01-05"],
+      ];
+      for (const [key, pri, created] of rows) {
+        const [r] =
+          await sql`insert into songs (user_id, title, artist, practice_priority, created_at)
+          values (${P}, ${"優先" + key}, 'a', ${pri}, ${created}) returning id`;
+        pids[key] = r.id;
+      }
+      qSong = (
+        await sql`insert into songs (user_id, title, artist, practice_priority) values (${Q}, 'q', 'q', 2) returning id`
+      )[0].id;
+    });
+
+    const search = (userId: string, p: Record<string, unknown>) =>
+      as(userId, async (tx) => {
+        const rows = await tx`select * from search_songs(${j(p)})`;
+        return rows.map((r) => r.id as string);
+      });
+    const priOf = async (tx: postgres.TransactionSql, id: string) =>
+      (await tx`select practice_priority as p from songs where id = ${id}`)[0].p;
+
+    it("CHECK：0 と 4 は入らない、1〜3 と null は入る", async () => {
+      for (const bad of [0, 4]) {
+        await as(P, async (tx) => {
+          await expect(
+            tx`insert into songs (user_id, title, artist, practice_priority) values (${P}, 'x', 'x', ${bad})`,
+          ).rejects.toMatchObject({ code: "23514" });
+        });
+      }
+      await as(P, async (tx) => {
+        for (const ok of [1, 2, 3, null]) {
+          await tx`insert into songs (user_id, title, artist, practice_priority) values (${P}, 'x', 'x', ${ok})`;
+        }
+      });
+    });
+
+    it("他人の曲の優先度は update で変えられない（B が A の曲を更新しても 0 行）", async () => {
+      await as(Q, async (tx) => {
+        const r = await tx`update songs set practice_priority = 3 where id = ${pids.p1old}`;
+        expect(r.count).toBe(0);
+      });
+      const [row] = await sql`select practice_priority as p from songs where id = ${pids.p1old}`;
+      expect(row.p).toBe(1);
+    });
+
+    it("update_song：practice_priority を保存し、null で未設定に戻る", async () => {
+      await as(P, async (tx) => {
+        const base = { title: "t", artist: "a" };
+        const [{ id }] =
+          await tx`select register_song(${j({ ...base, practice_priority: 2 })}) as id`;
+        expect(await priOf(tx, id)).toBe(2);
+        await tx`select update_song(${id}, ${j({ ...base, practice_priority: 1 })})`;
+        expect(await priOf(tx, id)).toBe(1);
+        await tx`select update_song(${id}, ${j({ ...base, practice_priority: null })})`;
+        expect(await priOf(tx, id)).toBeNull();
+      });
+    });
+
+    it("bulk_edit_song_tags：p_set_priority=false なら優先度は変わらない", async () => {
+      await as(P, async (tx) => {
+        await tx`select bulk_edit_song_tags(${[pids.p1old, pids.p2]}::uuid[], '{}'::uuid[], '[]'::jsonb, '{}'::uuid[], false, 3::smallint)`;
+        expect(await priOf(tx, pids.p1old)).toBe(1);
+        expect(await priOf(tx, pids.p2)).toBe(2);
+      });
+    });
+
+    it("bulk_edit_song_tags：p_set_priority=true, p_priority=1 で全曲が 1、p_priority=null で全曲が null", async () => {
+      await as(P, async (tx) => {
+        const ids = [pids.n, pids.p3, pids.p2];
+        await tx`select bulk_edit_song_tags(${ids}::uuid[], '{}'::uuid[], '[]'::jsonb, '{}'::uuid[], true, 1::smallint)`;
+        for (const id of ids) expect(await priOf(tx, id)).toBe(1);
+        await tx`select bulk_edit_song_tags(${ids}::uuid[], '{}'::uuid[], '[]'::jsonb, '{}'::uuid[], true, null)`;
+        for (const id of ids) expect(await priOf(tx, id)).toBeNull();
+      });
+    });
+
+    it("bulk_edit_song_tags：他人の曲が混ざると P0002 で全体が失敗し、自分の曲の優先度も変わらない", async () => {
+      await as(P, async (tx) => {
+        await expect(
+          tx`select bulk_edit_song_tags(${[pids.p3, qSong]}::uuid[], '{}'::uuid[], '[]'::jsonb, '{}'::uuid[], true, 1::smallint)`,
+        ).rejects.toMatchObject({ code: "P0002" });
+      });
+      const [row] = await sql`select practice_priority as p from songs where id = ${pids.p3}`;
+      expect(row.p).toBe(3);
+    });
+
+    it("search_songs priority=high は 1 だけ、mid は 1・2、set は null 以外", async () => {
+      const set = (ids: string[]) => ids.sort();
+      expect(set(await search(P, { priority: "high" }))).toEqual(set([pids.p1old, pids.p1new]));
+      expect(set(await search(P, { priority: "mid" }))).toEqual(
+        set([pids.p1old, pids.p1new, pids.p2]),
+      );
+      expect(set(await search(P, { priority: "set" }))).toEqual(
+        set([pids.p1old, pids.p1new, pids.p2, pids.p3]),
+      );
+      expect(await search(P, { priority: "" })).toHaveLength(5);
+    });
+
+    it("search_songs sort=priority_asc：1 → 2 → 3 → null、同じ値の中は created_at の新しい順", async () => {
+      expect(await search(P, { sort: "priority_asc" })).toEqual([
+        pids.p1new,
+        pids.p1old,
+        pids.p2,
+        pids.p3,
+        pids.n,
+      ]);
+    });
+
+    it("search_songs の結果に practice_priority が入る", async () => {
+      await as(P, async (tx) => {
+        const rows = await tx`select id, practice_priority from search_songs('{}'::jsonb)`;
+        const byId = Object.fromEntries(rows.map((r) => [r.id, r.practice_priority]));
+        expect(byId[pids.p1old]).toBe(1);
+        expect(byId[pids.p3]).toBe(3);
+        expect(byId[pids.n]).toBeNull();
+      });
+    });
+
+    it("export_data に practice_priority が出て、import_data で戻る", async () => {
+      const exported = await as(P, async (tx) => (await tx`select export_data() as d`)[0].d);
+      const pris = exported.songs.map((s: { practice_priority: unknown }) => s.practice_priority);
+      expect(pris).toHaveLength(5);
+      expect(pris).toContain(3);
+      expect(pris).toContain(null);
+
+      const R = "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3";
+      await sql`insert into auth.users (id, aud, role, email) values (${R}, 'authenticated', 'authenticated', 'r@test.invalid')`;
+      await as(R, async (tx) => {
+        await tx`select import_data(${j({
+          songs: [
+            { title: "取り込み", artist: "a", practice_priority: 2 },
+            { title: "未設定", artist: "a" },
+          ],
+        })})`;
+        const rows = await tx`select title, practice_priority as p from songs order by title`;
+        expect(Object.fromEntries(rows.map((r) => [r.title, r.p]))).toEqual({
+          取り込み: 2,
+          未設定: null,
+        });
+        const again = (await tx`select export_data() as d`)[0].d;
+        expect(
+          again.songs.map((s: { practice_priority: unknown }) => s.practice_priority).sort(),
+        ).toEqual([2, null]);
+      });
+    });
+
+    it('新しいユーザーの user_settings.list_columns は ["key","tags","priority"]', async () => {
+      const [row] = await sql`select list_columns from user_settings where user_id = ${P}`;
+      expect(row.list_columns).toEqual(["key", "tags", "priority"]);
+    });
+  });
+
   describe("招待の管理（管理者だけ）", () => {
     const ADM = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
     const NON = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";

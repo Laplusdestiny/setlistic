@@ -51,6 +51,7 @@ export const songs = pgTable(
     sourceUrl: text("source_url"),
     // 習熟度はタグ（「歌える度」グループ）で表現する（open-questions #2）
     songKey: smallint("song_key"),
+    practicePriority: smallint("practice_priority"), // 1=高 2=中 3=低、null=未設定
     memo: text("memo"), // 将来の共有機能では共有対象外
     lastSungAt: date("last_sung_at"),
     sungCount: integer("sung_count").notNull().default(0),
@@ -66,6 +67,7 @@ export const songs = pgTable(
       sql`${t.sourceService} in ('apple_music','spotify','youtube_music','amazon_music','manual','search')`,
     ),
     check("songs_song_key_check", sql`${t.songKey} between -7 and 7`),
+    check("songs_practice_priority_check", sql`${t.practicePriority} between 1 and 3`),
     ownRows("songs"),
   ],
 ).enableRLS();
@@ -245,7 +247,7 @@ export const userSettings = pgTable(
     listSort: text("list_sort").notNull().default("created_desc"),
     listColumns: jsonb("list_columns")
       .notNull()
-      .default(sql`'["key","tags"]'::jsonb`),
+      .default(sql`'["key","tags","priority"]'::jsonb`),
     defaultTagIds: uuid("default_tag_ids")
       .array()
       .notNull()
