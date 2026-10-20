@@ -12,7 +12,7 @@ const fail = (message: string): Result => ({ status: "error", message });
 const FAILED = fail("保存できませんでした。もう一度お試しください。");
 const isId = (v: unknown): v is string => typeof v === "string" && UUID_PATTERN.test(v);
 
-const COLUMNS = ["key", "tags"];
+const COLUMNS = ["key", "tags", "priority"];
 
 /** 表示設定：一覧の並び順、一覧に出す基本項目、登録時に付けるタグ */
 export async function saveDisplaySettingsAction(input: {

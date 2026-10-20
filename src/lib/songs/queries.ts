@@ -213,7 +213,7 @@ export async function getUserSettings(supabase: Client, userId: string): Promise
     listSort: parseSort(data?.list_sort),
     listColumns: Array.isArray(data?.list_columns)
       ? (data.list_columns as unknown[]).filter((c): c is string => typeof c === "string")
-      : ["key", "tags"],
+      : ["key", "tags", "priority"],
     defaultTagIds: data?.default_tag_ids ?? [],
   };
 }

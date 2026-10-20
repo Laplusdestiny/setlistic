@@ -35,15 +35,20 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
 
   // 並び順の既定・一覧に出す項目は設定（user_settings）。URL の ?sort= を優先する。
   // 設定も他と同時に取り、Supabase への往復を減らす
-  const [tutorialPending, settings, tags, groups, saved, fields, totalRes] = await Promise.all([
-    isTutorialPending(supabase, userId),
-    getUserSettings(supabase, userId),
-    listTagsWithCount(supabase),
-    supabase.from("tag_groups").select("id, name").order("sort_order"),
-    listSavedSearches(supabase),
-    listCustomFields(supabase),
-    supabase.from("songs").select("id", { count: "exact", head: true }),
-  ]);
+  const [tutorialPending, settings, tags, groups, saved, fields, totalRes, prioritizedRes] =
+    await Promise.all([
+      isTutorialPending(supabase, userId),
+      getUserSettings(supabase, userId),
+      listTagsWithCount(supabase),
+      supabase.from("tag_groups").select("id, name").order("sort_order"),
+      listSavedSearches(supabase),
+      listCustomFields(supabase),
+      supabase.from("songs").select("id", { count: "exact", head: true }),
+      supabase
+        .from("songs")
+        .select("id", { count: "exact", head: true })
+        .not("practice_priority", "is", null),
+    ]);
   // 初めてのユーザーは、まずチュートリアルへ（終えるかスキップするまで）
   if (tutorialPending) redirect(TUTORIAL_PATH);
   const defaultSort = settings.listSort;
@@ -69,6 +74,7 @@ async function HomeLoader({ searchParams }: { searchParams: Search }) {
       saved={saved}
       fields={fields}
       listColumns={settings.listColumns}
+      prioritizedCount={prioritizedRes.count ?? 0}
       today={todayJst()}
     />
   );

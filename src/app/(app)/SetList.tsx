@@ -14,9 +14,12 @@ import {
   describeConditions,
   EMPTY_CONDITIONS,
   hasConditions,
+  isPracticeMode,
+  togglePracticeMode,
   type SearchConditions,
 } from "@/lib/search/conditions";
 import { suggestSearchName, type SavedSearch } from "@/lib/search/saved";
+import { PRIORITY_LABELS } from "@/lib/songs/priority";
 import { formatKey } from "@/lib/songs/key";
 import type { SongRow, TagWithCount } from "@/lib/songs/queries";
 import { SORT_KEYS, SORT_LABELS } from "@/lib/songs/sort";
@@ -39,8 +42,10 @@ type Props = {
   saved: SavedSearch[];
   /** カスタム項目の定義 */
   fields: CustomField[];
-  /** 一覧に出す基本項目（"key" / "tags"） */
+  /** 一覧に出す基本項目（"key" / "tags" / "priority"） */
   listColumns: string[];
+  /** 練習の優先度が付いている曲の数（0 なら「練習する」チップを出さない） */
+  prioritizedCount: number;
   today: string;
 };
 
@@ -62,6 +67,7 @@ export function SetList({
   saved,
   fields,
   listColumns,
+  prioritizedCount,
   today,
 }: Props) {
   const router = useRouter();
@@ -105,6 +111,7 @@ export function SetList({
   const sort = conditions.sort ?? defaultSort;
   const showKey = listColumns.includes("key");
   const showTags = listColumns.includes("tags");
+  const showPriority = listColumns.includes("priority");
   const listFields = visibleFields(fields).filter((f) => f.showInList);
   const tagName = (id: string) => tags.find((t) => t.id === id)?.name;
   const active = hasConditions(conditions);
@@ -321,6 +328,16 @@ export function SetList({
           >
             すべて
           </button>
+          {prioritizedCount > 0 && (
+            <button
+              type="button"
+              className={styles.chip}
+              aria-pressed={isPracticeMode(draft)}
+              onClick={() => change(togglePracticeMode(draft))}
+            >
+              練習する
+            </button>
+          )}
           {chips.map((t) => (
             <button
               key={t.id}
@@ -427,6 +444,11 @@ export function SetList({
                     </span>
                     {showKey && s.songKey !== null && (
                       <span className={styles.key}>キー {formatKey(s.songKey)}</span>
+                    )}
+                    {showPriority && s.practicePriority !== null && (
+                      <span className={styles.key}>
+                        優先：{PRIORITY_LABELS[s.practicePriority]}
+                      </span>
                     )}
                   </Link>
                 </li>

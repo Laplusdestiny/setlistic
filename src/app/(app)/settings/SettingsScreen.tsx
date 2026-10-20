@@ -202,6 +202,14 @@ function DisplaySection({
           />
           タグ
         </label>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={columns.includes("priority")}
+            onChange={() => setColumns(toggle(columns, "priority"))}
+          />
+          練習の優先度
+        </label>
         <p className={styles.hint}>
           カスタム項目は、上の「カスタム項目」で「一覧に表示」を選んだものが出ます。
         </p>

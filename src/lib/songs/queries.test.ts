@@ -270,7 +270,7 @@ describe("getUserSettings", () => {
   it("未保存なら既定値", async () => {
     expect(await getUserSettings(client({}).c, "user-1")).toEqual({
       listSort: "created_desc",
-      listColumns: ["key", "tags"],
+      listColumns: ["key", "tags", "priority"],
       defaultTagIds: [],
     });
   });

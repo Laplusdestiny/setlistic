@@ -100,6 +100,7 @@ describe("SettingsScreen", () => {
     await userEvent.selectOptions(within(view()).getByLabelText("一覧の並び順（既定）"), "曲名順");
     await userEvent.click(within(view()).getByLabelText("キー"));
     await userEvent.click(within(view()).getByLabelText("タグ"));
+    await userEvent.click(within(view()).getByLabelText("練習の優先度"));
     await userEvent.click(within(view()).getByRole("button", { name: "#十八番" }));
     await userEvent.click(within(view()).getByRole("button", { name: "#アニソン" }));
     expect(within(view()).getByText("ジャンル")).toBeInTheDocument();
@@ -107,7 +108,7 @@ describe("SettingsScreen", () => {
     await userEvent.click(within(view()).getByRole("button", { name: "保存" }));
     expect(saveDisplaySettingsAction).toHaveBeenCalledWith({
       listSort: "title_asc",
-      listColumns: ["tags"],
+      listColumns: ["tags", "priority"],
       defaultTagIds: ["t2"],
     });
     expect(await within(view()).findByRole("status")).toHaveTextContent("保存しました");

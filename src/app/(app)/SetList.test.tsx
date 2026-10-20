@@ -82,6 +82,7 @@ function setup(over: Partial<Parameters<typeof SetList>[0]> = {}) {
     saved: [{ id: "q1", name: "盛り上げ", conditions: { ...EMPTY_CONDITIONS, include: ["t2"] } }],
     fields,
     listColumns: ["key", "tags"],
+    prioritizedCount: 0,
     today: "2026-10-12",
     ...over,
   };
@@ -297,5 +298,68 @@ describe("SetList: PC のレイアウト", () => {
     expect(within(panel).getByLabelText("この条件に名前を付けて保存")).toBeInTheDocument();
     await userEvent.click(within(panel).getByRole("button", { name: "リセット" }));
     expect(router.replace).toHaveBeenLastCalledWith("/", { scroll: false });
+  });
+});
+
+describe("SetList: 練習の優先度", () => {
+  const prioritized = [song("s1", "夜に駆ける", { practicePriority: 1 }), song("s2", "群青")];
+
+  it("listColumns に priority があると、優先度が付いた曲だけに「優先：高」のバッジ", () => {
+    setup({ songs: prioritized, listColumns: ["key", "tags", "priority"] });
+    const rows = within(screen.getByRole("region", { name: "SET LIST" })).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("優先：高");
+    expect(rows[1]).not.toHaveTextContent("優先：");
+  });
+
+  it("listColumns に priority が無いとバッジを出さない", () => {
+    setup({ songs: prioritized, listColumns: ["key", "tags"] });
+    expect(screen.queryByText(/優先：/)).not.toBeInTheDocument();
+  });
+
+  it("prioritizedCount > 0 のとき「すべて」のすぐ次に「練習する」チップ", () => {
+    setup({ prioritizedCount: 3 });
+    const chips = within(screen.getByRole("navigation", { name: "タグで絞り込み" })).getAllByRole(
+      "button",
+    );
+    expect(chips[0]).toHaveTextContent("すべて");
+    expect(chips[1]).toHaveTextContent("練習する");
+  });
+
+  it("prioritizedCount が 0 なら「練習する」チップを出さない", () => {
+    setup({ prioritizedCount: 0 });
+    expect(screen.queryByRole("button", { name: "練習する" })).not.toBeInTheDocument();
+  });
+
+  it("「練習する」を押すと priority=set&sort=priority_asc になり、タグの条件は残る", async () => {
+    setup({ prioritizedCount: 3, conditions: { ...EMPTY_CONDITIONS, include: ["t1"] } });
+    await userEvent.click(screen.getByRole("button", { name: "練習する" }));
+    const href = router.replace.mock.calls.at(-1)?.[0] as string;
+    const sp = new URL(href, "http://x").searchParams;
+    expect(sp.get("priority")).toBe("set");
+    expect(sp.get("sort")).toBe("priority_asc");
+    expect(sp.get("t")).toBe("t1");
+  });
+
+  it("練習モード中は aria-pressed=true、もう一度押すと priority と sort が外れる", async () => {
+    setup({
+      prioritizedCount: 3,
+      conditions: { ...EMPTY_CONDITIONS, priority: "set", sort: "priority_asc" },
+    });
+    const chip = screen.getByRole("button", { name: "練習する" });
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(chip);
+    expect(router.replace).toHaveBeenLastCalledWith("/", { scroll: false });
+  });
+
+  it("練習モード中に並べ替えで曲名順を選ぶと、「練習する」は aria-pressed=false", async () => {
+    setup({
+      prioritizedCount: 3,
+      conditions: { ...EMPTY_CONDITIONS, priority: "set", sort: "priority_asc" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "曲名順" }));
+    expect(screen.getByRole("button", { name: "練習する" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });

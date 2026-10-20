@@ -52,6 +52,17 @@ describe("saveDisplaySettingsAction", () => {
     expect(opt).toEqual({ onConflict: "user_id" });
   });
 
+  it("listColumns に priority を保存できる", async () => {
+    await saveDisplaySettingsAction({
+      listSort: "created_asc",
+      listColumns: ["priority", "key", "evil"],
+      defaultTagIds: [],
+    });
+    expect(sb.argsOf("user_settings", "upsert")[0][0]).toMatchObject({
+      list_columns: ["key", "priority"],
+    });
+  });
+
   it("タグ指定なしならタグを問い合わせない", async () => {
     await saveDisplaySettingsAction({
       listSort: "created_asc",
