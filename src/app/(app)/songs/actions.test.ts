@@ -42,6 +42,7 @@ describe("updateSongAction", () => {
     artist: "YOASOBI",
     songKey: -2,
     memo: "  サビ注意 ",
+    practicePriority: 1,
     tagIds: [],
     newTags: [{ name: "十八番" }],
     fields: { [FIELD]: "高め", unknown: "捨てる" },
@@ -71,7 +72,13 @@ describe("updateSongAction", () => {
         name: "update_song",
         args: {
           p_id: SONG,
-          p_song: { title: "夜に駆ける", artist: "YOASOBI", song_key: -2, memo: "サビ注意" },
+          p_song: {
+            title: "夜に駆ける",
+            artist: "YOASOBI",
+            song_key: -2,
+            memo: "サビ注意",
+            practice_priority: 1,
+          },
           p_tag_ids: [],
           p_new_tags: [{ name: "十八番", normalized: "十八番", group: undefined }],
           p_fields: { [FIELD]: "高め" },

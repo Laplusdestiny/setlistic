@@ -131,11 +131,21 @@ describe("toUpdatePayload", () => {
       ok: true,
       value: {
         id: UUID,
-        song: { title: "新曲名", artist: "新", song_key: -1, memo: "m" },
+        song: { title: "新曲名", artist: "新", song_key: -1, memo: "m", practice_priority: null },
         tagIds: [],
         newTags: [],
       },
     });
+  });
+  it("練習の優先度は 1〜3 だけ通し、それ以外・未送信は null", () => {
+    const pri = (v: object) => {
+      const r = toUpdatePayload({ ...base, ...v });
+      return r.ok ? r.value.song.practice_priority : "error";
+    };
+    expect(pri({ practicePriority: 2 })).toBe(2);
+    expect(pri({ practicePriority: null })).toBeNull();
+    expect(pri({ practicePriority: 9 })).toBeNull();
+    expect(pri({})).toBeNull();
   });
   it("曲IDがUUIDでない・曲名/アーティストが空はエラー", () => {
     expect(toUpdatePayload({ ...base, id: "1; drop" }).ok).toBe(false);

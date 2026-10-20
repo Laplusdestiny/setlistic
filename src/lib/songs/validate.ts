@@ -1,4 +1,5 @@
 import { clampKey } from "./key";
+import { parsePriority, type Priority } from "./priority";
 import { dedupeTagNames, normalizeTagName, MAX_TAG_LENGTH } from "../tags/normalize";
 import type { SongDraft } from "./types";
 
@@ -170,18 +171,25 @@ export type UpdateSongInput = {
   artist: string;
   songKey: number | null;
   memo: string;
+  practicePriority: Priority | null;
   tagIds: string[];
   newTags: { name: string; group?: string }[];
 };
 
 export type UpdatePayload = {
   id: string;
-  song: { title: string; artist: string; song_key: number | null; memo: string | null };
+  song: {
+    title: string;
+    artist: string;
+    song_key: number | null;
+    memo: string | null;
+    practice_priority: Priority | null;
+  };
   tagIds: string[];
   newTags: RegisterPayload["newTags"];
 };
 
-/** 編集リクエストの検証。編集できるのは曲名・アーティスト・キー・メモ・タグだけ */
+/** 編集リクエストの検証。編集できるのは曲名・アーティスト・キー・練習の優先度・メモ・タグだけ */
 export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
   if (!obj(raw)) return { ok: false, error: "リクエストが正しくありません" };
   if (typeof raw.id !== "string" || !UUID.test(raw.id))
@@ -202,7 +210,13 @@ export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
     ok: true,
     value: {
       id: raw.id,
-      song: { title, artist, song_key: key, memo: memo || null },
+      song: {
+        title,
+        artist,
+        song_key: key,
+        memo: memo || null,
+        practice_priority: parsePriority(raw.practicePriority),
+      },
       tagIds: tags.value.tagIds,
       newTags: tags.value.newTags,
     },

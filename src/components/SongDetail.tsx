@@ -11,6 +11,7 @@ import {
 import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { formatDateJa } from "@/lib/format";
 import { formatKey } from "@/lib/songs/key";
+import { PRIORITIES, PRIORITY_LABELS, type Priority } from "@/lib/songs/priority";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { FieldInputs } from "./FieldInputs";
@@ -58,6 +59,7 @@ export function SongDetail({
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist);
   const [songKey, setSongKey] = useState(song.songKey ?? 0);
+  const [priority, setPriority] = useState<Priority | null>(song.practicePriority);
   const [memo, setMemo] = useState(song.memo ?? "");
   const shownFields = visibleFields(fields);
   const currentFieldValues = () =>
@@ -77,6 +79,7 @@ export function SongDetail({
     setTitle(song.title);
     setArtist(song.artist);
     setSongKey(song.songKey ?? 0);
+    setPriority(song.practicePriority);
     setMemo(song.memo ?? "");
     setFieldValues(currentFieldValues());
     setSelected(new Set(song.tags.map((t) => t.id)));
@@ -94,6 +97,7 @@ export function SongDetail({
         artist,
         songKey,
         memo,
+        practicePriority: priority,
         fields: fieldValues,
         tagIds: [...selected],
         newTags,
@@ -190,6 +194,31 @@ export function SongDetail({
           <KeyStepper value={songKey} onChange={setSongKey} />
         </div>
 
+        <fieldset className={styles.ease}>
+          <legend className={form.label}>練習の優先度</legend>
+          <div className={styles.easeButtons}>
+            <button
+              type="button"
+              className={form.chip}
+              aria-pressed={priority === null}
+              onClick={() => setPriority(null)}
+            >
+              なし
+            </button>
+            {[...PRIORITIES].reverse().map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={form.chip}
+                aria-pressed={priority === p}
+                onClick={() => setPriority(p)}
+              >
+                {PRIORITY_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <TagPicker
           groups={groups}
           tags={allTags}
@@ -265,6 +294,10 @@ export function SongDetail({
         <div>
           <dt>キー</dt>
           <dd>{song.songKey === null ? "—" : formatKey(song.songKey)}</dd>
+        </div>
+        <div>
+          <dt>練習の優先度</dt>
+          <dd>{song.practicePriority === null ? "—" : PRIORITY_LABELS[song.practicePriority]}</dd>
         </div>
         <div>
           <dt>歌った回数</dt>

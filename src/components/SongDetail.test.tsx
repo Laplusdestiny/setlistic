@@ -101,7 +101,7 @@ describe("SongDetail: 表示", () => {
       song: { ...song, songKey: null, memo: null, appleUrl: null, tags: [], fields: {} },
       initialSing: { logs: [], sungCount: 0, lastSungAt: null },
     });
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    expect(screen.getAllByText("—")).toHaveLength(3);
     expect(screen.getByText("まだ記録がありません。")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "タグ" })).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
@@ -177,6 +177,17 @@ describe("SongDetail: 歌唱記録", () => {
   });
 });
 
+describe("SongDetail: 練習の優先度の表示", () => {
+  it("「高」と表示し、未設定は「—」", () => {
+    setup({ song: { ...song, practicePriority: 1 } });
+    expect(screen.getByText("練習の優先度").nextElementSibling).toHaveTextContent("高");
+  });
+  it("未設定は「—」", () => {
+    setup();
+    expect(screen.getByText("練習の優先度").nextElementSibling).toHaveTextContent("—");
+  });
+});
+
 describe("SongDetail: 編集", () => {
   it("initialEditing なら、現在の値で編集フォームを開いた状態で始める", () => {
     setup({ initialEditing: true });
@@ -215,12 +226,57 @@ describe("SongDetail: 編集", () => {
       artist: "YOASOBI",
       songKey: -1,
       memo: "サビ前で息継ぎ！",
+      practicePriority: null,
       fields: { f1: "高めい" },
       tagIds: ["t2"],
       newTags: [{ name: "別" }],
     });
     expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("「中」を押して保存すると practicePriority: 2 を送る", async () => {
+    vi.mocked(updateSongAction).mockResolvedValue({ status: "ok" });
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    await userEvent.click(screen.getByRole("button", { name: "中" }));
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(updateSongAction).toHaveBeenCalledWith(expect.objectContaining({ practicePriority: 2 }));
+  });
+
+  it("「なし」を押して保存すると practicePriority: null を送る", async () => {
+    vi.mocked(updateSongAction).mockResolvedValue({ status: "ok" });
+    setup({ song: { ...song, practicePriority: 1 } });
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    await userEvent.click(screen.getByRole("button", { name: "なし" }));
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(updateSongAction).toHaveBeenCalledWith(
+      expect.objectContaining({ practicePriority: null }),
+    );
+  });
+
+  it("優先度に触れずに曲名だけ変えて保存しても、元の値（1）のまま送る", async () => {
+    vi.mocked(updateSongAction).mockResolvedValue({ status: "ok" });
+    setup({ song: { ...song, practicePriority: 1 } });
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    await userEvent.type(screen.getByLabelText("曲名"), "2");
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(updateSongAction).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "夜に駆ける2", practicePriority: 1 }),
+    );
+  });
+
+  it("押されている優先度ボタンは1つだけ（aria-pressed）", async () => {
+    setup({ song: { ...song, practicePriority: 3 } });
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    const group = screen.getByRole("group", { name: "練習の優先度" });
+    const buttons = within(group).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual(["なし", "低", "中", "高"]);
+    expect(buttons.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1);
+    expect(within(group).getByRole("button", { name: "低" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("曲名が空だと保存できず、キャンセルで戻る", async () => {
