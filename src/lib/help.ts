@@ -9,6 +9,7 @@ export const HELP_SECTIONS = {
   services: "services",
   edit: "edit",
   tags: "tags",
+  practice: "practice",
   search: "search",
   random: "random",
   homeScreen: "home-screen",

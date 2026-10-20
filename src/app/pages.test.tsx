@@ -400,6 +400,14 @@ describe("静的なページ・レイアウト", () => {
     expect(html).toContain("YouTube Music");
   });
 
+  it("ヘルプに「練習の優先度」の節があり、「練習する」チップと「なし」に戻すことに触れている", () => {
+    const html = renderToStaticMarkup(HelpPage());
+    expect(html).toContain('id="practice"');
+    expect(html).toContain("練習の優先度");
+    expect(html).toContain("練習する");
+    expect(html).toContain("「なし」");
+  });
+
   it("404 はセトリへのリンク", () => {
     expect(renderToStaticMarkup(NotFound())).toContain('href="/"');
   });
