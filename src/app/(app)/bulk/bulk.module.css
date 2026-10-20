@@ -340,3 +340,25 @@
     box-sizing: border-box;
   }
 }
+
+/* 練習の優先度：まとめて変える */
+.priorityBox {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.priorityBox legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.priorityBox .chip {
+  align-self: auto;
+}

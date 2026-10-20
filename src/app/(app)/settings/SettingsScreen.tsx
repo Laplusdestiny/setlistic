@@ -111,7 +111,9 @@ export function SettingsScreen({ email, settings, fields, tags, groups, isAdmin,
               <Link href={TUTORIAL_PATH}>チュートリアルをもう一度見る</Link>
               {isAdmin && <Link href="/admin/invites">招待の管理（友人を招待する）</Link>}
               <Link href="/tags">タグの管理</Link>
-              <Link href="/bulk">タグの一括変更（複数の曲にまとめて付ける・外す）</Link>
+              <Link href="/bulk">
+                タグ・優先度の一括変更（複数の曲にまとめて付ける・外す・変える）
+              </Link>
               <Link href="/terms">利用規約</Link>
               <Link href="/privacy">プライバシーポリシー</Link>
             </p>

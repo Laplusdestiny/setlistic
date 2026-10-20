@@ -81,7 +81,7 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
     <div className={styles.panel}>
       <p className={styles.lead}>
         共有URLを複数まとめて貼り付けてください（1回につき{MAX}
-        件まで）。下で選んだタグが、取り込む曲すべてに付きます。付け忘れても、あとから「タグの一括変更」で直せます。
+        件まで）。下で選んだタグが、取り込む曲すべてに付きます。付け忘れても、あとから「タグ・優先度の一括変更」で直せます。
       </p>
       <label htmlFor="bulk-urls" className={styles.label}>
         共有URL（改行区切り）

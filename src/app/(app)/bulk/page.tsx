@@ -7,7 +7,7 @@ import { UUID_PATTERN } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
 import { BulkEditScreen } from "./BulkEditScreen";
 
-export const metadata: Metadata = { title: "タグの一括変更" };
+export const metadata: Metadata = { title: "タグ・優先度の一括変更" };
 
 type Search = Promise<{ ids?: string }>;
 

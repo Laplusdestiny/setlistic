@@ -25,8 +25,23 @@ describe("bulkEditTagsAction", () => {
     expect(await bulkEditTagsAction(input)).toEqual({ status: "ok", count: 2 });
     expect(sb.rpcCalls[0]).toEqual({
       name: "bulk_edit_song_tags",
-      args: { p_song_ids: [S1, S2], p_add_tag_ids: [], p_new_tags: [], p_remove_tag_ids: [TAG] },
+      args: {
+        p_song_ids: [S1, S2],
+        p_add_tag_ids: [],
+        p_new_tags: [],
+        p_remove_tag_ids: [TAG],
+        p_set_priority: false,
+        p_priority: null,
+      },
     });
+  });
+
+  it("優先度を指定すると p_set_priority / p_priority を渡す", async () => {
+    setup({ rpc: { bulk_edit_song_tags: { data: 2 } } });
+    await bulkEditTagsAction({ ...input, priority: 1 });
+    expect(sb.rpcCalls[0].args).toMatchObject({ p_set_priority: true, p_priority: 1 });
+    await bulkEditTagsAction({ ...input, priority: "none" });
+    expect(sb.rpcCalls[1].args).toMatchObject({ p_set_priority: true, p_priority: null });
   });
 
   it("件数が返らなければ選んだ曲数", async () => {

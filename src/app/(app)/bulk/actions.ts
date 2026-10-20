@@ -15,6 +15,8 @@ export async function bulkEditTagsAction(
     p_add_tag_ids: payload.value.addTagIds,
     p_new_tags: payload.value.newTags,
     p_remove_tag_ids: payload.value.removeTagIds,
+    p_set_priority: payload.value.priority.set,
+    p_priority: payload.value.priority.set ? payload.value.priority.value : null,
   });
   if (error) {
     if (error.code === "P0002")

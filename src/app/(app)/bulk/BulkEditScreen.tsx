@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 import { TagPicker } from "@/components/TagPicker";
 import { BULK_MAX_SONGS } from "@/lib/songs/bulk-tags";
+import { PRIORITIES, PRIORITY_LABELS, type Priority } from "@/lib/songs/priority";
 import { normalizeSearchText } from "@/lib/search/conditions";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { bulkEditTagsAction } from "./actions";
@@ -24,7 +25,7 @@ const toggle = <T,>(xs: Set<T>, x: T): Set<T> => {
   return next;
 };
 
-/** 複数の曲に、タグをまとめて付ける・外す画面 */
+/** 複数の曲に、タグをまとめて付ける・外す、練習の優先度をまとめて変える画面 */
 export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
   const router = useRouter();
   const id = useId();
@@ -37,6 +38,7 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
   const [add, setAdd] = useState<Set<string>>(new Set());
   const [newTags, setNewTags] = useState<NewTag[]>([]);
   const [remove, setRemove] = useState<Set<string>>(new Set());
+  const [priority, setPriority] = useState<"keep" | "none" | Priority>("keep");
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -66,7 +68,7 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
   }, [songs, selected]);
 
   const tagName = (tid: string) => tags.find((t) => t.id === tid)?.name ?? "";
-  const nothingToDo = add.size + newTags.length + remove.size === 0;
+  const nothingToDo = add.size + newTags.length + remove.size === 0 && priority === "keep";
   const tooMany = selected.size > BULK_MAX_SONGS;
 
   function selectAllVisible() {
@@ -86,12 +88,14 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
         addTagIds: [...add],
         newTags,
         removeTagIds: [...remove],
+        priority,
       });
       if (res.status === "ok") {
-        setMessage({ kind: "ok", text: `${res.count}曲のタグを変更しました` });
+        setMessage({ kind: "ok", text: `${res.count}曲を変更しました` });
         setAdd(new Set());
         setNewTags([]);
         setRemove(new Set());
+        setPriority("keep");
         router.refresh();
       } else setMessage({ kind: "error", text: res.message });
     });
@@ -119,10 +123,10 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </Link>
-        <h1>タグの一括変更</h1>
+        <h1>タグ・優先度の一括変更</h1>
       </header>
       <p className={styles.lead}>
-        曲を選んで、タグをまとめて付けたり外したりできます。まとめて登録したときの付け忘れの手直しに。
+        曲を選んで、タグや練習の優先度をまとめて変えられます。まとめて登録したときの付け忘れの手直しに。
       </p>
 
       <div className={styles.layout}>
@@ -204,7 +208,7 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
           )}
         </section>
 
-        <aside className={styles.editor} aria-label="タグの変更">
+        <aside className={styles.editor} aria-label="タグ・優先度の変更">
           <TagPicker
             groups={groups}
             tags={tags}
@@ -242,6 +246,29 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
             )}
           </section>
 
+          <fieldset className={styles.priorityBox}>
+            <legend>練習の優先度をまとめて変える</legend>
+            <div className={styles.chips}>
+              {(
+                [
+                  ["keep", "変えない"],
+                  ["none", "なし"],
+                  ...[...PRIORITIES].reverse().map((p) => [p, PRIORITY_LABELS[p]] as const),
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={styles.chip}
+                  aria-pressed={priority === value}
+                  onClick={() => setPriority(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
           {message && (
             <p
               role={message.kind === "error" ? "alert" : "status"}
@@ -262,10 +289,17 @@ export function BulkEditScreen({ songs, tags, groups, preselectedIds }: Props) {
                     {[...remove]
                       .map((t) => `#${removable.find((r) => r.id === t)?.name ?? tagName(t)}`)
                       .join(" ")}{" "}
-                    を外します
+                    を外し
                   </>
                 )}
-                {remove.size === 0 && "ます"}
+                {priority !== "keep" && (
+                  <>
+                    {summary.length + remove.size > 0 && "、"}
+                    練習の優先度を
+                    {priority === "none" ? "なし" : `「${PRIORITY_LABELS[priority]}」`}に変え
+                  </>
+                )}
+                ます
               </p>
             )}
             {tooMany && (

@@ -114,8 +114,9 @@ describe("BulkEditScreen: タグの変更", () => {
       addTagIds: ["t3"],
       newTags: [{ name: "新" }],
       removeTagIds: ["t2"],
+      priority: "keep",
     });
-    expect(await screen.findByRole("status")).toHaveTextContent("2曲のタグを変更しました");
+    expect(await screen.findByRole("status")).toHaveTextContent("2曲を変更しました");
     expect(refresh).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "#盛り上げ" })).toHaveAttribute(
       "aria-pressed",
@@ -166,5 +167,45 @@ describe("BulkEditScreen: タグの変更", () => {
       many,
     );
     expect(screen.getByText("一度に変更できるのは500曲までです。")).toBeInTheDocument();
+  });
+});
+
+describe("BulkEditScreen: 練習の優先度", () => {
+  const prioBox = () => screen.getByRole("group", { name: "練習の優先度をまとめて変える" });
+
+  it("見出しと、既定は「変えない」", () => {
+    setup(["s1"]);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("タグ・優先度の一括変更");
+    expect(within(prioBox()).getByRole("button", { name: "変えない" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "1曲に適用" })).toBeDisabled();
+  });
+
+  it("優先度だけ選んで適用でき、適用後は「変えない」に戻る", async () => {
+    vi.mocked(bulkEditTagsAction).mockResolvedValue({ status: "ok", count: 1 });
+    setup(["s1"]);
+    await userEvent.click(within(prioBox()).getByRole("button", { name: "高" }));
+    expect(within(prioBox()).getByRole("button", { name: "高" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("1曲に練習の優先度を「高」に変えます")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "1曲に適用" }));
+    expect(bulkEditTagsAction).toHaveBeenCalledWith(expect.objectContaining({ priority: 1 }));
+    expect(await screen.findByRole("status")).toHaveTextContent("1曲を変更しました");
+    expect(within(prioBox()).getByRole("button", { name: "変えない" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("「なし」は解除として送る", async () => {
+    vi.mocked(bulkEditTagsAction).mockResolvedValue({ status: "ok", count: 1 });
+    setup(["s1"]);
+    await userEvent.click(within(prioBox()).getByRole("button", { name: "なし" }));
+    await userEvent.click(screen.getByRole("button", { name: "1曲に適用" }));
+    expect(bulkEditTagsAction).toHaveBeenCalledWith(expect.objectContaining({ priority: "none" }));
   });
 });

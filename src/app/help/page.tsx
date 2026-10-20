@@ -218,7 +218,7 @@ export default function HelpPage() {
           </ul>
           <p>
             複数の曲にまとめてタグを付けたり外したりするときは、
-            <Link href="/bulk">タグの一括変更</Link>
+            <Link href="/bulk">タグ・優先度の一括変更</Link>
             を使います。タグ名の全角・半角や大文字・小文字の違いは同じタグとして扱いますが、ひらがなとカタカナの違いは別のタグになります。
           </p>
         </section>
