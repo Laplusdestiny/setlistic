@@ -38,6 +38,7 @@ const song: SongRow = {
   title: "夜に駆ける",
   artist: "YOASOBI",
   songKey: -2,
+  practicePriority: null,
   memo: "サビ前で息継ぎ",
   appleUrl: "https://music.apple.com/jp/song/1",
   lastSungAt: "2026-10-01",

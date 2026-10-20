@@ -2,6 +2,7 @@ import type { createClient } from "@/lib/supabase/server";
 import { toRpcParams, type SearchConditions } from "../search/conditions";
 import { toSavedSearch, type SavedSearch } from "../search/saved";
 import { FIELD_TYPES, type CustomField } from "../custom-fields";
+import { parsePriority, type Priority } from "./priority";
 import { parseQuota, type Quota } from "./quota";
 import { parseSort, type SortKey } from "./sort";
 
@@ -12,6 +13,7 @@ export type SongRow = {
   title: string;
   artist: string;
   songKey: number | null;
+  practicePriority: Priority | null;
   memo: string | null;
   appleUrl: string | null;
   lastSungAt: string | null;
@@ -30,6 +32,7 @@ type RawSong = {
   title: string;
   artist: string;
   song_key: number | null;
+  practice_priority: number | null;
   memo: string | null;
   apple_url: string | null;
   last_sung_at: string | null;
@@ -39,7 +42,7 @@ type RawSong = {
 };
 
 const COLUMNS =
-  "id, title, artist, song_key, memo, apple_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name)), field_values:song_field_values(field_id, value)";
+  "id, title, artist, song_key, practice_priority, memo, apple_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name)), field_values:song_field_values(field_id, value)";
 
 function toSongRow(r: RawSong): SongRow {
   return {
@@ -47,6 +50,7 @@ function toSongRow(r: RawSong): SongRow {
     title: r.title,
     artist: r.artist,
     songKey: r.song_key,
+    practicePriority: parsePriority(r.practice_priority),
     memo: r.memo,
     appleUrl: r.apple_url,
     lastSungAt: r.last_sung_at,
@@ -64,6 +68,7 @@ type SearchRow = {
   title: string;
   artist: string;
   song_key: number | null;
+  practice_priority: number | null;
   memo: string | null;
   apple_url: string | null;
   last_sung_at: string | null;
@@ -90,6 +95,7 @@ export async function searchSongs(
     title: r.title,
     artist: r.artist,
     songKey: r.song_key,
+    practicePriority: parsePriority(r.practice_priority),
     memo: r.memo,
     appleUrl: r.apple_url,
     lastSungAt: r.last_sung_at,

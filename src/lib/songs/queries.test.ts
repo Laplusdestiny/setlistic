@@ -30,6 +30,7 @@ describe("searchSongs", () => {
               title: "夜に駆ける",
               artist: "YOASOBI",
               song_key: -1,
+              practice_priority: 2,
               memo: null,
               apple_url: null,
               last_sung_at: "2026-10-01",
@@ -47,6 +48,7 @@ describe("searchSongs", () => {
         title: "夜に駆ける",
         artist: "YOASOBI",
         songKey: -1,
+        practicePriority: 2,
         memo: null,
         appleUrl: null,
         lastSungAt: "2026-10-01",
@@ -57,6 +59,12 @@ describe("searchSongs", () => {
     ]);
     expect(sb.rpcCalls[0].name).toBe("search_songs");
     expect(sb.rpcCalls[0].args).toHaveProperty("p");
+  });
+
+  it("不正な practice_priority は null にする", async () => {
+    const row = { id: "s1", title: "t", artist: "a", sung_count: 0, practice_priority: 5 };
+    const { c } = client({ rpc: { search_songs: { data: [row] } } });
+    expect((await searchSongs(c, EMPTY_CONDITIONS, "created_desc"))[0].practicePriority).toBeNull();
   });
 
   it("データなしは空配列、エラーは例外", async () => {
@@ -115,6 +123,12 @@ describe("getSong", () => {
       },
     });
     expect(await getSong(c, "s1")).toMatchObject({ tags: [], fields: {} });
+    const withPriority = client({
+      tables: {
+        songs: { data: { id: "s1", title: "t", artist: "a", sung_count: 0, practice_priority: 1 } },
+      },
+    });
+    expect(await getSong(withPriority.c, "s1")).toMatchObject({ practicePriority: 1 });
     expect(await getSong(client({}).c, "s1")).toBeNull();
   });
 });

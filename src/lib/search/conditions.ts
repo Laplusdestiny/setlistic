@@ -1,3 +1,4 @@
+import { PRIORITY_FILTER_LABELS, PRIORITY_FILTERS, type PriorityFilter } from "../songs/priority";
 import { SORT_KEYS, type SortKey } from "../songs/sort";
 import { UUID_PATTERN } from "../songs/validate";
 
@@ -19,6 +20,8 @@ export type SearchConditions = {
   durations: DurationBucket[];
   keys: KeyBucket[];
   lastEase: LastEase | null;
+  /** 練習の優先度の絞り込み */
+  priority: PriorityFilter | null;
   /** null = 設定の既定の並び順 */
   sort: SortKey | null;
 };
@@ -34,6 +37,7 @@ export const EMPTY_CONDITIONS: SearchConditions = {
   durations: [],
   keys: [],
   lastEase: null,
+  priority: null,
   sort: null,
 };
 
@@ -108,6 +112,7 @@ export function normalizeConditions(raw: unknown): SearchConditions {
     durations: pick(r.durations, DURATION_BUCKETS),
     keys: pick(r.keys, KEY_BUCKETS),
     lastEase: LAST_EASES.find((e) => e === r.lastEase) ?? null,
+    priority: PRIORITY_FILTERS.find((f) => f === r.priority) ?? null,
     sort: SORT_KEYS.find((k) => k === r.sort) ?? null,
   };
 }
@@ -123,7 +128,8 @@ export function hasConditions(c: SearchConditions): boolean {
     c.decades.length > 0 ||
     c.durations.length > 0 ||
     c.keys.length > 0 ||
-    c.lastEase !== null
+    c.lastEase !== null ||
+    c.priority !== null
   );
 }
 
@@ -138,7 +144,8 @@ export function countConditions(c: SearchConditions): number {
     (c.decades.length > 0 ? 1 : 0) +
     (c.durations.length > 0 ? 1 : 0) +
     (c.keys.length > 0 ? 1 : 0) +
-    (c.lastEase ? 1 : 0)
+    (c.lastEase ? 1 : 0) +
+    (c.priority ? 1 : 0)
   );
 }
 
@@ -160,6 +167,7 @@ export function conditionsFromParams(sp: Params): SearchConditions {
     durations: list(sp.get("len")),
     keys: list(sp.get("key")),
     lastEase: sp.get("ease"),
+    priority: sp.get("priority"),
     sort: sp.get("sort"),
   });
 }
@@ -177,6 +185,7 @@ export function conditionsToParams(c: SearchConditions): URLSearchParams {
   if (c.durations.length) p.set("len", c.durations.join(","));
   if (c.keys.length) p.set("key", c.keys.join(","));
   if (c.lastEase) p.set("ease", c.lastEase);
+  if (c.priority) p.set("priority", c.priority);
   if (c.sort) p.set("sort", c.sort);
   return p;
 }
@@ -215,6 +224,7 @@ export type SearchRpcParams = {
   duration_ranges: Range[];
   key_ranges: Range[];
   last_ease: LastEase | null;
+  priority: PriorityFilter | null;
   sort: SortKey;
 };
 
@@ -231,6 +241,7 @@ export function toRpcParams(c: SearchConditions, defaultSort: SortKey): SearchRp
     duration_ranges: c.durations.map((d) => DURATION_RANGES[d]),
     key_ranges: c.keys.map((k) => KEY_RANGES[k]),
     last_ease: c.lastEase,
+    priority: c.priority,
     sort: c.sort ?? defaultSort,
   };
 }
@@ -259,7 +270,20 @@ export function describeConditions(
   if (c.durations.length) out.push(c.durations.map((d) => DURATION_LABELS[d]).join("・"));
   if (c.keys.length) out.push(c.keys.map((k) => KEY_LABELS[k]).join("・"));
   if (c.lastEase) out.push(LAST_EASE_LABELS[c.lastEase]);
+  if (c.priority) out.push(`練習の優先度：${PRIORITY_FILTER_LABELS[c.priority]}`);
   return out;
+}
+
+/** 練習モード：優先度が設定された曲を、優先度が高い順に並べている状態 */
+export function isPracticeMode(c: SearchConditions): boolean {
+  return c.priority === "set" && c.sort === "priority_asc";
+}
+
+/** 練習モードの入り切り（ほかの条件は残す） */
+export function togglePracticeMode(c: SearchConditions): SearchConditions {
+  return isPracticeMode(c)
+    ? { ...c, priority: null, sort: null }
+    : { ...c, priority: "set", sort: "priority_asc" };
 }
 
 /** タグのチップを押したときの切り替え：なし → 含める → 除外 → なし */

@@ -5,6 +5,7 @@ export const SORT_KEYS = [
   "sung_count_desc",
   "title_asc",
   "artist_asc",
+  "priority_asc",
 ] as const;
 
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -18,6 +19,7 @@ export const SORT_LABELS: Record<SortKey, string> = {
   sung_count_desc: "歌った回数が多い順",
   title_asc: "曲名順",
   artist_asc: "アーティスト名順",
+  priority_asc: "練習の優先度が高い順",
 };
 
 export function parseSort(value: unknown, fallback: SortKey = DEFAULT_SORT): SortKey {
@@ -43,5 +45,8 @@ export function orderSpecs(sort: SortKey): OrderSpec[] {
       return [{ column: "title", ascending: true }, tail];
     case "artist_asc":
       return [{ column: "artist", ascending: true }, { column: "title", ascending: true }, tail];
+    case "priority_asc":
+      // 優先度が高い（数値が小さい）順。未設定は最後
+      return [{ column: "practice_priority", ascending: true, nullsFirst: false }, tail];
   }
 }

@@ -37,3 +37,13 @@ describe("orderSpecs", () => {
     }
   });
 });
+
+describe("priority_asc", () => {
+  it("優先度の高い順（未設定は最後）、同順位は新しい順", () => {
+    expect(orderSpecs("priority_asc")).toEqual([
+      { column: "practice_priority", ascending: true, nullsFirst: false },
+      { column: "created_at", ascending: false },
+    ]);
+    expect(SORT_LABELS.priority_asc).toBe("練習の優先度が高い順");
+  });
+});

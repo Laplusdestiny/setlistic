@@ -8,6 +8,7 @@ import {
   describeConditions,
   EMPTY_CONDITIONS,
   hasConditions,
+  isPracticeMode,
   normalizeConditions,
   normalizeSearchText,
   pickRandom,
@@ -15,6 +16,7 @@ import {
   slotSequence,
   splitWords,
   tagState,
+  togglePracticeMode,
   toRpcParams,
 } from "./conditions";
 
@@ -139,6 +141,7 @@ describe("toRpcParams（検索条件 → DB関数の引数）", () => {
       duration_ranges: [],
       key_ranges: [],
       last_ease: null,
+      priority: null,
       sort: "created_desc",
     });
   });
@@ -286,5 +289,39 @@ describe("countConditions", () => {
   });
   it("並び順は数えない", () => {
     expect(countConditions({ ...EMPTY_CONDITIONS, sort: "title_asc" })).toBe(0);
+  });
+});
+
+describe("練習の優先度", () => {
+  it("normalizeConditions", () => {
+    expect(normalizeConditions({ priority: "high" }).priority).toBe("high");
+    expect(normalizeConditions({ priority: "foo" }).priority).toBeNull();
+    expect(normalizeConditions({}).priority).toBeNull();
+  });
+  it("URL・RPC・件数・説明", () => {
+    expect(conditionsFromParams(new URLSearchParams("priority=mid")).priority).toBe("mid");
+    expect(conditionsFromParams(new URLSearchParams("priority=x")).priority).toBeNull();
+    expect(conditionsToParams({ ...EMPTY_CONDITIONS, priority: "set" }).get("priority")).toBe(
+      "set",
+    );
+    expect(toRpcParams({ ...EMPTY_CONDITIONS, priority: "high" }, "created_desc").priority).toBe(
+      "high",
+    );
+    expect(hasConditions({ ...EMPTY_CONDITIONS, priority: "set" })).toBe(true);
+    expect(countConditions({ ...EMPTY_CONDITIONS, priority: "set" })).toBe(1);
+    expect(
+      describeConditions({ ...EMPTY_CONDITIONS, priority: "high" }, () => undefined),
+    ).toContain("練習の優先度：高だけ");
+  });
+  it("練習モードの切り替え", () => {
+    const on = togglePracticeMode({ ...EMPTY_CONDITIONS, include: [A] });
+    expect(on).toMatchObject({ priority: "set", sort: "priority_asc", include: [A] });
+    expect(isPracticeMode(on)).toBe(true);
+    expect(isPracticeMode({ ...on, sort: "title_asc" })).toBe(false);
+    expect(togglePracticeMode(on)).toMatchObject({ priority: null, sort: null, include: [A] });
+    expect(togglePracticeMode({ ...EMPTY_CONDITIONS, priority: "high" })).toMatchObject({
+      priority: "set",
+      sort: "priority_asc",
+    });
   });
 });

@@ -10,6 +10,7 @@ const song = (id: string, title: string): SongRow => ({
   title,
   artist: "YOASOBI",
   songKey: null,
+  practicePriority: null,
   memo: null,
   appleUrl: null,
   lastSungAt: null,
