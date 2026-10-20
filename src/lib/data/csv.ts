@@ -1,3 +1,5 @@
+import { PRIORITY_LABELS, parsePriority } from "../songs/priority";
+
 /** エクスポート JSON（DB関数 export_data の出力）の、CSVに使う部分だけの型 */
 export type ExportedSong = {
   apple_track_id?: number | null;
@@ -7,6 +9,7 @@ export type ExportedSong = {
   genre?: string | null;
   release_date?: string | null;
   song_key?: number | null;
+  practice_priority?: number | null;
   memo?: string | null;
   created_at?: string | null;
   apple_url?: string | null;
@@ -50,6 +53,7 @@ export function exportToCsv(data: ExportedData): string {
     "ジャンル",
     "リリース日",
     "キー",
+    "練習の優先度",
     "タグ",
     "メモ",
     "最後に歌った日",
@@ -62,6 +66,7 @@ export function exportToCsv(data: ExportedData): string {
   const rows = (data.songs ?? []).map((s) => {
     const logs = s.sing_logs ?? [];
     const last = logs.reduce<string>((m, l) => (l.sung_at > m ? l.sung_at : m), "");
+    const priority = parsePriority(s.practice_priority);
     return [
       csvCell(s.title),
       csvCell(s.artist),
@@ -69,6 +74,7 @@ export function exportToCsv(data: ExportedData): string {
       csvCell(s.genre),
       csvCell(s.release_date, false),
       csvCell(s.song_key, false),
+      csvCell(priority !== null ? PRIORITY_LABELS[priority] : "", false),
       csvCell((s.tags ?? []).join(" / ")),
       csvCell(s.memo),
       csvCell(last, false),

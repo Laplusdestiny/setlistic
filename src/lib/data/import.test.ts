@@ -84,6 +84,33 @@ describe("parseImport: 曲", () => {
       source_service: "manual",
     });
   });
+  it('練習の優先度：1・2・3は通し、0・4・"高"・"1"・nullは null、キーが無くても null（エラーにならない）', () => {
+    const r = ok({
+      ...base,
+      songs: [
+        { title: "高優先度", artist: "a", practice_priority: 1 },
+        { title: "中優先度", artist: "b", practice_priority: 2 },
+        { title: "低優先度", artist: "c", practice_priority: 3 },
+        { title: "無効値_0", artist: "d", practice_priority: 0 },
+        { title: "無効値_4", artist: "e", practice_priority: 4 },
+        { title: "無効値_文字列高", artist: "f", practice_priority: "高" },
+        { title: "無効値_文字列1", artist: "g", practice_priority: "1" },
+        { title: "無効値_null", artist: "h", practice_priority: null },
+        { title: "無効値_キーなし", artist: "i" },
+      ],
+    });
+    expect(r.payload.songs).toHaveLength(9);
+    expect(r.payload.songs[0].practice_priority).toBe(1);
+    expect(r.payload.songs[1].practice_priority).toBe(2);
+    expect(r.payload.songs[2].practice_priority).toBe(3);
+    expect(r.payload.songs[3].practice_priority).toBe(null);
+    expect(r.payload.songs[4].practice_priority).toBe(null);
+    expect(r.payload.songs[5].practice_priority).toBe(null);
+    expect(r.payload.songs[6].practice_priority).toBe(null);
+    expect(r.payload.songs[7].practice_priority).toBe(null);
+    expect(r.payload.songs[8].practice_priority).toBe(null);
+    expect(r.warnings).toEqual([]);
+  });
 });
 
 describe("parseImport: タグ・グループ・項目・設定", () => {

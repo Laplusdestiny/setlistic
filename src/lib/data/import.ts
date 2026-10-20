@@ -1,5 +1,6 @@
 import { FIELD_TYPES, FIELD_NAME_MAX, OPTION_LENGTH_MAX, OPTION_MAX } from "../custom-fields";
 import { isValidDate } from "../format";
+import { parsePriority } from "../songs/priority";
 import { SORT_KEYS } from "../songs/sort";
 import { MAX_TAG_LENGTH } from "../tags/normalize";
 
@@ -200,6 +201,7 @@ export function parseImport(raw: unknown): ImportParse {
       source_service: service ?? (trackId ? "apple_music" : "manual"),
       source_url: httpsUrl(s.source_url),
       song_key: int(s.song_key, -7, 7),
+      practice_priority: parsePriority(s.practice_priority),
       memo: typeof s.memo === "string" && s.memo.trim() ? s.memo.trim().slice(0, 2000) : null,
       created_at:
         typeof s.created_at === "string" && !Number.isNaN(Date.parse(s.created_at))
