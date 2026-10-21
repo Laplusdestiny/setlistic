@@ -5,14 +5,13 @@ import { FIELD_MAX_COUNT, validateFieldDefinition } from "@/lib/custom-fields";
 import { SORT_KEYS } from "@/lib/songs/sort";
 import { UUID_PATTERN } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
+import { LIST_COLUMNS } from "@/lib/settings/columns";
 
 type Result = { status: "ok" } | { status: "error"; message: string };
 const ok: Result = { status: "ok" };
 const fail = (message: string): Result => ({ status: "error", message });
 const FAILED = fail("保存できませんでした。もう一度お試しください。");
 const isId = (v: unknown): v is string => typeof v === "string" && UUID_PATTERN.test(v);
-
-const COLUMNS = ["key", "tags", "priority"];
 
 /** 表示設定：一覧の並び順、一覧に出す基本項目、登録時に付けるタグ */
 export async function saveDisplaySettingsAction(input: {
@@ -23,7 +22,7 @@ export async function saveDisplaySettingsAction(input: {
   const { supabase, userId } = await requireUser();
   const listSort = SORT_KEYS.find((k) => k === input?.listSort);
   if (!listSort) return fail("並び順が正しくありません");
-  const listColumns = COLUMNS.filter(
+  const listColumns = LIST_COLUMNS.filter(
     (c) => Array.isArray(input.listColumns) && input.listColumns.includes(c),
   );
   const wanted = Array.isArray(input.defaultTagIds) ? input.defaultTagIds.filter(isId) : [];

@@ -1,6 +1,7 @@
 import { FIELD_TYPES, FIELD_NAME_MAX, OPTION_LENGTH_MAX, OPTION_MAX } from "../custom-fields";
 import { isValidDate } from "../format";
 import { parsePriority } from "../songs/priority";
+import { LIST_COLUMNS } from "../settings/columns";
 import { SORT_KEYS } from "../songs/sort";
 import { MAX_TAG_LENGTH } from "../tags/normalize";
 
@@ -15,7 +16,6 @@ export const IMPORT_LIMITS = {
 } as const;
 
 const SERVICES = ["apple_music", "spotify", "youtube_music", "amazon_music", "manual", "search"];
-const COLUMNS = ["key", "tags"];
 
 type Json = Record<string, unknown>;
 const obj = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -227,7 +227,9 @@ export function parseImport(raw: unknown): ImportParse {
       ...(SORT_KEYS.some((k) => k === st.list_sort) ? { list_sort: st.list_sort as string } : {}),
       ...(Array.isArray(st.list_columns)
         ? {
-            list_columns: st.list_columns.filter((c): c is string => COLUMNS.includes(c as string)),
+            list_columns: st.list_columns.filter((c): c is string =>
+              (LIST_COLUMNS as readonly string[]).includes(c as string),
+            ),
           }
         : {}),
       ...(Array.isArray(st.default_tags)

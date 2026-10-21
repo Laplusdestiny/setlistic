@@ -137,14 +137,20 @@ describe("toUpdatePayload", () => {
       },
     });
   });
-  it("練習の優先度は 1〜3 だけ通し、それ以外・未送信は null", () => {
+  it("練習の優先度は 1〜3 だけ通し、null・未送信は null、範囲外はエラー", () => {
     const pri = (v: object) => {
       const r = toUpdatePayload({ ...base, ...v });
       return r.ok ? r.value.song.practice_priority : "error";
     };
     expect(pri({ practicePriority: 2 })).toBe(2);
     expect(pri({ practicePriority: null })).toBeNull();
-    expect(pri({ practicePriority: 9 })).toBeNull();
+    expect(pri({ practicePriority: 9 })).toBe("error");
+    expect(pri({ practicePriority: "1" })).toBe("error");
+    expect(pri({ practicePriority: 0 })).toBe("error");
+    expect(toUpdatePayload({ ...base, practicePriority: 9 })).toEqual({
+      ok: false,
+      error: "練習の優先度が正しくありません",
+    });
     expect(pri({})).toBeNull();
   });
   it("曲IDがUUIDでない・曲名/アーティストが空はエラー", () => {

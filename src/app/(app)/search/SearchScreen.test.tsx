@@ -64,6 +64,18 @@ describe("SearchScreen", () => {
     expect(screen.getByText(/詳しい条件/).closest("details")).toHaveAttribute("open");
   });
 
+  it("練習の優先度の条件があれば詳しい条件を最初から開く", () => {
+    render(
+      <SearchScreen
+        initial={{ ...EMPTY_CONDITIONS, priority: "high" }}
+        tags={tags}
+        groups={[]}
+        saved={[]}
+      />,
+    );
+    expect(screen.getByText(/詳しい条件/).closest("details")).toHaveAttribute("open");
+  });
+
   it("保存した条件を呼び出し・削除する。戻るボタン", async () => {
     render(<SearchScreen initial={EMPTY_CONDITIONS} tags={tags} groups={[]} saved={saved} />);
     await userEvent.click(screen.getByRole("button", { name: /^90年代/ }));

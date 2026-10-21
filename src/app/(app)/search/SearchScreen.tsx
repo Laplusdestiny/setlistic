@@ -90,7 +90,8 @@ export function SearchScreen({ initial, tags, groups, saved }: Props) {
             c.artist !== "" ||
             c.genre !== "" ||
             c.decades.length + c.durations.length + c.keys.length > 0 ||
-            c.lastEase !== null
+            c.lastEase !== null ||
+            c.priority !== null
           }
         />
 

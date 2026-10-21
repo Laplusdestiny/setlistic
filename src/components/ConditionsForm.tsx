@@ -153,7 +153,7 @@ export function ConditionsForm({
       </fieldset>
 
       <details className={styles.advanced} open={advancedOpen || undefined}>
-        <summary>詳しい条件（アーティスト・年代・長さ・キーなど）</summary>
+        <summary>詳しい条件（アーティスト・年代・長さ・キー・優先度など）</summary>
         <div className={styles.advancedBody}>
           <div className={styles.block}>
             <label htmlFor={`${id}-artist`} className={form.label}>

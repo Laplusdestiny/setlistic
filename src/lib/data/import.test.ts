@@ -148,11 +148,15 @@ describe("parseImport: タグ・グループ・項目・設定", () => {
   it("設定：許可された値だけ", () => {
     const r = ok({
       ...base,
-      settings: { list_sort: "title_asc", list_columns: ["key", "evil"], default_tags: ["歌える"] },
+      settings: {
+        list_sort: "title_asc",
+        list_columns: ["key", "priority", "evil"],
+        default_tags: ["歌える"],
+      },
     });
     expect(r.payload.settings).toEqual({
       list_sort: "title_asc",
-      list_columns: ["key"],
+      list_columns: ["key", "priority"],
       default_tags: ["歌える"],
     });
     expect(ok({ ...base, settings: { list_sort: "drop table" } }).payload.settings).toEqual({});

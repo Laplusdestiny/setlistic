@@ -206,6 +206,11 @@ export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
   const key =
     typeof raw.songKey === "number" && Number.isFinite(raw.songKey) ? clampKey(raw.songKey) : null;
 
+  // 未送信・null は未設定。1〜3 以外は弾く（DB の CHECK と二重）
+  const practicePriority = parsePriority(raw.practicePriority);
+  if (raw.practicePriority != null && practicePriority === null)
+    return { ok: false, error: "練習の優先度が正しくありません" };
+
   return {
     ok: true,
     value: {
@@ -215,7 +220,7 @@ export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
         artist,
         song_key: key,
         memo: memo || null,
-        practice_priority: parsePriority(raw.practicePriority),
+        practice_priority: practicePriority,
       },
       tagIds: tags.value.tagIds,
       newTags: tags.value.newTags,
