@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-10-24",
+    changes: [
+      {
+        kind: "feature",
+        text: "歌唱記録を振り返るページを追加しました。今月・今年・全期間ごとに、歌った回数や曲数、月ごとの推移、よく歌った曲、しばらく歌っていない曲を確かめられます。スマホはセトリ右上のグラフのアイコンから、PC は左のメニューの「振り返り」から開けます",
+      },
+    ],
+  },
+  {
     version: "0.7.0",
     date: "2026-10-24",
     changes: [{ kind: "feature", text: "ヘルプに、この更新履歴を載せました" }],
