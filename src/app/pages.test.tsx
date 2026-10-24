@@ -41,6 +41,7 @@ import HomePage from "./(app)/page";
 import SearchPage from "./(app)/search/page";
 import SettingsPage from "./(app)/settings/page";
 import SongPage from "./(app)/songs/[id]/page";
+import StatsPage from "./(app)/stats/page";
 import TagsPage from "./(app)/tags/page";
 import LegalLayout from "./(legal)/layout";
 import PrivacyPage from "./(legal)/privacy/page";
@@ -228,6 +229,20 @@ describe("SearchPage", () => {
     expect(props.saved).toHaveLength(1);
     setup();
     expect((await load(SearchPage({ searchParams: params({}) }))).groups).toEqual([]);
+  });
+});
+
+describe("StatsPage", () => {
+  it("?period= の期間と今日（日本時間）で集計して渡す。既定は今年", async () => {
+    setup({ rpc: { sing_stats: { data: { summary: { logs: 3 } } } } });
+    const props = await load(StatsPage({ searchParams: params({ period: "all" }) }));
+    expect(props).toMatchObject({ period: "all", today: "2026-10-12" });
+    expect((props.stats as { summary: { logs: number } }).summary.logs).toBe(3);
+    expect(sb.client.rpc).toHaveBeenCalledWith("sing_stats", {
+      p_from: null,
+      p_today: "2026-10-12",
+    });
+    expect((await load(StatsPage({ searchParams: params({ period: "x" }) }))).period).toBe("year");
   });
 });
 

@@ -219,6 +219,22 @@ export function SetList({
         </h1>
 
         <div className={styles.headerActions}>
+          {/* PC は左のサイドバーから開くので、スマホだけに出す */}
+          <Link href="/stats" className={`${styles.iconButton} ${styles.mobileOnly}`}>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20h16M7 16v-5M12 16V6M17 16v-8" />
+            </svg>
+            <span className="visually-hidden">振り返り</span>
+          </Link>
           {total > 0 && songs.length > 0 && (
             <button type="button" className={styles.iconButton} onClick={random}>
               <svg

@@ -545,7 +545,8 @@
   .buttonLabel {
     display: inline;
   }
-  .mobileLogout {
+  .mobileLogout,
+  .mobileOnly {
     display: none;
   }
   .chips {
