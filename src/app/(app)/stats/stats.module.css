@@ -1,0 +1,419 @@
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding-bottom: 48px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 20px 8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  border-radius: var(--radius-nav);
+}
+
+/* ───────── 期間 ───────── */
+.periods {
+  display: flex;
+  gap: 8px;
+  padding: 4px 20px 14px;
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.period:hover {
+  color: var(--color-ink);
+  background: var(--color-selected-row);
+}
+
+.period[aria-current="page"] {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-primary);
+}
+
+/* ───────── 並び ───────── */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.statName {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.statValue small {
+  margin-left: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-ink-muted);
+  border: 1px dashed var(--color-divider-dashed);
+  border-radius: var(--radius-card);
+}
+
+/* ───────── カード ───────── */
+.card {
+  min-width: 0;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px dashed var(--color-divider-dashed);
+}
+
+.cardHead h2 {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cardHead span {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.cardEmpty {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* ───────── 曲の一覧 ───────── */
+.songs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.song {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.songs li:last-child .song {
+  border-bottom: 0;
+}
+
+.song:hover {
+  color: var(--color-ink);
+  background: var(--color-selected-row);
+}
+
+.songMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.songTitle {
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.songArtist {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.songMeta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.songCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+/* ───────── 棒グラフ ───────── */
+.chart {
+  padding: 16px 16px 12px;
+}
+
+/* 上の余白は、いちばん高い棒の上に数を出すぶん */
+.chartBody {
+  position: relative;
+  height: 160px;
+  padding-top: 18px;
+}
+
+.chartBars {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chartBars rect {
+  fill: var(--color-primary);
+}
+
+.chartBars line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.chartCounts {
+  position: absolute;
+  inset: 18px 0 0;
+  display: grid;
+  pointer-events: none;
+}
+
+.chartCounts > span {
+  position: relative;
+}
+
+.chartCounts > span > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-bottom: 2px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.chartLabels {
+  display: grid;
+  margin-top: 6px;
+}
+
+.chartLabels span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.chartLabels small {
+  font-size: 10px;
+  color: var(--color-ink-faint);
+}
+
+/* ───────── 詳しく見る ───────── */
+.more summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.more[open] summary {
+  border-bottom: 1px dashed var(--color-divider-dashed);
+}
+
+.breakdowns {
+  display: grid;
+  gap: 20px;
+  padding: 16px;
+}
+
+/* 2つの集計の間に、カードの見出しと同じ点線の区切りを入れる（PC は左右に並ぶので縦線） */
+.breakdown + .breakdown {
+  padding-top: 20px;
+  border-top: 1px dashed var(--color-divider-dashed);
+}
+
+.breakdown h3 {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+}
+
+.barName {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barValue {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.barValue small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-ink-muted);
+}
+
+.barTrack {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-divider);
+  overflow: hidden;
+}
+
+.barTrack span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-primary);
+}
+
+@media (min-width: 900px) {
+  .header {
+    padding: 24px 32px 8px;
+  }
+  .periods {
+    padding: 4px 32px 16px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 18px;
+    padding: 0 32px;
+  }
+  .summary {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .empty,
+  .wide {
+    grid-column: 1 / -1;
+  }
+  .chartBody {
+    height: 200px;
+  }
+  .breakdowns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .breakdown + .breakdown {
+    padding-top: 0;
+    padding-left: 32px;
+    border-top: 0;
+    border-left: 1px dashed var(--color-divider-dashed);
+  }
+}

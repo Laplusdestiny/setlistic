@@ -1358,6 +1358,106 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     });
   });
 
+  describe("sing_stats（振り返りの集計）", () => {
+    const Y = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
+    const Z = "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2";
+    const song: Record<string, string> = {};
+    let tag: string;
+
+    beforeAll(async () => {
+      await sql`insert into auth.users (id, aud, role, email) values
+        (${Y}, 'authenticated', 'authenticated', 'y@test.invalid'),
+        (${Z}, 'authenticated', 'authenticated', 'z@test.invalid')`;
+      for (const [title, artist] of [
+        ["夜に駆ける", "YOASOBI"],
+        ["群青", "YOASOBI"],
+        ["丸の内サディスティック", "椎名林檎"],
+      ]) {
+        const [s] =
+          await sql`insert into songs (user_id, title, artist) values (${Y}, ${title}, ${artist}) returning id`;
+        song[title] = s.id;
+      }
+      tag = (await sql`select id from tags where user_id = ${Y} and name = '十八番'`)[0].id;
+      await sql`insert into song_tags (song_id, tag_id, user_id) values (${song["丸の内サディスティック"]}, ${tag}, ${Y})`;
+      const logs: [string, string][] = [
+        // 丸の内：去年に3回 → 今年は歌っていないので「ご無沙汰」
+        ["丸の内サディスティック", "2025-03-01"],
+        ["丸の内サディスティック", "2025-03-01"],
+        ["丸の内サディスティック", "2025-06-10"],
+        // 夜に駆ける：去年から歌っていて、今年2回
+        ["夜に駆ける", "2025-12-20"],
+        ["夜に駆ける", "2026-02-14"],
+        ["夜に駆ける", "2026-10-03"],
+        // 群青：今年初めて
+        ["群青", "2026-10-03"],
+      ];
+      for (const [title, at] of logs)
+        await sql`insert into sing_logs (user_id, song_id, sung_at) values (${Y}, ${song[title]}, ${at})`;
+      // 他人の記録は数えない
+      const [other] =
+        await sql`insert into songs (user_id, title, artist) values (${Z}, '他人の曲', 'YOASOBI') returning id`;
+      await sql`insert into sing_logs (user_id, song_id, sung_at) values (${Z}, ${other.id}, '2026-10-03')`;
+    });
+
+    const stats = (user: string | null, from: string | null) =>
+      as(user, async (tx) => (await tx`select sing_stats(${from}, '2026-10-24') as s`)[0].s);
+
+    it("期間内の回数・曲数・日数・初めて歌った曲数、月ごとの回数をまとめる", async () => {
+      const s = await stats(Y, "2026-01-01");
+      expect(s.summary).toEqual({ logs: 3, songs: 2, days: 2, firstTimes: 1 });
+      expect(s.monthly).toEqual([
+        { month: "2026-02", logs: 1 },
+        { month: "2026-10", logs: 2 },
+      ]);
+      expect(s.top.map((t: { title: string; count: number }) => [t.title, t.count])).toEqual([
+        ["夜に駆ける", 2],
+        ["群青", 1],
+      ]);
+      expect(s.top[0]).toMatchObject({ artist: "YOASOBI", lastSungAt: "2026-10-03" });
+      expect(s.artists).toEqual([{ artist: "YOASOBI", count: 3, songs: 2 }]);
+      expect(s.tags).toEqual([]);
+    });
+
+    it("全期間なら、これまでの記録すべてを数える", async () => {
+      const s = await stats(Y, null);
+      expect(s.summary).toEqual({ logs: 7, songs: 3, days: 5, firstTimes: 3 });
+      // 回数が同じなら、最後に歌った日が新しい曲を先に
+      expect(s.top.map((t: { title: string; count: number }) => [t.title, t.count])).toEqual([
+        ["夜に駆ける", 3],
+        ["丸の内サディスティック", 3],
+        ["群青", 1],
+      ]);
+      expect(s.tags).toEqual([{ id: tag, name: "十八番", count: 3, songs: 1 }]);
+      expect(s.artists.map((a: { artist: string }) => a.artist)).toEqual(["YOASOBI", "椎名林檎"]);
+    });
+
+    it("ご無沙汰の曲は、期間に関係なく3回以上歌って90日以上歌っていない曲", async () => {
+      const s = await stats(Y, "2026-10-01");
+      expect(s.dormant).toEqual([
+        {
+          id: song["丸の内サディスティック"],
+          title: "丸の内サディスティック",
+          artist: "椎名林檎",
+          count: 3,
+          lastSungAt: "2025-06-10",
+        },
+      ]);
+    });
+
+    it("記録のない人は0と空、ログインしていなければ呼べない", async () => {
+      const s = await stats(B, null);
+      expect(s).toEqual({
+        summary: { logs: 0, songs: 0, days: 0, firstTimes: 0 },
+        monthly: [],
+        top: [],
+        dormant: [],
+        tags: [],
+        artists: [],
+      });
+      await as(null, (tx) => rejects(tx`select sing_stats(null, '2026-10-24')`));
+    });
+  });
+
   describe("曲数の上限（1人2,000曲）", () => {
     const L1 = "f1f1f1f1-f1f1-4f1f-8f1f-f1f1f1f1f1f1";
     const L2 = "f2f2f2f2-f2f2-4f2f-8f2f-f2f2f2f2f2f2";

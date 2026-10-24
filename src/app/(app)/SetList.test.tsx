@@ -108,6 +108,11 @@ describe("SetList: 一覧", () => {
     expect(screen.getByRole("heading", { name: "SET LIST" })).toBeInTheDocument();
   });
 
+  it("ヘッダーから振り返りを開ける（曲がなくても出す）", () => {
+    setup({ songs: [], total: 0 });
+    expect(screen.getByRole("link", { name: "振り返り" })).toHaveAttribute("href", "/stats");
+  });
+
   it("設定で外した列は出さない", () => {
     setup({ listColumns: [], fields: [] });
     const row = within(screen.getByRole("region", { name: "SET LIST" })).getAllByRole(

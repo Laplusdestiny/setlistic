@@ -8,6 +8,7 @@ import styles from "./sidebar.module.css";
 const ITEMS = [
   { href: "/", label: "セトリ（曲一覧）" },
   { href: "/tags", label: "タグ管理" },
+  { href: "/stats", label: "振り返り" },
   { href: "/settings", label: "設定" },
   { href: "/help", label: "ヘルプ" },
 ] as const;

@@ -92,6 +92,13 @@
       "when": 1792296552250,
       "tag": "0012_tutorial_completed",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792849978777,
+      "tag": "0013_sing_stats",
+      "breakpoints": true
     }
   ]
 }

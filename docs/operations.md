@@ -57,6 +57,7 @@ CI（GitHub Actions）が、push と PR のたびに `npm run test:coverage` を
    TEST_DATABASE_URL=postgres://postgres:pw@localhost:54329/postgres npm test
    ```
    CI でも同じテストが走る。本番の Supabase には向けない。
+4. 取り消し用の SQL は `supabase/rollbacks/<番号>_<名前>.down.sql` に置く（`supabase/migrations/` に置くとテストで順に流されてしまうため）。本番で戻すときは、アプリ側（PR の revert）とあわせて SQL Editor で実行する
 
 ## 招待（利用できる人の追加）
 
