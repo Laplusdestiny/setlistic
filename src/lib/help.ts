@@ -16,6 +16,7 @@ export const HELP_SECTIONS = {
   data: "data",
   account: "account",
   contact: "contact",
+  releases: "releases",
 } as const;
 
 export type HelpSection = keyof typeof HELP_SECTIONS;

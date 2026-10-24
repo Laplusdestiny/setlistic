@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HELP_SECTIONS, helpHref, type HelpSection } from "@/lib/help";
+import {
+  RELEASES,
+  RELEASES_OPEN_COUNT,
+  currentVersion,
+  groupReleaseChanges,
+  type Release,
+} from "@/lib/release-notes";
 import { SUPPORTED_SERVICE_NAMES } from "@/lib/songs/services";
 import { TUTORIAL_PATH } from "@/lib/tutorial";
 import styles from "./help.module.css";
@@ -21,6 +28,7 @@ const TOC: { id: HelpSection; label: string }[] = [
   { id: "data", label: "データの書き出し・取り込み" },
   { id: "account", label: "アカウント" },
   { id: "contact", label: "お問い合わせ" },
+  { id: "releases", label: "更新履歴" },
 ];
 
 const TROUBLES: { q: string; a: string; to: HelpSection }[] = [
@@ -72,6 +80,28 @@ const TROUBLES: { q: string; a: string; to: HelpSection }[] = [
 ];
 
 const id = (s: HelpSection) => HELP_SECTIONS[s];
+
+function ReleaseEntry({ release }: { release: Release }) {
+  return (
+    <div className={styles.release}>
+      <h3>
+        v{release.version}
+        {release.title && <span className={styles.releaseTitle}>{release.title}</span>}
+        <time dateTime={release.date}>{release.date.replaceAll("-", ".")}</time>
+      </h3>
+      {groupReleaseChanges(release).map((g) => (
+        <div key={g.kind}>
+          <p className={styles.releaseKind}>{g.label}</p>
+          <ul>
+            {g.items.map((text) => (
+              <li key={text}>{text}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function HelpPage() {
   return (
@@ -330,6 +360,22 @@ export default function HelpPage() {
         <section id={id("contact")} aria-labelledby="h-contact">
           <h2 id="h-contact">お問い合わせ</h2>
           <p>不具合や要望は、招待時にお伝えした連絡先までお寄せください。</p>
+        </section>
+
+        <section id={id("releases")} aria-labelledby="h-releases">
+          <h2 id="h-releases">更新履歴</h2>
+          <p>いまのバージョンは v{currentVersion()} です。</p>
+          {RELEASES.slice(0, RELEASES_OPEN_COUNT).map((r) => (
+            <ReleaseEntry key={r.version} release={r} />
+          ))}
+          {RELEASES.length > RELEASES_OPEN_COUNT && (
+            <details className={styles.olderReleases}>
+              <summary>それより前の更新</summary>
+              {RELEASES.slice(RELEASES_OPEN_COUNT).map((r) => (
+                <ReleaseEntry key={r.version} release={r} />
+              ))}
+            </details>
+          )}
         </section>
       </article>
 
