@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,8 +83,14 @@ describe("TagEditor", () => {
     await userEvent.type(screen.getByLabelText("タグ名"), "x");
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("同じ名前のタグがあります");
-    await userEvent.selectOptions(screen.getByLabelText("グループ"), "マイタグ（グループなし）");
-    expect(await screen.findByRole("alert")).toHaveTextContent("うまくいきませんでした");
+    // 保存のトランジションが終わるまでグループの選択欄は押せない（押しても何も起きない）
+    const select = screen.getByLabelText("グループ");
+    await waitFor(() => expect(select).toBeEnabled());
+    await userEvent.selectOptions(select, "マイタグ（グループなし）");
+    // 前のエラーが残っている間に findBy すると古い alert を拾うので、文言が変わるまで待つ
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("うまくいきませんでした"),
+    );
     expect(refresh).not.toHaveBeenCalled();
   });
 
