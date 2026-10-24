@@ -138,3 +138,37 @@
   align-items: center;
   min-height: 44px;
 }
+
+/* 更新履歴 */
+.release h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.release time,
+.releaseTitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-ink-muted);
+}
+
+.article .releaseKind {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.olderReleases {
+  margin-top: 20px;
+}
+
+.olderReleases summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-primary);
+  cursor: pointer;
+}

@@ -32,6 +32,7 @@ vi.mock("@/app/welcome/actions", () => ({
 }));
 
 import { requireUser } from "@/lib/supabase/user";
+import { RELEASES, RELEASES_OPEN_COUNT, currentVersion } from "@/lib/release-notes";
 import AddPage from "./(app)/add/page";
 import InvitesPage from "./(app)/admin/invites/page";
 import BulkPage from "./(app)/bulk/page";
@@ -398,6 +399,17 @@ describe("静的なページ・レイアウト", () => {
     expect(html).toContain('href="/help#services"');
     expect(html).toContain('href="/welcome"');
     expect(html).toContain("YouTube Music");
+  });
+
+  it("ヘルプの末尾に更新履歴を出し、古いものは畳む", () => {
+    const html = renderToStaticMarkup(HelpPage());
+    expect(html).toContain('href="#releases"');
+    expect(html).toContain(`いまのバージョンは v${currentVersion()} です。`);
+    expect(html).toContain(`<time dateTime="${RELEASES[0].date}">`);
+    const older = html.slice(html.indexOf("<details"));
+    expect(older).toContain(`v${RELEASES[RELEASES_OPEN_COUNT].version}`);
+    expect(older).not.toContain(`v${RELEASES[0].version}<`);
+    expect(html).toContain("最初の公開");
   });
 
   it("404 はセトリへのリンク", () => {
