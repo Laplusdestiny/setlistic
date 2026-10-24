@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { signOut } from "@/app/login/actions";
 import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { ConditionsForm } from "@/components/ConditionsForm";
 import { SaveSearchForm } from "@/components/SaveSearchForm";
@@ -287,9 +286,6 @@ export function SetList({
               ))}
             </ul>
           </details>
-          <form action={signOut} className={styles.mobileLogout}>
-            <button type="submit">ログアウト</button>
-          </form>
         </div>
 
         {total > 0 && (
