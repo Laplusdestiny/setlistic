@@ -98,7 +98,7 @@ Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし�
 - 曲URLパーサー、タグ正規化、検索条件→クエリ変換などのロジックは `src/lib` の純粋関数にしてユニットテストを書く。Server Actions・API・画面にもテストを書く（カバレッジは約99%を維持している）
 - DB を変えたら `docs/operations.md` の「DB マイグレーション」の手順で SQL を作り、RLS・関数のテストを `src/db/rls.test.ts` に足す
 - 運用手順が変わったら `docs/operations.md` も更新する
-- 利用者に見える変更を入れる PR では、`release-bump` スキル（`.claude/skills/release-bump/SKILL.md`）の手順で `package.json` の version を上げ、ヘルプの更新履歴（`src/lib/release-notes.ts`）に利用者向けの説明を足す。バージョンは 0.x.y（新機能・仕様変更は minor、修正だけは patch、見えない変更は据え置き。1.0 などの major はオーナーが決める）
+- 利用者に見える変更を入れる PR では、`release-bump` スキル（`.claude/skills/release-bump/SKILL.md`）の手順で、上げ幅と文案をオーナーに提案して了承を得てから `package.json` の version を上げ、ヘルプの更新履歴（`src/lib/release-notes.ts`）に利用者向けの説明を足す。バージョンは 0.x.y（新機能・仕様変更は minor、修正だけは patch、見えない変更は据え置き。1.0 などの major はオーナーが決める）
 - 秘密情報（Supabaseのキー等）はコミットしない。`.env.example` にキー名だけ置く
 
 ### コマンド
