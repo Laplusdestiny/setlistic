@@ -3,7 +3,10 @@ import { afterEach } from "vitest";
 
 // 画面のテスト（// @vitest-environment jsdom）だけの準備
 if (typeof window !== "undefined") {
-  const { cleanup } = await import("@testing-library/react");
+  const { cleanup, configure } = await import("@testing-library/react");
+  // findBy* / waitFor の待ち時間（既定1秒）を延ばす。全件を並列で流して負荷が高いと、
+  // useTransition の中の更新が1秒に間に合わずまれに落ちるため（#40）
+  configure({ asyncUtilTimeout: 3000 });
   const { installMatchMedia, setViewportWidth } = await import("./media");
   installMatchMedia();
   afterEach(() => {

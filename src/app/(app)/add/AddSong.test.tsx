@@ -137,14 +137,15 @@ describe("AddSong: URL から", () => {
       duplicate: { id: "s1", title: "夜に駆ける" },
     });
     expect(await screen.findByRole("alert")).toHaveTextContent("すでにセトリに登録されています");
-    expect(screen.getByRole("button", { name: "セトリに追加" })).toBeDisabled();
+    // 取得の非同期トランジションが終わるまで、ボタンは「保存中…」のまま。名前が戻るのを待つ
+    expect(await screen.findByRole("button", { name: "セトリに追加" })).toBeDisabled();
   });
 
   it("戻るで入力に戻る", async () => {
     setup();
     await fetchFromUrl();
     await userEvent.click(await screen.findByRole("button", { name: "戻る" }));
-    expect(screen.getByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
   });
 });
 
@@ -186,9 +187,11 @@ describe("AddSong: 保存", () => {
     setup();
     await fetchFromUrl();
     await userEvent.type(await screen.findByLabelText("メモ"), "低め");
-    await userEvent.click(screen.getByRole("button", { name: "セトリに追加" }));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
-    expect(screen.getByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "セトリに追加" }));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith("/"), { timeout: 3000 });
+    // reset と移動は同じトランジションの中で呼ばれる。push はモックなので先に記録され、
+    // 画面の再描画はそのあとに確定するため、見出しは findBy で待つ
+    expect(await screen.findByRole("heading", { name: "曲を登録" })).toBeInTheDocument();
     expect(screen.getByLabelText("共有URL")).toHaveValue("");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
