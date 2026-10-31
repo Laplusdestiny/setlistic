@@ -585,6 +585,22 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
       expect(await search({ q: "夜に駆ける" }, O)).toEqual([]);
     });
 
+    it("登録元のサービスと URL も返す（曲の画面の「〜で開く」に使う）", async () => {
+      const url = "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh";
+      const rows = await as(S, async (tx) => {
+        await tx`update songs set source_service = 'spotify', source_url = ${url} where id = ${id.yoru}`;
+        return tx`select title, source_service, source_url from search_songs('{}'::jsonb)`;
+      });
+      expect(rows.find((r) => r.title === "夜に駆ける")).toMatchObject({
+        source_service: "spotify",
+        source_url: url,
+      });
+      expect(rows.find((r) => r.title === "白日")).toMatchObject({
+        source_service: null,
+        source_url: null,
+      });
+    });
+
     it("タグAND：十八番 AND 盛り上げ", async () => {
       const r = await search({ tagMode: "and", include: [tag["十八番"], tag["盛り上げ"]] });
       expect(r.sort()).toEqual(["夜に駆ける", "残酷な天使のテーゼ"].sort());

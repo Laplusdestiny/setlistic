@@ -32,6 +32,8 @@ describe("searchSongs", () => {
               song_key: -1,
               memo: null,
               apple_url: null,
+              source_service: "spotify",
+              source_url: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
               last_sung_at: "2026-10-01",
               sung_count: 2,
               tags: null,
@@ -49,6 +51,8 @@ describe("searchSongs", () => {
         songKey: -1,
         memo: null,
         appleUrl: null,
+        sourceService: "spotify",
+        sourceUrl: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
         lastSungAt: "2026-10-01",
         sungCount: 2,
         tags: [],
@@ -80,6 +84,8 @@ describe("getSong", () => {
             song_key: null,
             memo: "m",
             apple_url: "https://music.apple.com/x",
+            source_service: "apple_music",
+            source_url: "https://music.apple.com/x",
             last_sung_at: null,
             sung_count: 0,
             tags: [
@@ -95,7 +101,11 @@ describe("getSong", () => {
     const song = await getSong(c, "s1");
     expect(song?.tags.map((t) => t.name)).toEqual(["アニソン", "盛り上げ"]);
     expect(song?.fields).toEqual({ f1: 3 });
-    expect(song?.appleUrl).toBe("https://music.apple.com/x");
+    expect(song).toMatchObject({
+      appleUrl: "https://music.apple.com/x",
+      sourceService: "apple_music",
+      sourceUrl: "https://music.apple.com/x",
+    });
     expect(sb.argsOf("songs", "eq")).toEqual([["id", "s1"]]);
   });
 

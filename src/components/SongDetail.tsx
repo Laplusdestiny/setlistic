@@ -11,6 +11,7 @@ import {
 import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { formatDateJa } from "@/lib/format";
 import { formatKey } from "@/lib/songs/key";
+import { songLink } from "@/lib/songs/link";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { FieldInputs } from "./FieldInputs";
@@ -60,6 +61,7 @@ export function SongDetail({
   const [songKey, setSongKey] = useState(song.songKey ?? 0);
   const [memo, setMemo] = useState(song.memo ?? "");
   const shownFields = visibleFields(fields);
+  const link = songLink(song);
   const currentFieldValues = () =>
     Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null]));
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
@@ -380,14 +382,14 @@ export function SongDetail({
         <button type="button" className={styles.secondary} onClick={startEdit}>
           編集
         </button>
-        {song.appleUrl && (
+        {link && (
           <a
             className={styles.secondary}
-            href={song.appleUrl}
+            href={link.href}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Apple Musicで開く
+            {link.label}
           </a>
         )}
       </div>

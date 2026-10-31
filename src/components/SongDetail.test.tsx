@@ -40,6 +40,8 @@ const song: SongRow = {
   songKey: -2,
   memo: "サビ前で息継ぎ",
   appleUrl: "https://music.apple.com/jp/song/1",
+  sourceService: "apple_music",
+  sourceUrl: "https://music.apple.com/jp/song/1",
   lastSungAt: "2026-10-01",
   sungCount: 2,
   tags: [{ id: "t1", name: "十八番" }],
@@ -93,6 +95,15 @@ describe("SongDetail: 表示", () => {
       "rel",
       "noopener noreferrer",
     );
+  });
+
+  it.each([
+    ["spotify", "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh", "Spotifyで開く"],
+    ["youtube_music", "https://music.youtube.com/watch?v=x8VYWazR5mE", "YouTube Musicで開く"],
+  ])("%s から登録した曲は、登録元で開くリンクだけを出す", (sourceService, sourceUrl, label) => {
+    setup({ song: { ...song, sourceService, sourceUrl } });
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", sourceUrl);
+    expect(screen.queryByRole("link", { name: "Apple Musicで開く" })).toBeNull();
   });
 
   it("値のない曲は「—」や空の記録表示", () => {
