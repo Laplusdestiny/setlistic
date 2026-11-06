@@ -33,6 +33,10 @@ export const RELEASES: Release[] = [
         kind: "change",
         text: "Spotify・YouTube Music から登録した曲は、曲の画面のボタンが「Spotifyで開く」「YouTube Musicで開く」になり、登録したときのリンクの曲を開けるようにしました",
       },
+      {
+        kind: "feature",
+        text: "曲の編集画面の「曲のリンク」から、曲を開くリンクを別のサービスの URL に変えられるようにしました",
+      },
     ],
   },
   {
