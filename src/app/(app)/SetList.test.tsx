@@ -44,6 +44,8 @@ const song = (id: string, title: string, over: Partial<SongRow> = {}): SongRow =
   songKey: null,
   memo: null,
   appleUrl: null,
+  sourceService: null,
+  sourceUrl: null,
   lastSungAt: null,
   sungCount: 0,
   tags: [],

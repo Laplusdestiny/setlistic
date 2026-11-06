@@ -14,6 +14,9 @@ export type SongRow = {
   songKey: number | null;
   memo: string | null;
   appleUrl: string | null;
+  /** 登録元（spotify / youtube_music など）。曲の画面の「〜で開く」は songLink で決める */
+  sourceService: string | null;
+  sourceUrl: string | null;
   lastSungAt: string | null;
   sungCount: number;
   tags: { id: string; name: string }[];
@@ -32,6 +35,8 @@ type RawSong = {
   song_key: number | null;
   memo: string | null;
   apple_url: string | null;
+  source_service: string | null;
+  source_url: string | null;
   last_sung_at: string | null;
   sung_count: number;
   tags: { tag: { id: string; name: string } | null }[] | null;
@@ -39,7 +44,7 @@ type RawSong = {
 };
 
 const COLUMNS =
-  "id, title, artist, song_key, memo, apple_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name)), field_values:song_field_values(field_id, value)";
+  "id, title, artist, song_key, memo, apple_url, source_service, source_url, last_sung_at, sung_count, tags:song_tags(tag:tags(id, name)), field_values:song_field_values(field_id, value)";
 
 function toSongRow(r: RawSong): SongRow {
   return {
@@ -49,6 +54,8 @@ function toSongRow(r: RawSong): SongRow {
     songKey: r.song_key,
     memo: r.memo,
     appleUrl: r.apple_url,
+    sourceService: r.source_service,
+    sourceUrl: r.source_url,
     lastSungAt: r.last_sung_at,
     sungCount: r.sung_count,
     tags: (r.tags ?? [])
@@ -66,6 +73,8 @@ type SearchRow = {
   song_key: number | null;
   memo: string | null;
   apple_url: string | null;
+  source_service: string | null;
+  source_url: string | null;
   last_sung_at: string | null;
   sung_count: number;
   tags: { id: string; name: string }[] | null;
@@ -92,6 +101,8 @@ export async function searchSongs(
     songKey: r.song_key,
     memo: r.memo,
     appleUrl: r.apple_url,
+    sourceService: r.source_service,
+    sourceUrl: r.source_url,
     lastSungAt: r.last_sung_at,
     sungCount: r.sung_count,
     tags: r.tags ?? [],

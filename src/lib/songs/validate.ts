@@ -1,4 +1,6 @@
+import { parseMusicUrl } from "./apple-url";
 import { clampKey } from "./key";
+import { supportedServicesText } from "./services";
 import { dedupeTagNames, normalizeTagName, MAX_TAG_LENGTH } from "../tags/normalize";
 import type { SongDraft } from "./types";
 
@@ -172,16 +174,40 @@ export type UpdateSongInput = {
   memo: string;
   tagIds: string[];
   newTags: { name: string; group?: string }[];
+  /** 曲のリンク。変えたときだけ送る（空なら登録元の URL を消して Apple Music に戻す） */
+  link?: string;
 };
 
 export type UpdatePayload = {
   id: string;
-  song: { title: string; artist: string; song_key: number | null; memo: string | null };
+  song: {
+    title: string;
+    artist: string;
+    song_key: number | null;
+    memo: string | null;
+    /** link を送ったときだけ入る。update_song はキーがあるときだけ登録元を書き換える */
+    source_service?: string;
+    source_url?: string | null;
+  };
   tagIds: string[];
   newTags: RegisterPayload["newTags"];
 };
 
-/** 編集リクエストの検証。編集できるのは曲名・アーティスト・キー・メモ・タグだけ */
+const LINK_ERROR = `曲のリンクは、${supportedServicesText()} の曲のURLを入れてください`;
+
+/** 編集で変えた曲のリンクを登録元（サービス＋整えた URL）にする。空なら URL だけを消す */
+function parseLink(
+  v: unknown,
+): Result<Pick<UpdatePayload["song"], "source_service" | "source_url">> {
+  if (v === undefined) return { ok: true, value: {} };
+  if (typeof v !== "string") return { ok: false, error: LINK_ERROR };
+  if (!v.trim()) return { ok: true, value: { source_url: null } };
+  const parsed = parseMusicUrl(v);
+  if (!parsed.ok) return { ok: false, error: LINK_ERROR };
+  return { ok: true, value: { source_service: parsed.service, source_url: parsed.canonicalUrl } };
+}
+
+/** 編集リクエストの検証。編集できるのは曲名・アーティスト・キー・メモ・タグ・曲のリンクだけ */
 export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
   if (!obj(raw)) return { ok: false, error: "リクエストが正しくありません" };
   if (typeof raw.id !== "string" || !UUID.test(raw.id))
@@ -193,6 +219,8 @@ export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
 
   const tags = parseTags(raw.tagIds, raw.newTags);
   if (!tags.ok) return tags;
+  const link = parseLink(raw.link);
+  if (!link.ok) return link;
 
   const memo = typeof raw.memo === "string" ? raw.memo.trim().slice(0, LIMITS.memo) : "";
   const key =
@@ -202,7 +230,7 @@ export function toUpdatePayload(raw: unknown): Result<UpdatePayload> {
     ok: true,
     value: {
       id: raw.id,
-      song: { title, artist, song_key: key, memo: memo || null },
+      song: { title, artist, song_key: key, memo: memo || null, ...link.value },
       tagIds: tags.value.tagIds,
       newTags: tags.value.newTags,
     },

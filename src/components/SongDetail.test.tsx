@@ -40,6 +40,8 @@ const song: SongRow = {
   songKey: -2,
   memo: "サビ前で息継ぎ",
   appleUrl: "https://music.apple.com/jp/song/1",
+  sourceService: "apple_music",
+  sourceUrl: "https://music.apple.com/jp/song/1",
   lastSungAt: "2026-10-01",
   sungCount: 2,
   tags: [{ id: "t1", name: "十八番" }],
@@ -95,9 +97,26 @@ describe("SongDetail: 表示", () => {
     );
   });
 
+  it.each([
+    ["spotify", "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh", "Spotifyで開く"],
+    ["youtube_music", "https://music.youtube.com/watch?v=x8VYWazR5mE", "YouTube Musicで開く"],
+  ])("%s から登録した曲は、登録元で開くリンクだけを出す", (sourceService, sourceUrl, label) => {
+    setup({ song: { ...song, sourceService, sourceUrl } });
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", sourceUrl);
+    expect(screen.queryByRole("link", { name: "Apple Musicで開く" })).toBeNull();
+  });
+
   it("値のない曲は「—」や空の記録表示", () => {
     setup({
-      song: { ...song, songKey: null, memo: null, appleUrl: null, tags: [], fields: {} },
+      song: {
+        ...song,
+        songKey: null,
+        memo: null,
+        appleUrl: null,
+        sourceUrl: null,
+        tags: [],
+        fields: {},
+      },
       initialSing: { logs: [], sungCount: 0, lastSungAt: null },
     });
     expect(screen.getAllByText("—")).toHaveLength(2);
@@ -241,6 +260,37 @@ describe("SongDetail: 編集", () => {
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("曲が見つかりません。");
     expect(screen.getByRole("heading", { name: "曲を編集" })).toBeInTheDocument();
+  });
+
+  it("曲のリンクは折りたたみの中にあり、今のリンクが入っている", async () => {
+    setup({
+      song: {
+        ...song,
+        sourceService: "spotify",
+        sourceUrl: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
+      },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    const input = screen.getByLabelText("曲のリンク（URL）");
+    expect(input).not.toBeVisible();
+    await userEvent.click(screen.getByText("曲のリンク"));
+    expect(input).toBeVisible();
+    expect(input).toHaveValue("https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh");
+  });
+
+  it.each([
+    ["別のサービスの URL に変える", "https://music.apple.com/jp/song/1498176428"],
+    ["空にする", ""],
+  ])("曲のリンクを変えたときだけ link を送る（%s）", async (_, value) => {
+    vi.mocked(updateSongAction).mockResolvedValue({ status: "ok" });
+    setup({ song: { ...song, songKey: null, memo: null, fields: {} } });
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    await userEvent.click(screen.getByText("曲のリンク"));
+    const input = screen.getByLabelText("曲のリンク（URL）");
+    await userEvent.clear(input);
+    if (value) await userEvent.type(input, value);
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(updateSongAction).toHaveBeenLastCalledWith(expect.objectContaining({ link: value }));
   });
 });
 

@@ -164,8 +164,9 @@ export default function HelpPage() {
           </ul>
           <p>
             Spotify・YouTube Music
-            のリンクは、曲名とアーティストを読み取ってから、表記をそろえるために同じ曲を探します。候補がはっきりしないときは、登録画面で候補から選べます。Amazon
-            Music は、いまは対応していません。
+            のリンクは、曲名とアーティストを読み取ってから、表記をそろえるために同じ曲を探します。候補がはっきりしないときは、登録画面で候補から選べます。登録した曲は、曲の画面の「Spotifyで開く」「YouTube
+            Musicで開く」から、貼り付けたリンクの曲を開けます。Amazon Music
+            は、いまは対応していません。
           </p>
           <h3>うまく読み込めないとき</h3>
           <ul>
@@ -186,8 +187,8 @@ export default function HelpPage() {
             <li>同じ曲を二度登録しようとすると、登録済みであることをお知らせします</li>
             <li>登録できる曲は、1人2,000曲までです</li>
             <li>
-              ジャケット画像は、いまは表示していません。曲のリンク元（Apple Music
-              など）は、曲の画面からリンクで開けます
+              ジャケット画像は、いまは表示していません。曲は、曲の画面のリンクから音楽アプリで開けます（Spotify・YouTube
+              Music から登録した曲はそのサービス、それ以外は Apple Music）
             </li>
           </ul>
         </section>
@@ -209,6 +210,13 @@ export default function HelpPage() {
             <li>
               <strong>カスタム項目</strong>
               ：最高点・機種など、自分で項目を足せます（設定 › カスタム項目）
+            </li>
+            <li>
+              <strong>曲のリンク</strong>
+              ：編集画面の「曲のリンク」を開くと、曲の画面の「〜で開く」の行き先を、Apple
+              Music・Spotify・YouTube Music の曲の URL
+              に変えられます。使う音楽アプリを変えたときに便利です。空にすると、Apple Music
+              のリンク（登録したときに見つかった場合）に戻ります
             </li>
             <li>
               <strong>削除</strong>

@@ -424,6 +424,49 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
       });
     });
 
+    it("曲のリンク：source_url を送ったときだけ登録元を書き換え、null なら URL だけを消す", async () => {
+      await as(A, async (tx) => {
+        const spotify = "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh";
+        const apple = "https://music.apple.com/jp/song/1498176428";
+        const [{ id }] =
+          await tx`insert into songs (user_id, title, artist, apple_url, source_service, source_url)
+            values (${A}, 'old', 'old', ${apple}, 'spotify', ${spotify}) returning id`;
+        const source = async () =>
+          (await tx`select source_service, source_url, apple_url from songs where id = ${id}`)[0];
+
+        await tx`select update_song(${id}, ${patch()})`;
+        expect(await source()).toEqual({
+          source_service: "spotify",
+          source_url: spotify,
+          apple_url: apple,
+        });
+
+        await tx`select update_song(${id}, ${patch({ source_service: "apple_music", source_url: apple })})`;
+        expect(await source()).toEqual({
+          source_service: "apple_music",
+          source_url: apple,
+          apple_url: apple,
+        });
+
+        await tx`select update_song(${id}, ${patch({ source_url: null })})`;
+        expect(await source()).toEqual({
+          source_service: "apple_music",
+          source_url: null,
+          apple_url: apple,
+        });
+      });
+    });
+
+    it("曲のリンク：対応していないサービス名は制約で拒否する", async () => {
+      await as(A, async (tx) => {
+        const [{ id }] =
+          await tx`insert into songs (user_id, title, artist) values (${A}, 'x', 'x') returning id`;
+        await expect(
+          tx`select update_song(${id}, ${patch({ source_service: "niconico", source_url: "https://example.com" })})`,
+        ).rejects.toMatchObject({ code: "23514" });
+      });
+    });
+
     it("他人の曲は更新できない（P0002）", async () => {
       const [other] =
         await sql`insert into songs (user_id, title, artist) values (${A}, 'mine', 'a') returning id`;
@@ -583,6 +626,22 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
     it("他のユーザーからは検索結果に出ない", async () => {
       expect(await search({}, O)).toEqual(["別ユーザーの夜"]);
       expect(await search({ q: "夜に駆ける" }, O)).toEqual([]);
+    });
+
+    it("登録元のサービスと URL も返す（曲の画面の「〜で開く」に使う）", async () => {
+      const url = "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh";
+      const rows = await as(S, async (tx) => {
+        await tx`update songs set source_service = 'spotify', source_url = ${url} where id = ${id.yoru}`;
+        return tx`select title, source_service, source_url from search_songs('{}'::jsonb)`;
+      });
+      expect(rows.find((r) => r.title === "夜に駆ける")).toMatchObject({
+        source_service: "spotify",
+        source_url: url,
+      });
+      expect(rows.find((r) => r.title === "白日")).toMatchObject({
+        source_service: null,
+        source_url: null,
+      });
     });
 
     it("タグAND：十八番 AND 盛り上げ", async () => {

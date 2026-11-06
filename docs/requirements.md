@@ -249,7 +249,7 @@ DBと認証はSupabaseの無料プランを採用する。自分＋友人数十�
    - 要確認：曲名・アーティスト・長さのうち2つ以上が一致 → 候補（最大3件）か取得元の表記から選ぶ
    - 見つからず → 取得元の表記で入力欄を埋めて、確認・修正してもらう
 5. どの場合もユーザーが確認画面で「セトリに追加」を押すまで保存しない
-6. 元のURL（追跡パラメータを落とした `https://open.spotify.com/track/{id}` / `https://music.youtube.com/watch?v={id}`）とサービス名を「登録元リンク」として保存する。重複判定は iTunes の曲IDを優先し、無ければ登録元のサービス＋URLで見る
+6. 元のURL（追跡パラメータを落とした `https://open.spotify.com/track/{id}` / `https://music.youtube.com/watch?v={id}`）とサービス名を「登録元リンク」として保存する。重複判定は iTunes の曲IDを優先し、無ければ登録元のサービス＋URLで見る。曲の画面のリンクは登録元を優先し、「Spotifyで開く」「YouTube Musicで開く」とする（Apple Music の曲が見つかっていても、Apple Music のリンクは出さない。Issue #44）。リンクの URL は曲の編集画面であとから変えられる
 
 **前提と注意**
 

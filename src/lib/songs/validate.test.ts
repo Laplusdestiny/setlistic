@@ -158,4 +158,58 @@ describe("toUpdatePayload", () => {
       [{ name: "Rock", normalized: "rock", group: undefined }],
     ]);
   });
+
+  describe("曲のリンク（link）", () => {
+    const songOf = (link: unknown) => {
+      const r = toUpdatePayload({ ...base, link });
+      if (!r.ok) throw new Error(r.error);
+      return r.value.song;
+    };
+
+    it("送られなければ、登録元には触れない", () => {
+      expect(songOf(undefined)).not.toHaveProperty("source_url");
+      expect(songOf(undefined)).not.toHaveProperty("source_service");
+    });
+
+    it.each([
+      [
+        "Apple Music",
+        "https://music.apple.com/jp/album/x/1?i=1498176428&uo=4",
+        "apple_music",
+        "https://music.apple.com/jp/song/1498176428",
+      ],
+      [
+        "Spotify",
+        "https://open.spotify.com/intl-ja/track/4iV5W9uYEdYUVa79Axb7Rh?si=abc",
+        "spotify",
+        "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
+      ],
+      [
+        "YouTube Music（共有テキストのまま）",
+        "この曲を聴く https://youtu.be/x8VYWazR5mE?si=abc",
+        "youtube_music",
+        "https://music.youtube.com/watch?v=x8VYWazR5mE",
+      ],
+    ])("%s の曲 URL は、サービスと整えた URL にする", (_, link, service, url) => {
+      expect(songOf(link)).toMatchObject({ source_service: service, source_url: url });
+    });
+
+    it("空にすると登録元の URL だけを消す（サービスはそのまま）", () => {
+      const song = songOf("   ");
+      expect(song).toHaveProperty("source_url", null);
+      expect(song).not.toHaveProperty("source_service");
+    });
+
+    it.each([
+      ["アルバムの URL", "https://open.spotify.com/album/4iV5W9uYEdYUVa79Axb7Rh"],
+      ["対応していないサイト", "https://music.amazon.co.jp/tracks/B0"],
+      ["URL でない", "夜に駆ける"],
+      ["文字列でない", 123],
+    ])("%s はエラー", (_, link) => {
+      expect(toUpdatePayload({ ...base, link })).toEqual({
+        ok: false,
+        error: "曲のリンクは、Apple Music・Spotify・YouTube Music の曲のURLを入れてください",
+      });
+    });
+  });
 });

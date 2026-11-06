@@ -12,6 +12,8 @@ const song = (id: string, title: string): SongRow => ({
   songKey: null,
   memo: null,
   appleUrl: null,
+  sourceService: null,
+  sourceUrl: null,
   lastSungAt: null,
   sungCount: 0,
   tags: [],

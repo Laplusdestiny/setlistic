@@ -80,10 +80,27 @@ describe("updateSongAction", () => {
     ]);
   });
 
+  it("曲のリンクを変えたときは、登録元のサービスと整えた URL も渡す", async () => {
+    await updateSongAction({
+      ...input,
+      link: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh?si=abc",
+    });
+    expect(sb.rpcCalls[0].args).toMatchObject({
+      p_song: {
+        source_service: "spotify",
+        source_url: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
+      },
+    });
+  });
+
   it("検証エラーは DB を呼ばずに返す", async () => {
     expect(await updateSongAction({ ...input, title: " " })).toEqual({
       status: "error",
       message: "曲名を入力してください",
+    });
+    expect(await updateSongAction({ ...input, link: "https://example.com/" })).toMatchObject({
+      status: "error",
+      message: "曲のリンクは、Apple Music・Spotify・YouTube Music の曲のURLを入れてください",
     });
     expect(sb.rpcCalls).toEqual([]);
   });
