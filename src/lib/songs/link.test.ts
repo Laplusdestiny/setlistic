@@ -26,10 +26,20 @@ describe("songLink", () => {
     });
   });
 
-  it.each(["apple_music", "search", "manual", null])(
+  it("登録元が Apple Music の曲は、登録元の URL を整えた形で開く（編集で切り替えた曲も同じ）", () => {
+    expect(
+      songLink({
+        appleUrl: "https://music.apple.com/jp/album/x/1?i=1498176428",
+        sourceService: "apple_music",
+        sourceUrl: "https://music.apple.com/us/album/x/1?i=2&uo=4",
+      }),
+    ).toEqual({ href: "https://music.apple.com/us/song/2", label: "Apple Musicで開く" });
+  });
+
+  it.each(["search", "manual", null])(
     "登録元が %s の曲は Apple Music の URL を使う",
     (sourceService) => {
-      expect(songLink({ appleUrl: APPLE, sourceService, sourceUrl: APPLE })).toEqual({
+      expect(songLink({ appleUrl: APPLE, sourceService, sourceUrl: SPOTIFY })).toEqual({
         href: APPLE,
         label: "Apple Musicで開く",
       });
@@ -40,7 +50,8 @@ describe("songLink", () => {
     ["サービスと URL が食い違う", "spotify", YOUTUBE],
     ["曲の URL でない", "spotify", "https://open.spotify.com/album/4iV5W9uYEdYUVa79Axb7Rh"],
     ["対応していないサイト", "youtube_music", "https://example.com/watch?v=x8VYWazR5mE"],
-    ["URL が無い", "spotify", null],
+    ["URL が無い（編集で空にした）", "spotify", null],
+    ["Apple Music と言いつつ別のサービス", "apple_music", SPOTIFY],
   ])("登録元の URL が使えない（%s）ときは Apple Music に戻す", (_, sourceService, sourceUrl) => {
     expect(songLink({ appleUrl: APPLE, sourceService, sourceUrl })).toEqual({
       href: APPLE,

@@ -212,6 +212,13 @@ export default function HelpPage() {
               ：最高点・機種など、自分で項目を足せます（設定 › カスタム項目）
             </li>
             <li>
+              <strong>曲のリンク</strong>
+              ：編集画面の「曲のリンク」を開くと、曲の画面の「〜で開く」の行き先を、Apple
+              Music・Spotify・YouTube Music の曲の URL
+              に変えられます。使う音楽アプリを変えたときに便利です。空にすると、Apple Music
+              のリンク（登録したときに見つかった場合）に戻ります
+            </li>
+            <li>
               <strong>削除</strong>
               ：曲の画面のいちばん下の「この曲を削除」から。確認のあと、その曲の歌唱記録やタグの紐づけも消えます。元に戻せません
             </li>

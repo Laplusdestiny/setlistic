@@ -12,6 +12,7 @@ import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-
 import { formatDateJa } from "@/lib/format";
 import { formatKey } from "@/lib/songs/key";
 import { songLink } from "@/lib/songs/link";
+import { supportedServicesText } from "@/lib/songs/services";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { FieldInputs } from "./FieldInputs";
@@ -62,6 +63,7 @@ export function SongDetail({
   const [memo, setMemo] = useState(song.memo ?? "");
   const shownFields = visibleFields(fields);
   const link = songLink(song);
+  const [linkUrl, setLinkUrl] = useState(link?.href ?? "");
   const currentFieldValues = () =>
     Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null]));
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
@@ -80,6 +82,7 @@ export function SongDetail({
     setArtist(song.artist);
     setSongKey(song.songKey ?? 0);
     setMemo(song.memo ?? "");
+    setLinkUrl(link?.href ?? "");
     setFieldValues(currentFieldValues());
     setSelected(new Set(song.tags.map((t) => t.id)));
     setNewTags([]);
@@ -99,6 +102,8 @@ export function SongDetail({
         fields: fieldValues,
         tagIds: [...selected],
         newTags,
+        // 変えたときだけ送る（取り込んだ曲の読めない URL などを、編集のたびに消さないため）
+        ...(linkUrl.trim() !== (link?.href ?? "") ? { link: linkUrl } : {}),
       });
       if (res.status === "ok") {
         setEditing(false);
@@ -221,6 +226,29 @@ export function SongDetail({
           values={fieldValues}
           onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
         />
+
+        <details className={styles.linkEdit}>
+          <summary>曲のリンク</summary>
+          <div className={styles.linkEditBody}>
+            <label className={form.label} htmlFor={`u-${song.id}`}>
+              曲のリンク（URL）
+            </label>
+            <input
+              id={`u-${song.id}`}
+              className={form.input}
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://open.spotify.com/track/…"
+            />
+            <p className={form.hint}>
+              {supportedServicesText()} の曲のURL。空にすると Apple Music のリンクに戻ります
+            </p>
+          </div>
+        </details>
 
         {error && (
           <p role="alert" className={styles.error}>
