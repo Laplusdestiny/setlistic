@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { watchHtml } from "./__fixtures__";
+import { YOUTUBE_MUSIC_NEXT, watchHtml } from "./__fixtures__";
 import {
   extractPlayerResponse,
   fromTitleAndChannel,
+  parseClock,
   parseDataApi,
   parseIsoDuration,
+  parseMusicNext,
   parseOembed,
   parseProvidedDescription,
   parseWatchHtml,
@@ -24,6 +26,95 @@ describe("parseWatchHtml（実物の playerResponse）", () => {
       releaseDate,
       durationSec,
     });
+  });
+});
+
+describe("parseMusicNext（実物の応答）", () => {
+  // watch ページ・oEmbed では Asuca Hayashi / Kenshi Yonezu / Ryoichi Higuchi になる曲（Issue #47）
+  it.each([
+    ["I2lwBfsfV5k", "小さきもの", "林明日香", "咲", 334],
+    ["7QDosulSmBw", "M八七", "米津玄師", "M八七", 264],
+    ["Fr4tGn29hD8", "1/6の夢旅人2002（オリジナル）", "樋口 了一", "1/6の夢旅人2002", 237],
+    // MV はアルバムが無く、曲名に「(Official Music Video)」などの飾りも付かない
+    ["x8VYWazR5mE", "夜に駆ける", "YOASOBI", null, 276],
+  ])("%s", (id, title, artist, album, durationSec) => {
+    expect(parseMusicNext(YOUTUBE_MUSIC_NEXT[id], id)).toEqual({
+      title,
+      artist,
+      credits: [],
+      album,
+      releaseDate: null,
+      durationSec,
+    });
+  });
+
+  const panel = (renderer: unknown) => ({
+    contents: [
+      {
+        playlistPanelVideoWrapperRenderer: {
+          primaryRenderer: { playlistPanelVideoRenderer: renderer },
+        },
+      },
+    ],
+  });
+  const link = (text: string, pageType: string) => ({
+    text,
+    navigationEndpoint: {
+      browseEndpoint: {
+        browseEndpointContextSupportedConfigs: {
+          browseEndpointContextMusicConfig: { pageType },
+        },
+      },
+    },
+  });
+
+  it("2人目以降のアーティストは credits に入れる", () => {
+    const body = panel({
+      videoId: "v1",
+      title: { runs: [{ text: "曲" }] },
+      longBylineText: {
+        runs: [
+          link("A", "MUSIC_PAGE_TYPE_ARTIST"),
+          { text: "" },
+          { text: " & " },
+          link("B", "MUSIC_PAGE_TYPE_ARTIST"),
+          { text: " • " },
+          link("A", "MUSIC_PAGE_TYPE_ARTIST"),
+        ],
+      },
+    });
+    expect(parseMusicNext(body, "v1")).toMatchObject({
+      artist: "A",
+      credits: ["B"],
+      album: null,
+      durationSec: null,
+    });
+  });
+
+  it("アーティストのリンクが無い（一般の動画）・別の動画しか無い・壊れているときは null", () => {
+    const ugc = {
+      videoId: "v1",
+      title: { runs: [{ text: "歌ってみた" }] },
+      longBylineText: { runs: [link("チャンネル", "MUSIC_PAGE_TYPE_USER_CHANNEL")] },
+    };
+    expect(parseMusicNext(panel(ugc), "v1")).toBeNull();
+    expect(parseMusicNext(YOUTUBE_MUSIC_NEXT["7QDosulSmBw"], "v1")).toBeNull();
+    expect(parseMusicNext(panel({ videoId: "v1", title: {} }), "v1")).toBeNull();
+    expect(parseMusicNext(null, "v1")).toBeNull();
+  });
+});
+
+describe("parseClock", () => {
+  it.each([
+    ["5:34", 334],
+    ["1:02:03", 3723],
+    [" 0:59 ", 59],
+    ["", null],
+    [null, null],
+    ["5分34秒", null],
+    ["534", null],
+  ])("%j → %j", (s, sec) => {
+    expect(parseClock(s)).toBe(sec);
   });
 });
 

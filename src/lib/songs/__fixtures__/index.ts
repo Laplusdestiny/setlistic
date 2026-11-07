@@ -2,6 +2,7 @@
 // Issue #4 の検証スクリプト（playground）と同じ曲で、判定ルールの回帰確認に使う。
 import itunesSearch from "./itunes-search.json";
 import spotifyPages from "./spotify-pages.json";
+import youtubeMusicNext from "./youtube-music-next.json";
 import youtubePlayerResponses from "./youtube-player-responses.json";
 
 export const SPOTIFY_PAGES: Record<string, string> = spotifyPages;
@@ -13,3 +14,6 @@ export function watchHtml(videoId: string): string {
   if (!pr) throw new Error(`no fixture for ${videoId}`);
   return `<html><body><script>var ytInitialPlayerResponse = ${JSON.stringify(pr)};var meta = {"a":"}"};</script></body></html>`;
 }
+
+/** YouTube Music の内部 API（youtubei/v1/next）の応答。2026-11-07 に取得（Issue #47） */
+export const YOUTUBE_MUSIC_NEXT: Record<string, unknown> = youtubeMusicNext;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ITUNES_SEARCH, SPOTIFY_PAGES, watchHtml } from "./__fixtures__";
+import { ITUNES_SEARCH, SPOTIFY_PAGES, YOUTUBE_MUSIC_NEXT, watchHtml } from "./__fixtures__";
 import { youtubeMusicUrl } from "./apple-url";
 import { mapSearchResponse } from "./itunes";
 import {
@@ -15,7 +15,7 @@ import {
 import { matchSource, sourceToDraft } from "./resolve";
 import { parseSpotifyHtml } from "./spotify";
 import type { SongDraft } from "./types";
-import { parseWatchHtml } from "./youtube";
+import { parseMusicNext, parseOembed, parseWatchHtml } from "./youtube";
 
 const src = (over: Partial<SourceSong> = {}): SourceSong => ({
   service: "spotify",
@@ -186,6 +186,49 @@ describe("matchSource: 両サービスから同じ iTunes の曲に寄る", () =
       return fixtureSearch(t);
     });
     expect(terms).toEqual(["ケセラセラ Mrs. GREEN APPLE"]);
+  });
+});
+
+// ───────── Issue #47：YouTube Music のアーティストがローマ字表記で見つからない ─────────
+
+const musicNext = (id: string): SourceSong => ({
+  service: "youtube_music",
+  method: "music_next",
+  id,
+  url: youtubeMusicUrl(id),
+  ...parseMusicNext(YOUTUBE_MUSIC_NEXT[id], id)!,
+});
+
+describe("matchSource: YouTube Music の内部 API の日本語表記で探す（Issue #47）", () => {
+  it("oEmbed だけ（ローマ字のアーティスト・長さ無し）では曲名しか合わず見つからない", async () => {
+    const s: SourceSong = {
+      service: "youtube_music",
+      method: "oembed",
+      id: "7QDosulSmBw",
+      url: youtubeMusicUrl("7QDosulSmBw"),
+      ...parseOembed({ title: "M八七", author_name: "Kenshi Yonezu - Topic" })!,
+    };
+    expect((await matchSource(s, fixtureSearch)).confidence).toBe("not_found");
+  });
+
+  it.each([
+    ["M八七", "7QDosulSmBw", "米津玄師"],
+    ["1/6の夢旅人2002（オリジナル）", "Fr4tGn29hD8", "樋口了一"],
+  ])("%s は確信ありで見つかる", async (_, id, artist) => {
+    const m = await matchSource(musicNext(id), fixtureSearch);
+    expect(m.confidence).toBe("confident");
+    expect(m.best).toMatchObject({ artist, sourceService: "youtube_music" });
+  });
+
+  it("1/6の夢旅人2002 は「オリジナルカラオケ」ではなく本人の歌の版を選ぶ", async () => {
+    const m = await matchSource(musicNext("Fr4tGn29hD8"), fixtureSearch);
+    expect(m.best?.appleTrackId).toBe(1483508788);
+  });
+
+  it("Apple Music で曲名がローマ字（Chiisaki Mono）の版も、要確認の候補に出る", async () => {
+    const m = await matchSource(musicNext("I2lwBfsfV5k"), fixtureSearch);
+    expect(m.confidence).toBe("needs_confirmation");
+    expect(m.candidates.map((c) => c.appleTrackId)).toContain(715549087);
   });
 });
 

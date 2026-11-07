@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.1",
+    date: "2026-11-07",
+    changes: [
+      {
+        kind: "fix",
+        text: "YouTube Music のリンクから登録するとき、アーティスト名が英語の表記で取れてしまい、Apple Music の曲が見つからないことが多かったのを直しました",
+      },
+    ],
+  },
+  {
     version: "0.9.0",
     date: "2026-11-06",
     changes: [

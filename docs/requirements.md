@@ -236,7 +236,7 @@ DBと認証はSupabaseの無料プランを採用する。自分＋友人数十�
 | --- | --- | --- | --- |
 | Apple Music | 曲名、アーティスト、アルバム、ジャンル、ジャケット、長さ | 認証不要 | Lookupで確定（現行どおり） |
 | Spotify | 曲名、アーティスト、アルバム、リリース日、長さ（曲ページのOGP） | 認証不要。自前のUser-Agent（`Setlistic/0.1 (+https://setlistic.laplusdestiny.com)`）で取得する。ブラウザのUAだとmetaタグのないページが返る | OGPで曲情報を取得し、iTunes Searchで Apple Music の表記にそろえる |
-| YouTube Music | 曲名、アーティスト、アルバム、リリース日、長さ（自動生成動画の説明文） | Data API v3 はAPIキーのみ（任意）。無ければ watchページ → oEmbed | 説明文「Provided to YouTube by」を読み、無ければタイトル・チャンネル名を整形（「- Topic」除去、「(Official Music Video)」等の削除）して iTunes Search で照合する |
+| YouTube Music | 曲名、アーティスト、アルバム、長さ（YouTube Music の内部 API）。リリース日（自動生成動画の説明文） | 認証不要の YouTube Music の内部 API（`youtubei/v1/next`、`hl=ja`）を最初に使う。だめなら Data API v3（APIキーのみ・任意）→ watchページ → oEmbed | 内部 API は日本語の表記（米津玄師）を返すので優先する（Issue #47。ほかの方法はローマ字表記「Kenshi Yonezu」になり iTunes Search の表記と合わない）。次点では説明文「Provided to YouTube by」を読み、無ければタイトル・チャンネル名を整形（「- Topic」除去、「(Official Music Video)」等の削除）して iTunes Search で照合する |
 | Amazon Music | 公式の取得手段なし | Web APIはクローズドベータで承認制 | 自動取得は未対応と表示し、キーワード検索登録へ誘導する |
 
 **処理の流れ**（詳細は GitHub Issue #4）

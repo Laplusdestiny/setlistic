@@ -8,7 +8,7 @@ import type { SongDraft } from "./types";
 /** 他サービスから取得した曲情報（取得元の表記のまま） */
 export type SourceSong = {
   service: "spotify" | "youtube_music";
-  method: "ogp" | "data_api" | "watch_html" | "oembed";
+  method: "ogp" | "music_next" | "data_api" | "watch_html" | "oembed";
   /** Spotify のトラックID / YouTube の動画ID */
   id: string;
   /** 追跡パラメータを落としたURL（登録元リンク） */

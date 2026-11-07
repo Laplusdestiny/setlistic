@@ -18,11 +18,20 @@ export class SourceError extends Error {
   }
 }
 
-export async function fetchText(url: string): Promise<{ finalUrl: string; body: string }> {
+/** `json` を渡すと、それを本文にして POST する */
+export async function fetchText(
+  url: string,
+  json?: unknown,
+): Promise<{ finalUrl: string; body: string }> {
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, "Accept-Language": "ja" },
+      ...(json === undefined ? {} : { method: "POST", body: JSON.stringify(json) }),
+      headers: {
+        "User-Agent": USER_AGENT,
+        "Accept-Language": "ja",
+        ...(json === undefined ? {} : { "Content-Type": "application/json" }),
+      },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
@@ -33,8 +42,8 @@ export async function fetchText(url: string): Promise<{ finalUrl: string; body: 
   return { finalUrl: res.url || url, body: await res.text() };
 }
 
-export async function fetchJson(url: string): Promise<unknown> {
-  const { body } = await fetchText(url);
+export async function fetchJson(url: string, json?: unknown): Promise<unknown> {
+  const { body } = await fetchText(url, json);
   try {
     return JSON.parse(body);
   } catch {

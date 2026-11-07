@@ -1,0 +1,321 @@
+{
+  "I2lwBfsfV5k": {
+    "contents": {
+      "singleColumnMusicWatchNextResultsRenderer": {
+        "tabbedRenderer": {
+          "watchNextTabbedResultsRenderer": {
+            "tabs": [
+              {
+                "tabRenderer": {
+                  "content": {
+                    "musicQueueRenderer": {
+                      "content": {
+                        "playlistPanelRenderer": {
+                          "contents": [
+                            {
+                              "playlistPanelVideoRenderer": {
+                                "videoId": "I2lwBfsfV5k",
+                                "title": {
+                                  "runs": [
+                                    {
+                                      "text": "小さきもの"
+                                    }
+                                  ]
+                                },
+                                "longBylineText": {
+                                  "runs": [
+                                    {
+                                      "text": "林明日香",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "咲",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ALBUM"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "2003年"
+                                    }
+                                  ]
+                                },
+                                "lengthText": {
+                                  "runs": [
+                                    {
+                                      "text": "5:34"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "7QDosulSmBw": {
+    "contents": {
+      "singleColumnMusicWatchNextResultsRenderer": {
+        "tabbedRenderer": {
+          "watchNextTabbedResultsRenderer": {
+            "tabs": [
+              {
+                "tabRenderer": {
+                  "content": {
+                    "musicQueueRenderer": {
+                      "content": {
+                        "playlistPanelRenderer": {
+                          "contents": [
+                            {
+                              "playlistPanelVideoRenderer": {
+                                "videoId": "7QDosulSmBw",
+                                "title": {
+                                  "runs": [
+                                    {
+                                      "text": "M八七"
+                                    }
+                                  ]
+                                },
+                                "longBylineText": {
+                                  "runs": [
+                                    {
+                                      "text": "米津玄師",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "M八七",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ALBUM"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "2022年"
+                                    }
+                                  ]
+                                },
+                                "lengthText": {
+                                  "runs": [
+                                    {
+                                      "text": "4:24"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Fr4tGn29hD8": {
+    "contents": {
+      "singleColumnMusicWatchNextResultsRenderer": {
+        "tabbedRenderer": {
+          "watchNextTabbedResultsRenderer": {
+            "tabs": [
+              {
+                "tabRenderer": {
+                  "content": {
+                    "musicQueueRenderer": {
+                      "content": {
+                        "playlistPanelRenderer": {
+                          "contents": [
+                            {
+                              "playlistPanelVideoRenderer": {
+                                "videoId": "Fr4tGn29hD8",
+                                "title": {
+                                  "runs": [
+                                    {
+                                      "text": "1/6の夢旅人2002（オリジナル）"
+                                    }
+                                  ]
+                                },
+                                "longBylineText": {
+                                  "runs": [
+                                    {
+                                      "text": "樋口 了一",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "1/6の夢旅人2002",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ALBUM"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "2007年"
+                                    }
+                                  ]
+                                },
+                                "lengthText": {
+                                  "runs": [
+                                    {
+                                      "text": "3:57"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "x8VYWazR5mE": {
+    "contents": {
+      "singleColumnMusicWatchNextResultsRenderer": {
+        "tabbedRenderer": {
+          "watchNextTabbedResultsRenderer": {
+            "tabs": [
+              {
+                "tabRenderer": {
+                  "content": {
+                    "musicQueueRenderer": {
+                      "content": {
+                        "playlistPanelRenderer": {
+                          "contents": [
+                            {
+                              "playlistPanelVideoRenderer": {
+                                "videoId": "x8VYWazR5mE",
+                                "title": {
+                                  "runs": [
+                                    {
+                                      "text": "夜に駆ける"
+                                    }
+                                  ]
+                                },
+                                "longBylineText": {
+                                  "runs": [
+                                    {
+                                      "text": "YOASOBI",
+                                      "navigationEndpoint": {
+                                        "browseEndpoint": {
+                                          "browseEndpointContextSupportedConfigs": {
+                                            "browseEndpointContextMusicConfig": {
+                                              "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "2.8億回視聴"
+                                    },
+                                    {
+                                      "text": " • "
+                                    },
+                                    {
+                                      "text": "高評価 331万 件"
+                                    }
+                                  ]
+                                },
+                                "lengthText": {
+                                  "runs": [
+                                    {
+                                      "text": "4:36"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
