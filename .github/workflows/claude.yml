@@ -1,0 +1,80 @@
+name: Claude Code
+
+# Issue・PR のコメントで「@claude」と書くと、Claude Code が動いて返答・実装・PR 作成をする。
+# 指示の書き方や事前の設定は docs/operations.md の「Claude Code（GitHub Actions）」を参照。
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    # 公開リポジトリなので、書き込み権限のある人（オーナー・コラボレーター）の「@claude」だけで動かす。
+    # 第三者のコメントでジョブが走り、利用枠を消費しないようにする
+    if: |
+      (github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' &&
+        contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' &&
+        contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' &&
+        (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # 同じ Issue・PR で続けて呼んだときは、前の実行が終わるのを待つ（同じブランチへの同時書き込みを避ける）
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # PR の CI 結果を Claude が読めるようにする
+    services:
+      # CI と同じ使い捨ての Postgres。RLS のテストを Claude にも通させる（Supabase 本番には向けない）
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:pw@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      # lint・typecheck・test を Claude が実行できるように、CI と同じ Node と依存を入れておく
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Pro / Max プランの OAuth トークン（`claude setup-token` で発行）。月額の範囲で動き、従量課金にならない。
+          # API キー（従量課金）に切り替えるときは、この行を
+          # `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}` に置き換える
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 方針は CLAUDE.md を自動で読む。ここでは使いすぎ防止のターン上限と、
+          # PR を出す前の確認（CLAUDE.md の「PR を出す前に lint・typecheck・format:check・test を通す」）に使うコマンドだけ許可する
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Bash(npm run lint),Bash(npm run typecheck),Bash(npm run format:check),Bash(npm run format),Bash(npm test),Bash(npm test *),Bash(npm run test:coverage),Bash(npx vitest *),Bash(gh issue view *),Bash(gh pr view *),Bash(gh pr diff *)"

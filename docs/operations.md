@@ -47,6 +47,31 @@ CI（GitHub Actions）が、push と PR のたびに `npm run test:coverage` を
 - 手元で見る：`npm run test:coverage`（DBのテストも含めるなら、`TEST_DATABASE_URL` を付けて実行。`coverage/lcov-report/index.html` にHTMLが出る）
 - 計測の対象は `src/` の全ファイル（未テストの画面も数字に出す）。純粋関数（`src/lib`）は高い水準を保つ方針
 
+## Claude Code（GitHub Actions）
+
+Issue・PR のコメントに `@claude` と書くと、GitHub Actions 上で Claude Code が動き、質問への返答・レビュー・実装をする（`.github/workflows/claude.yml`、`anthropics/claude-code-action@v1`）。方針はリポジトリの `CLAUDE.md` を読んで従う。
+
+### 事前の設定（初回だけ）
+
+1. Claude の GitHub App を入れる：<https://github.com/apps/claude> から、このリポジトリだけを対象にインストールする
+2. OAuth トークンを発行する：手元で `claude setup-token` を実行し、表示されたトークンを控える（Pro / Max プランの範囲で動き、従量課金にならない）
+3. Secrets に登録する：GitHub → Settings → Secrets and variables → Actions → New repository secret で、名前 `CLAUDE_CODE_OAUTH_TOKEN` に 2 のトークンを入れる
+
+手元の Claude Code で `/install-github-app` を実行しても 1〜3 をまとめてできる（ワークフローのファイルを作る PR も出されるが、このリポジトリには既にあるので、その PR は閉じてよい）。API キー（従量課金）で動かす場合は、Secrets に `ANTHROPIC_API_KEY` を登録し、ワークフローの `claude_code_oauth_token` の行を `anthropic_api_key` に置き換える。
+
+### 使い方
+
+- Issue のコメントで `@claude この Issue を実装して` → ブランチを作ってコミットし、PR を作るリンクをコメントで返す
+- PR のコメントやレビューで `@claude ここを直して` → その PR のブランチにコミットする
+- `@claude` を本文かタイトルに書いて Issue を作っても動く
+
+### 知っておくこと
+
+- 動くのは、オーナー・コラボレーターが書いた `@claude` だけ（公開リポジトリなので、第三者のコメントでは動かさない）
+- 使いすぎ防止に、1回の実行は最大30ターン・30分で止まる。足りないときは `claude.yml` の `--max-turns` と `timeout-minutes` を上げる
+- Claude が実行できるコマンドは lint・typecheck・format・test と、Issue / PR の閲覧だけ（`--allowedTools`）。テストは CI と同じ使い捨ての Postgres に向く
+- Claude の作った変更も、ふつうの PR と同じく CI を通し、オーナーが確認してからマージする
+
 ## DB マイグレーション
 
 1. `src/db/schema.ts` を変更して `npm run db:generate`（関数などは `npx drizzle-kit generate --custom --name <名前>` で空のSQLを作って書く）
