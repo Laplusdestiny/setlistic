@@ -3,7 +3,10 @@ import type { SourceSong } from "./match";
 import { SourceError, fetchJson, fetchText } from "./source-fetch";
 
 /**
- * YouTube Music の曲情報。Data API v3 → watch ページの HTML → oEmbed の順に試し、取れた時点で終わる。
+ * YouTube Music の曲情報。YouTube Music の内部 API → Data API v3 → watch ページの HTML → oEmbed の順に試し、
+ * 取れた時点で終わる。
+ * YouTube Music の内部 API は日本語の表記（米津玄師・林明日香）を返すので、最初に試す（Issue #47）。
+ * それ以外は日本語を指定しても「Kenshi Yonezu」のようなローマ字表記になり、iTunes Search の表記と合わない。
  * 自動生成（Topic）動画の説明文に曲名・アーティスト・アルバム・リリース日が入っているので、それを優先して読む。
  */
 
@@ -143,6 +146,88 @@ export function parseDataApi(body: unknown): Parsed | null {
   return { ...parsed, durationSec: parseIsoDuration(str(obj(item?.contentDetails)?.duration)) };
 }
 
+// YouTube Music の Web クライアントを名乗る。clientVersion は形式が正しくないと 404 になる
+const MUSIC_NEXT_URL = "https://music.youtube.com/youtubei/v1/next?prettyPrint=false";
+const MUSIC_CLIENT = {
+  clientName: "WEB_REMIX",
+  clientVersion: "1.20241023.01.00",
+  hl: "ja",
+  gl: "JP",
+};
+
+/** 「5:34」「1:02:03」を秒にする */
+export function parseClock(s: string | null | undefined): number | null {
+  if (!s || !/^\d+(?::\d{1,2}){1,2}$/.test(s.trim())) return null;
+  return s
+    .trim()
+    .split(":")
+    .reduce((sec, part) => sec * 60 + Number(part), 0);
+}
+
+/** 応答の中から、その動画の再生キューの項目（playlistPanelVideoRenderer）を探す */
+function findPanelVideo(node: unknown, videoId: string): Record<string, unknown> | null {
+  if (Array.isArray(node)) {
+    for (const v of node) {
+      const found = findPanelVideo(v, videoId);
+      if (found) return found;
+    }
+    return null;
+  }
+  const o = obj(node);
+  if (!o) return null;
+  const r = obj(o.playlistPanelVideoRenderer);
+  if (r?.videoId === videoId) return r;
+  for (const v of Object.values(o)) {
+    const found = findPanelVideo(v, videoId);
+    if (found) return found;
+  }
+  return null;
+}
+
+type Run = { text: string; pageType: string | null };
+
+function runs(v: unknown): Run[] {
+  const list = obj(v)?.runs;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((r) => {
+    const text = str(obj(r)?.text);
+    if (!text) return [];
+    const config = obj(
+      obj(
+        obj(obj(obj(r)?.navigationEndpoint)?.browseEndpoint)?.browseEndpointContextSupportedConfigs,
+      )?.browseEndpointContextMusicConfig,
+    );
+    return [{ text, pageType: str(config?.pageType) }];
+  });
+}
+
+/**
+ * YouTube Music の内部 API（youtubei/v1/next）の応答を読む。
+ * 再生キューの先頭にその動画があり、`林明日香 • 咲 • 2003年` の各部分に、アーティスト・アルバムのページへのリンクが付く。
+ * リリース日は年しか無いので持たない。アーティストのリンクが無い（一般の動画）ときは null にして、次の方法に任せる。
+ */
+export function parseMusicNext(body: unknown, videoId: string): Parsed | null {
+  const r = findPanelVideo(body, videoId);
+  const title = runs(r?.title)
+    .map((x) => x.text)
+    .join("")
+    .trim();
+  const byline = runs(r?.longBylineText);
+  const artists = [
+    ...new Set(byline.filter((x) => x.pageType === "MUSIC_PAGE_TYPE_ARTIST").map((x) => x.text)),
+  ];
+  if (!r || !title || artists.length === 0) return null;
+  const [artist, ...credits] = artists;
+  return {
+    title,
+    artist,
+    credits,
+    album: byline.find((x) => x.pageType === "MUSIC_PAGE_TYPE_ALBUM")?.text ?? null,
+    releaseDate: null,
+    durationSec: parseClock(runs(r.lengthText)[0]?.text),
+  };
+}
+
 /** oEmbed は曲名（動画タイトル）とチャンネル名だけ */
 export function parseOembed(body: unknown): Parsed | null {
   const title = str(obj(body)?.title);
@@ -158,6 +243,14 @@ export async function fetchYoutube(
 ): Promise<SourceSong> {
   const watch = `https://www.youtube.com/watch?v=${id}`;
   const attempts: Attempt[] = [
+    {
+      method: "music_next",
+      run: async () =>
+        parseMusicNext(
+          await fetchJson(MUSIC_NEXT_URL, { videoId: id, context: { client: MUSIC_CLIENT } }),
+          id,
+        ),
+    },
     ...(apiKey
       ? [
           {

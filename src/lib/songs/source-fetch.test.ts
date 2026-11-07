@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ITUNES_SEARCH, SPOTIFY_PAGES, watchHtml } from "./__fixtures__";
+import { ITUNES_SEARCH, SPOTIFY_PAGES, YOUTUBE_MUSIC_NEXT, watchHtml } from "./__fixtures__";
 import { resolveExternal } from "./resolve";
 import { SourceError, USER_AGENT, fetchJson, fetchText } from "./source-fetch";
 import { fetchSpotify } from "./spotify";
@@ -9,6 +9,9 @@ import { fetchYoutube } from "./youtube";
 
 const PEACE_SIGN = "364JzOajs76bJymjHm3sVY";
 const SPACE_SONIC = "Pmgc40BUVaI";
+const M87 = "7QDosulSmBw";
+// YouTube Music の内部 API で曲が分からなかったとき（一般の動画など）の応答
+const NO_MUSIC = JSON.stringify({ contents: {} });
 
 function response(body: string, init: { status?: number; url?: string } = {}) {
   const res = new Response(body, { status: init.status ?? 200 });
@@ -40,6 +43,16 @@ describe("fetchText / fetchJson", () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       headers: { "User-Agent": USER_AGENT, "Accept-Language": "ja" },
       cache: "no-store",
+    });
+  });
+
+  it("json を渡すと、それを本文にして POST する", async () => {
+    fetchMock.mockResolvedValue(response('{"ok":true}'));
+    expect(await fetchJson("https://example.com/api", { a: 1 })).toEqual({ ok: true });
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "POST",
+      body: '{"a":1}',
+      headers: { "User-Agent": USER_AGENT, "Content-Type": "application/json" },
     });
   });
 
@@ -127,27 +140,50 @@ describe("fetchYoutube", () => {
     ],
   };
 
-  it("API キーがあれば Data API で取得する", async () => {
-    fetchMock.mockResolvedValue(response(JSON.stringify(dataApi)));
+  it("まず YouTube Music の内部 API を日本語で呼び、日本語の表記で取得する", async () => {
+    fetchMock.mockResolvedValue(response(JSON.stringify(YOUTUBE_MUSIC_NEXT[M87])));
+    const song = await fetchYoutube(M87, "key-1");
+    expect(calledUrls()).toEqual(["https://music.youtube.com/youtubei/v1/next?prettyPrint=false"]);
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toMatchObject({
+      videoId: M87,
+      context: { client: { clientName: "WEB_REMIX", hl: "ja", gl: "JP" } },
+    });
+    expect(song).toMatchObject({
+      service: "youtube_music",
+      method: "music_next",
+      id: M87,
+      url: `https://music.youtube.com/watch?v=${M87}`,
+      title: "M八七",
+      artist: "米津玄師",
+      durationSec: 264,
+    });
+  });
+
+  it("内部 API で分からず、API キーがあれば Data API で取得する", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response(NO_MUSIC))
+      .mockResolvedValueOnce(response(JSON.stringify(dataApi)));
     const song = await fetchYoutube(SPACE_SONIC, "key-1");
-    const u = new URL(calledUrls()[0]);
+    const u = new URL(calledUrls()[1]);
     expect(u.host).toBe("www.googleapis.com");
     expect(u.searchParams.get("key")).toBe("key-1");
     expect(song).toMatchObject({
-      service: "youtube_music",
       method: "data_api",
-      id: SPACE_SONIC,
-      url: `https://music.youtube.com/watch?v=${SPACE_SONIC}`,
       title: "Space Sonic",
       artist: "ELLEGARDEN",
       durationSec: 209,
     });
+    expect(warn.mock.calls[0][0]).toContain("music_next failed");
   });
 
   it("API キーがなければ watch ページから読む", async () => {
-    fetchMock.mockResolvedValue(response(watchHtml(SPACE_SONIC)));
+    fetchMock
+      .mockResolvedValueOnce(response("busy", { status: 429 }))
+      .mockResolvedValueOnce(response(watchHtml(SPACE_SONIC)));
     const song = await fetchYoutube(SPACE_SONIC, undefined);
-    expect(calledUrls()).toEqual([`https://www.youtube.com/watch?v=${SPACE_SONIC}&hl=ja`]);
+    expect(calledUrls()[1]).toBe(`https://www.youtube.com/watch?v=${SPACE_SONIC}&hl=ja`);
     expect(song).toMatchObject({
       method: "watch_html",
       title: "Space Sonic",
@@ -157,6 +193,7 @@ describe("fetchYoutube", () => {
 
   it("Data API で見つからず、watch ページが 429 なら oEmbed まで進む", async () => {
     fetchMock
+      .mockResolvedValueOnce(response(NO_MUSIC))
       .mockResolvedValueOnce(response(JSON.stringify({ items: [] })))
       .mockResolvedValueOnce(response("too many", { status: 429 }))
       .mockResolvedValueOnce(
@@ -164,13 +201,14 @@ describe("fetchYoutube", () => {
       );
     const song = await fetchYoutube(SPACE_SONIC, "key-1");
     expect(song).toMatchObject({ method: "oembed", title: "Space Sonic" });
-    expect(new URL(calledUrls()[2]).pathname).toBe("/oembed");
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(warn.mock.calls[0][0]).toContain("data_api failed");
+    expect(new URL(calledUrls()[3]).pathname).toBe("/oembed");
+    expect(warn).toHaveBeenCalledTimes(3);
+    expect(warn.mock.calls[1][0]).toContain("data_api failed");
   });
 
   it("すべて失敗したら最後のエラーを投げる（SourceError 以外は fetch_failed にする）", async () => {
     fetchMock
+      .mockResolvedValueOnce(response(NO_MUSIC))
       .mockResolvedValueOnce(response("<html>no player</html>"))
       .mockImplementationOnce(() => {
         throw new TypeError("boom");
@@ -183,6 +221,7 @@ describe("fetchYoutube", () => {
 
   it("どの方法でも曲情報がなければ meta_not_found", async () => {
     fetchMock
+      .mockResolvedValueOnce(response(NO_MUSIC))
       .mockResolvedValueOnce(response("<html></html>"))
       .mockResolvedValueOnce(response(JSON.stringify({})));
     await expect(fetchYoutube(SPACE_SONIC, undefined)).rejects.toMatchObject({
@@ -223,7 +262,9 @@ describe("resolveExternal", () => {
     fetchMock.mockImplementation(async (url: string) =>
       url.startsWith("https://www.youtube.com/")
         ? response(watchHtml(SPACE_SONIC))
-        : response(JSON.stringify({ results: [] })),
+        : url.startsWith("https://music.youtube.com/")
+          ? response(NO_MUSIC)
+          : response(JSON.stringify({ results: [] })),
     );
     const m = await resolveExternal({
       ok: true,
