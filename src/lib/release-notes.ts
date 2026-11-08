@@ -26,6 +26,20 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-11-08",
+    changes: [
+      {
+        kind: "feature",
+        text: "iPhone でも、ショートカットを使うと、音楽アプリの共有から曲を登録できるようにしました（ヘルプからショートカットを追加できます）",
+      },
+      {
+        kind: "feature",
+        text: "Android でホーム画面に追加（インストール）すると、共有メニューから Setlistic を選んで登録画面を開けるようにしました",
+      },
+    ],
+  },
+  {
     version: "0.9.1",
     date: "2026-11-07",
     changes: [

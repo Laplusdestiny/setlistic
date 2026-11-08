@@ -1,0 +1,48 @@
+/* ホームのタブバー（.tabbar）より上に浮かせる */
+.banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 8px 8px 12px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 24px rgb(30 28 24 / 0.12);
+}
+
+.action {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: 700;
+}
+
+.close {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: 20px;
+}
+
+.note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+}
