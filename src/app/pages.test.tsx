@@ -148,6 +148,23 @@ describe("AddPage", () => {
     });
   });
 
+  it("Android の共有では text の中の URL を使う", async () => {
+    const props = await load(
+      AddPage({
+        searchParams: params({ title: "曲", text: "聴いて https://open.spotify.com/track/a?si=b" }),
+      }),
+    );
+    expect(props.initialUrl).toBe("https://open.spotify.com/track/a?si=b");
+  });
+
+  it("同じ名前のパラメーターが複数あれば最初の値を使う。タグが取れなければ空", async () => {
+    const props = await load(
+      AddPage({ searchParams: params({ url: ["https://youtu.be/a", "x"], si: ["b", "c"] }) }),
+    );
+    expect(props.initialUrl).toBe("https://youtu.be/a?si=b");
+    expect(props.tags).toEqual([]);
+  });
+
   it("何もなければ空", async () => {
     setup({ tables: { tags: { data: [{ id: T1, name: "x", group_id: null, aliases: null }] } } });
     const props = await load(AddPage({ searchParams: params({}) }));

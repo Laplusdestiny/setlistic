@@ -326,11 +326,11 @@ export default function HelpPage() {
             <li>
               iPhone で
               <a href={SHORTCUT_URL} target="_blank" rel="noopener noreferrer">
-                ショートカット「setlisticに登録する」
+                ショートカット「Setlisticに登録する」
               </a>
               を開き、「ショートカットを追加」を押す
             </li>
-            <li>音楽アプリで曲の「共有」を押し、一覧から「setlisticに登録する」を選ぶ</li>
+            <li>音楽アプリで曲の「共有」を押し、一覧から「Setlisticに登録する」を選ぶ</li>
             <li>Setlistic が開いたら、画面の下に出る「コピーしたURLから登録」を押す</li>
             <li>「ペースト」を押すと、リンクが入った状態で登録画面が開く</li>
           </ol>
