@@ -31,7 +31,7 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "feature",
-        text: "Siri ショートカットを使うと、iPhone の共有シートから Setlistic の登録画面を開けるようにしました（ヘルプに作り方を載せました）",
+        text: "iPhone でも、ショートカットを使うと、音楽アプリの共有から曲を登録できるようにしました（ヘルプからショートカットを追加できます）",
       },
       {
         kind: "feature",

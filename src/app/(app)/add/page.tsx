@@ -9,7 +9,7 @@ import styles from "./add.module.css";
 
 export const metadata: Metadata = { title: "曲を登録" };
 
-// Siri ショートカット等からの `/add?url=<共有URL>` はURL欄に入った状態で開く（自動取得・保存はしない）
+// Android の共有メニュー・iPhone の「コピーしたURLから登録」からの `/add?url=<共有URL>` はURL欄に入った状態で開く（自動取得・保存はしない）
 export default function AddPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   return (
     <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>

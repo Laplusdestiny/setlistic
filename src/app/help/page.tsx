@@ -17,6 +17,9 @@ export const metadata: Metadata = { title: "ヘルプ" };
 // 使い方とよくある困りごと（Issue #18）。ログインできないときの案内もあるので、ログイン前から読める。
 // 方針：「困りごと → 一行回答 → 該当する節へのリンク」で、困っている人を使い方の説明につなげる。
 
+/** iPhone の共有シートから登録するショートカット（URL をコピーしてホーム画面の Setlistic を開く） */
+const SHORTCUT_URL = "https://www.icloud.com/shortcuts/33e3cf230bad4877ab6643c201867725";
+
 const TOC: { id: HelpSection; label: string }[] = [
   { id: "trouble", label: "よくある困りごと" },
   { id: "register", label: "曲を登録する" },
@@ -316,22 +319,23 @@ export default function HelpPage() {
             の共有メニューに「Setlistic」が出ます。選ぶと、リンクが入った状態で登録画面が開きます（出ないときは、いったんアンインストールして入れ直してください）。
           </p>
           <p>
-            iPhone
-            は共有メニューに直接出せないため、「ショートカット」アプリで次のショートカットを作ります。
+            iPhone は共有メニューに直接出せないため、ショートカットを使います。先に、Setlistic
+            をホーム画面に追加しておいてください。
           </p>
           <ol>
-            <li>「共有シートに表示」をオンにし、受け付ける種類を「URL」「テキスト」にする</li>
-            <li>「URLエンコード」アクションで、ショートカットの入力をエンコードする</li>
             <li>
-              「URLを開く」で{" "}
-              <code>https://setlistic.laplusdestiny.com/add?url=［エンコード済みテキスト］</code>
-              を開く
+              iPhone で
+              <a href={SHORTCUT_URL} target="_blank" rel="noopener noreferrer">
+                ショートカット「setlisticに登録する」
+              </a>
+              を開き、「ショートカットを追加」を押す
             </li>
+            <li>音楽アプリで曲の「共有」を押し、一覧から「setlisticに登録する」を選ぶ</li>
+            <li>Setlistic が開いたら、画面の下に出る「コピーしたURLから登録」を押す</li>
+            <li>「ペースト」を押すと、リンクが入った状態で登録画面が開く</li>
           </ol>
           <p>
-            エンコードを省くと、Spotify や YouTube Music
-            のリンクが途中で切れることがあります。Safari で開くため、初回は Safari
-            でもログインが必要です。
+            「コピーしたURLから登録」は数秒で消えます。消えたときは、「＋」で登録画面を開き、「ペースト」を押してください。
           </p>
         </section>
 
