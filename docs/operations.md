@@ -61,16 +61,20 @@ Issue・PR のコメントに `@claude` と書くと、GitHub Actions 上で Cla
 
 ### 使い方
 
-- Issue のコメントで `@claude この Issue を実装して` → ブランチを作ってコミットし、PR を作るリンクをコメントで返す
+- Issue のコメントで `@claude この Issue を実装して` → ブランチを作ってコミットし、**PR まで自分で作って**、その URL をコメントで返す。PR の本文には `Closes #番号` が入るので、マージすると Issue が閉じる
 - PR のコメントやレビューで `@claude ここを直して` → その PR のブランチにコミットする
 - `@claude` を本文かタイトルに書いて Issue を作っても動く
+- **続きの指示は PR のコメントで出す**。Issue で頼むと、毎回 `main` から新しいブランチを作るので、前の作業が引き継がれない（その Issue を閉じる PR が既にあれば、Claude は作業せずに PR の URL を案内する）
+- バージョンの上げ幅と更新履歴は、Claude が `release-bump` スキルの手順で決めてコミットする（了承は求めない）。PR の本文の「バージョン」の節を見て、直したいときは PR のコメントで頼む
 
 ### 知っておくこと
 
 - 動くのは、オーナー・コラボレーターが書いた `@claude` だけ（公開リポジトリなので、第三者のコメントでは動かさない）
-- 使いすぎ防止に、1回の実行は最大30ターン・30分で止まる。足りないときは `claude.yml` の `--max-turns` と `timeout-minutes` を上げる
-- Claude が実行できるコマンドは lint・typecheck・format・test と、Issue / PR の閲覧だけ（`--allowedTools`）。テストは CI と同じ使い捨ての Postgres に向く
-- Claude の作った変更も、ふつうの PR と同じく CI を通し、オーナーが確認してからマージする
+- モデルは Opus 5.5（`claude.yml` の `--model claude-opus-5-5`）。指定を外すと既定のモデル（Sonnet）になる
+- 使いすぎ防止に、1回の実行は最大60ターン・30分で止まる。上限を超えると、作業が終わっていてもジョブは失敗（「exceeding the configured maximum of 60」）になる。足りないときは `claude.yml` の `--max-turns` と `timeout-minutes` を上げる
+- Claude が実行できるコマンドは `--allowedTools` で決めている：lint・typecheck・format・test、`npm version`、Issue / PR の閲覧と PR の作成・本文の更新、git の読み取り（`status` `diff` `log` `show` `branch`）。コミットと push はアクションが用意したものを使う。テストは CI と同じ使い捨ての Postgres に向く
+- 許可していないコマンドを使おうとすると拒否される（ログの `permission_denials_count` に件数が出る）。Claude が「権限がなくてできなかった」と返したら、必要なものだけ `--allowedTools` に足す
+- Claude の作った PR も、ふつうの PR と同じく CI を通し、オーナーが確認してからマージする
 
 ## DB マイグレーション
 
