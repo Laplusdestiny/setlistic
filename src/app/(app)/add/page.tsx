@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { extractSharedUrl } from "@/lib/songs/shared-url";
 import { getSongQuota, listCustomFields } from "@/lib/songs/queries";
-import { restoreSharedUrl } from "@/lib/songs/shared-url";
 import { requireUser } from "@/lib/supabase/user";
 import { AddSong } from "./AddSong";
 import type { GroupOption, TagOption } from "./types";
@@ -10,9 +10,7 @@ import styles from "./add.module.css";
 export const metadata: Metadata = { title: "曲を登録" };
 
 // Siri ショートカット等からの `/add?url=<共有URL>` はURL欄に入った状態で開く（自動取得・保存はしない）
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export default function AddPage({ searchParams }: { searchParams: SearchParams }) {
+export default function AddPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   return (
     <Suspense fallback={<div className={styles.loading} aria-busy="true" />}>
       <AddLoader searchParams={searchParams} />
@@ -20,8 +18,13 @@ export default function AddPage({ searchParams }: { searchParams: SearchParams }
   );
 }
 
-async function AddLoader({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams;
+type SearchParams = Record<string, string | string[] | undefined>;
+
+async function AddLoader({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const raw = await searchParams;
+  const params = Object.fromEntries(
+    Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+  );
   const { supabase, userId } = await requireUser();
 
   const [groups, tags, settings, fields, quota] = await Promise.all([
@@ -45,7 +48,7 @@ async function AddLoader({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <AddSong
-      initialUrl={restoreSharedUrl(params)}
+      initialUrl={extractSharedUrl(params)}
       groups={groupOptions}
       tags={tagOptions}
       defaultTagIds={settings.data?.default_tag_ids ?? []}

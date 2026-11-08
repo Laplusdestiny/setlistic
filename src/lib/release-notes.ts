@@ -26,6 +26,20 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-11-08",
+    changes: [
+      {
+        kind: "feature",
+        text: "Siri ショートカットを使うと、iPhone の共有シートから Setlistic の登録画面を開けるようにしました（ヘルプに作り方を載せました）",
+      },
+      {
+        kind: "feature",
+        text: "Android でホーム画面に追加（インストール）すると、共有メニューから Setlistic を選んで登録画面を開けるようにしました",
+      },
+    ],
+  },
+  {
     version: "0.9.1",
     date: "2026-11-07",
     changes: [

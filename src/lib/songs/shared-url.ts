@@ -1,32 +1,45 @@
-// `/add?url=` で受け取った共有URLを、URL欄に入れる文字列にそろえる。
-// Siri ショートカットは URL エンコードを挟む想定だが、挟み忘れ・二重エンコードにも耐える。
+// 共有シート・ショートカット経由で `/add` に渡る値から、URL欄に入れる文字列を取り出す。
+// - Android の Web Share Target は URL を `url` ではなく `text` に入れて渡すことが多い
+// - ショートカットでエンコードし忘れると、`&` 以降（si=… など）が別のパラメーターに分かれる
+// - 二重エンコード（`https%3A%2F%2F…`）は一度だけ戻す
 
 const MAX_LENGTH = 2000;
 
-type Params = Record<string, string | string[] | undefined>;
+export type SharedParams = Record<string, string | undefined>;
 
-/**
- * - 未エンコードの `&` で切れた分（`?url=https://…?v=1&si=2` の `si=2`）は、url の後ろに付け直す
- * - `https%3A%2F%2F…` のような二重エンコードは一度だけ戻す
- */
-export function restoreSharedUrl(params: Params): string {
-  const raw = params.url;
-  const first = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
-  if (!first) return "";
+function decodeOnce(s: string): string {
+  if (!/^https?%3A/i.test(s)) return s;
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
 
-  // url 以外のパラメータは、切れた残りとして元の順に付け直す
-  const rest = Object.entries(params)
-    .filter(([k]) => k !== "url")
-    .flatMap(([k, v]) => (Array.isArray(v) ? v : [v ?? ""]).map((x) => (x ? k + "=" + x : k)));
+const URL_IN_TEXT = /https?:\/\/[^\s<>"']+/i;
+const IS_URL = /^https?:\/\//i;
 
-  let value = first;
-  if (/^https?%3A/i.test(value)) {
-    try {
-      value = decodeURIComponent(value);
-    } catch {
-      // 戻せないときはそのまま使う
+export function extractSharedUrl(params: SharedParams): string {
+  let url = decodeOnce((params.url ?? "").trim());
+  if (!IS_URL.test(url)) {
+    // url が空・URLでない場合は、text → title の中から最初のURLを探す（無ければ url をそのまま使う）
+    for (const candidate of [params.text, params.title]) {
+      const m = decodeOnce((candidate ?? "").trim()).match(URL_IN_TEXT);
+      if (m) {
+        url = m[0];
+        break;
+      }
     }
   }
-  if (rest.length > 0) value += (value.includes("?") ? "&" : "?") + rest.join("&");
-  return value.slice(0, MAX_LENGTH);
+  if (!url) return "";
+  if (!IS_URL.test(url)) return url.slice(0, MAX_LENGTH);
+
+  // エンコードし忘れた `&` で切れたパラメーターを付け直す
+  const rest = Object.entries(params)
+    .filter(([k, v]) => !["url", "text", "title"].includes(k) && v !== undefined)
+    .map(([k, v]) => `${k}=${v}`);
+  if (rest.length > 0) {
+    url += (url.includes("?") ? "&" : "?") + rest.join("&");
+  }
+  return url.slice(0, MAX_LENGTH);
 }

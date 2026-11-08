@@ -303,24 +303,6 @@ export default function HelpPage() {
             うまくいかないときは、LINE などのアプリ内のブラウザではなく、Safari
             で開いているかを確かめてください。
           </p>
-          <h3>iPhone：共有シートから曲を登録する</h3>
-          <p>
-            ショートカットアプリで次のショートカットを作ると、Spotify などの「共有」から Setlistic
-            の登録画面を開けます（URL 欄に入るだけで、登録は自分で押します）。
-          </p>
-          <ol>
-            <li>
-              ショートカットの詳細で「共有シートに表示」をオンにし、受け付ける種類を「URL」「テキスト」にする
-            </li>
-            <li>「URLエンコード」アクションを追加し、入力は「ショートカットの入力」にする</li>
-            <li>
-              「URLを開く」を追加し、URL を<code>https://setlistic.laplusdestiny.com/add?url=</code>
-              の後ろに「エンコード済みテキスト」をつないだものにする
-            </li>
-          </ol>
-          <p>
-            Safari で開くため、ホーム画面のアプリとは別に、初回は Safari でもログインが必要です。
-          </p>
           <h3>Android（Chrome）</h3>
           <ol>
             <li>Chrome で Setlistic を開く</li>
@@ -328,6 +310,29 @@ export default function HelpPage() {
             <li>「アプリをインストール」または「ホーム画面に追加」を選ぶ</li>
             <li>確認が出たら「インストール」（または「追加」）を押す</li>
           </ol>
+          <h3>共有から曲を登録する</h3>
+          <p>
+            Android では、インストールしたあと、Apple Music・Spotify・YouTube Music
+            の共有メニューに「Setlistic」が出ます。選ぶと、リンクが入った状態で登録画面が開きます（出ないときは、いったんアンインストールして入れ直してください）。
+          </p>
+          <p>
+            iPhone
+            は共有メニューに直接出せないため、「ショートカット」アプリで次のショートカットを作ります。
+          </p>
+          <ol>
+            <li>「共有シートに表示」をオンにし、受け付ける種類を「URL」「テキスト」にする</li>
+            <li>「URLエンコード」アクションで、ショートカットの入力をエンコードする</li>
+            <li>
+              「URLを開く」で{" "}
+              <code>https://setlistic.laplusdestiny.com/add?url=［エンコード済みテキスト］</code>
+              を開く
+            </li>
+          </ol>
+          <p>
+            エンコードを省くと、Spotify や YouTube Music
+            のリンクが途中で切れることがあります。Safari で開くため、初回は Safari
+            でもログインが必要です。
+          </p>
         </section>
 
         <section id={id("pc")} aria-labelledby="h-pc">

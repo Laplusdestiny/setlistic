@@ -1,37 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { restoreSharedUrl } from "./shared-url";
+import { extractSharedUrl } from "./shared-url";
 
-describe("restoreSharedUrl", () => {
-  it("url が無ければ空", () => {
-    expect(restoreSharedUrl({})).toBe("");
-    expect(restoreSharedUrl({ url: "" })).toBe("");
+describe("extractSharedUrl", () => {
+  it("url をそのまま返す", () => {
+    expect(extractSharedUrl({ url: "https://music.apple.com/jp/song/x/1" })).toBe(
+      "https://music.apple.com/jp/song/x/1",
+    );
   });
-
-  it("エンコード済みの URL はそのまま", () => {
-    const u = "https://open.spotify.com/track/abc?si=x&y=1";
-    expect(restoreSharedUrl({ url: u })).toBe(u);
+  it("url が空なら text の中のURLを使う（Android）", () => {
+    expect(extractSharedUrl({ text: "曲名 https://open.spotify.com/track/abc?si=z 聴いて" })).toBe(
+      "https://open.spotify.com/track/abc?si=z",
+    );
   });
-
-  it("未エンコードの & で切れた分を付け直す", () => {
+  it("text にも無ければ title を見る", () => {
+    expect(extractSharedUrl({ title: "https://youtu.be/abc" })).toBe("https://youtu.be/abc");
+  });
+  it("二重エンコードを戻す", () => {
     expect(
-      restoreSharedUrl({ url: "https://music.youtube.com/watch?v=abc", si: "xyz", a: ["1", "2"] }),
-    ).toBe("https://music.youtube.com/watch?v=abc&si=xyz&a=1&a=2");
-    expect(restoreSharedUrl({ url: "https://example.com/song", si: "x", flag: "" })).toBe(
-      "https://example.com/song?si=x&flag",
+      extractSharedUrl({ url: "https%3A%2F%2Fmusic.youtube.com%2Fwatch%3Fv%3Da%26si%3Db" }),
+    ).toBe("https://music.youtube.com/watch?v=a&si=b");
+  });
+  it("壊れたエンコード・URLでない値はそのまま返す", () => {
+    expect(extractSharedUrl({ url: "https%3A%2F%2F%E0%A4%A" })).toBe("https%3A%2F%2F%E0%A4%A");
+    expect(extractSharedUrl({ url: "abc", si: "b" })).toBe("abc");
+  });
+  it("切れたパラメーターを付け直す", () => {
+    expect(extractSharedUrl({ url: "https://music.youtube.com/watch?v=a", si: "b" })).toBe(
+      "https://music.youtube.com/watch?v=a&si=b",
+    );
+    expect(extractSharedUrl({ url: "https://open.spotify.com/track/a", si: "b" })).toBe(
+      "https://open.spotify.com/track/a?si=b",
     );
   });
-
-  it("二重エンコードは一度戻す。戻せなければそのまま", () => {
-    expect(restoreSharedUrl({ url: "https%3A%2F%2Fopen.spotify.com%2Ftrack%2Fabc%3Fsi%3Dx" })).toBe(
-      "https://open.spotify.com/track/abc?si=x",
-    );
-    expect(restoreSharedUrl({ url: "https%3A%E0%A4%A" })).toBe("https%3A%E0%A4%A");
-  });
-
-  it("url が複数あれば最初の値を使い、長すぎるときは切る", () => {
-    expect(restoreSharedUrl({ url: ["https://a.example/1", "https://b.example/2"] })).toBe(
-      "https://a.example/1",
-    );
-    expect(restoreSharedUrl({ url: "x".repeat(3000) })).toHaveLength(2000);
+  it("何も無ければ空、長すぎれば2000文字で切る", () => {
+    expect(extractSharedUrl({})).toBe("");
+    expect(extractSharedUrl({ url: "https://a.com/" + "x".repeat(3000) })).toHaveLength(2000);
   });
 });
