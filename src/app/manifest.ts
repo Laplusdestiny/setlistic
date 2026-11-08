@@ -10,6 +10,12 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     background_color: "#f5f2ea",
     theme_color: "#f5f2ea",
+    // Android（Chrome）の共有メニューに出す。URL は `text` に入って渡されることもある
+    share_target: {
+      action: "/add",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
