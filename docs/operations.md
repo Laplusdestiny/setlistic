@@ -70,6 +70,7 @@ Issue・PR のコメントに `@claude` と書くと、GitHub Actions 上で Cla
 ### 知っておくこと
 
 - 動くのは、オーナー・コラボレーターが書いた `@claude` だけ（公開リポジトリなので、第三者のコメントでは動かさない）
+- モデルは Opus 5.5（`claude.yml` の `--model claude-opus-5-5`）。指定を外すと既定のモデル（Sonnet）になる
 - 使いすぎ防止に、1回の実行は最大60ターン・30分で止まる。上限を超えると、作業が終わっていてもジョブは失敗（「exceeding the configured maximum of 60」）になる。足りないときは `claude.yml` の `--max-turns` と `timeout-minutes` を上げる
 - Claude が実行できるコマンドは `--allowedTools` で決めている：lint・typecheck・format・test、`npm version`、Issue / PR の閲覧と PR の作成・本文の更新、git の読み取り（`status` `diff` `log` `show` `branch`）。コミットと push はアクションが用意したものを使う。テストは CI と同じ使い捨ての Postgres に向く
 - 許可していないコマンドを使おうとすると拒否される（ログの `permission_denials_count` に件数が出る）。Claude が「権限がなくてできなかった」と返したら、必要なものだけ `--allowedTools` に足す

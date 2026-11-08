@@ -73,12 +73,14 @@ jobs:
           # API キー（従量課金）に切り替えるときは、この行を
           # `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}` に置き換える
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # 方針は CLAUDE.md を自動で読む。ここでは次の3つを足す
+          # 方針は CLAUDE.md を自動で読む。ここでは次の4つを足す
+          # - モデル：Opus 5.5 を使う（指定しないと既定の Sonnet になる）
           # - ターン上限：使いすぎ防止。30 ではふつうの実装でも足りず、作業を終えたのに失敗扱いになったので 60 にする
           # - 許可するコマンド：PR を出す前の確認（lint・typecheck・format・test）、バージョン上げ（release-bump）、
           #   Issue / PR の閲覧と PR の作成・本文の更新、git の読み取り
           # - 追加の指示：既定では「PR を作るリンク」を返すだけなので、Claude 自身に PR を作らせる
           claude_args: |
+            --model claude-opus-5-5
             --max-turns 60
             --allowedTools "Bash(npm run lint),Bash(npm run typecheck),Bash(npm run format:check),Bash(npm run format),Bash(npm test),Bash(npm test *),Bash(npm run test:coverage),Bash(npx vitest *),Bash(npm version *),Bash(gh issue view *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr list *),Bash(gh pr create *),Bash(gh pr edit *),Bash(git status),Bash(git status *),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git branch *)"
             --append-system-prompt "このリポジトリでの追加の決まり：(1) Issue から起動してコードを変えたときは、push したあと、PR を作るリンクを返すのではなく、gh pr create --base main --head <作業ブランチ> --title <タイトル> --body <本文> で PR を自分で作り、コメントにはその PR の URL を書く。本文の書式は CLAUDE.md と release-bump スキルに従い、対応する Issue は必ず Closes #番号 と書く（Refs は使わない）。(2) Issue から起動したとき、その Issue を閉じる open な PR が既にあれば（gh pr list --state open --search で確かめる）、新しいブランチや PR は作らず、その PR の URL を示して、続きは PR のコメントで @claude と頼むよう案内して終える。(3) バージョンの上げ幅と更新履歴は release-bump スキルの手順で自分で決めてコミットし、オーナーの了承は待たない。"
