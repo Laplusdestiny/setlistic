@@ -92,13 +92,13 @@ Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし�
 
 ## 開発の進め方
 
-- 作業は `feat/...` `fix/...` などのブランチで行い、`main` へ PR を出す。Issue に対応する PR は本文で Issue を参照する
+- 作業は `feat/...` `fix/...` などのブランチで行い、`main` へ PR を出す。Issue に対応する PR は、本文に `Closes #番号` を書いてマージで Issue が閉じるようにする（`Refs` は使わない）
 - コミットは Conventional Commits の接頭辞＋日本語の要約（例：`feat: タグ入力中に、過去に作ったタグを候補として表示する`）。区切りのよい単位でコミットし、オーナーに報告する
 - 仕様に迷う点・`docs/open-questions.md` に未決として残っている点は、着手前にオーナーへ確認する。勝手に決めない
 - 曲URLパーサー、タグ正規化、検索条件→クエリ変換などのロジックは `src/lib` の純粋関数にしてユニットテストを書く。Server Actions・API・画面にもテストを書く（カバレッジは約99%を維持している）
 - DB を変えたら `docs/operations.md` の「DB マイグレーション」の手順で SQL を作り、RLS・関数のテストを `src/db/rls.test.ts` に足す
 - 運用手順が変わったら `docs/operations.md` も更新する
-- 利用者に見える変更を入れる PR では、`release-bump` スキル（`.claude/skills/release-bump/SKILL.md`）の手順で、上げ幅と文案をオーナーに提案して了承を得てから `package.json` の version を上げ、ヘルプの更新履歴（`src/lib/release-notes.ts`）に利用者向けの説明を足す。バージョンは 0.x.y（新機能・仕様変更は minor、修正だけは patch、見えない変更は据え置き。1.0 などの major はオーナーが決める）
+- 利用者に見える変更を入れる PR では、`release-bump` スキル（`.claude/skills/release-bump/SKILL.md`）の手順で、上げ幅と文を自分で決めて `package.json` の version を上げ、ヘルプの更新履歴（`src/lib/release-notes.ts`）に利用者向けの説明を足す。オーナーの了承は待たずにコミットして PR を出し、決めた内容は PR の本文に書いてレビューに回す。バージョンは 0.x.y（新機能・仕様変更は minor、修正だけは patch、見えない変更は据え置き。1.0 などの major はオーナーが決める）
 - 秘密情報（Supabaseのキー等）はコミットしない。`.env.example` にキー名だけ置く
 
 ### コマンド
