@@ -43,7 +43,7 @@ export const songs = pgTable(
     artist: text("artist").notNull(),
     album: text("album"),
     genre: text("genre"),
-    artworkUrl: text("artwork_url"), // 文字列のみ保存。MVPでは表示しない
+    artworkUrl: text("artwork_url"), // 文字列のみ保存。曲の詳細でだけ表示する
     durationMs: integer("duration_ms"),
     releaseDate: date("release_date"),
     appleUrl: text("apple_url"),

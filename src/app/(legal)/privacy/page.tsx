@@ -7,7 +7,7 @@ export default function PrivacyPage() {
     <>
       <h1>プライバシーポリシー</h1>
       <p>
-        <small>最終更新：2026年10月12日（草案）</small>
+        <small>最終更新：2026年11月13日（草案）</small>
       </p>
       <p>「Setlistic」（以下「本サービス」）における個人情報の取扱いについて定めます。</p>
 
@@ -26,12 +26,18 @@ export default function PrivacyPage() {
           <strong>ログイン状態を保つための情報（Cookie）</strong>
           ：ログインの維持にのみ使います。広告や行動の追跡・解析には使いません。
         </li>
+        <li>
+          <strong>アクセスの記録（アクセス解析）</strong>
+          ：どの画面が何回表示されたかを集計するため、表示した画面のURL（曲のIDや検索語などは除きます）、参照元、端末・ブラウザの種類、おおよその地域（国）を記録します。Cookie
+          は使わず、記録は個人やアカウントと結び付けません。
+        </li>
       </ul>
 
       <h2>2. 利用目的</h2>
       <ul>
         <li>ログインと本人確認</li>
         <li>本サービスの提供（登録したデータの表示・検索・管理）</li>
+        <li>利用状況の把握と改善（よく使われる画面の集計）</li>
         <li>不正利用の防止、障害対応</li>
       </ul>
 
@@ -41,10 +47,18 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>Supabase（認証・データベース。データは東京リージョンに保存）</li>
-        <li>Vercel（アプリの配信・実行）</li>
+        <li>
+          Vercel（アプリの配信・実行、アクセス解析「Vercel Web
+          Analytics」。訪問者の区別には、接続情報から作った匿名の値を使い、24時間で破棄されます）
+        </li>
         <li>Google（ログイン認証）</li>
         <li>
           Apple（曲の情報の取得。曲を登録するとき、貼り付けたURLに含まれる曲ID、または入力した検索語を送信します。メールアドレスなどの個人情報は送りません）
+        </li>
+        <li>
+          Apple（ジャケット画像の表示。曲の画面を開くと、お使いの端末が Apple
+          のサーバーから画像を直接読み込みます。このとき、IPアドレスなどの接続情報が Apple
+          に送られます。本サービスは画像を保存しません）
         </li>
         <li>
           Spotify・Google（YouTube）（曲の情報の取得。Spotify・YouTube Music

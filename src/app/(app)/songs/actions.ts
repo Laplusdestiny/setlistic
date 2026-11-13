@@ -2,7 +2,7 @@
 
 import { sanitizeFieldValues } from "@/lib/custom-fields";
 import { todayJst } from "@/lib/format";
-import { getSingState, listCustomFields, type SingState } from "@/lib/songs/queries";
+import { getArtworkUrl, getSingState, listCustomFields, type SingState } from "@/lib/songs/queries";
 import { toSingLogPayload } from "@/lib/songs/sing-log";
 import { toUpdatePayload, UUID_PATTERN } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
@@ -46,6 +46,13 @@ export async function loadSingStateAction(songId: string): Promise<SingState | n
   const { supabase } = await requireUser();
   if (typeof songId !== "string" || !UUID_PATTERN.test(songId)) return null;
   return getSingState(supabase, songId);
+}
+
+/** PC の右パネル用。ジャケット画像の URL を返す（無い曲・不正な ID は null） */
+export async function loadArtworkUrlAction(songId: string): Promise<string | null> {
+  const { supabase } = await requireUser();
+  if (typeof songId !== "string" || !UUID_PATTERN.test(songId)) return null;
+  return getArtworkUrl(supabase, songId);
 }
 
 export async function recordSingAction(

@@ -3,6 +3,7 @@ import { EMPTY_CONDITIONS } from "../search/conditions";
 import { fakeSupabase } from "@/test/fake-supabase";
 import {
   getSingState,
+  getArtworkUrl,
   getSong,
   getSongQuota,
   getUserSettings,
@@ -69,6 +70,19 @@ describe("searchSongs", () => {
     await expect(searchSongs(c, EMPTY_CONDITIONS, "created_desc")).rejects.toThrow(
       "曲の読み込みに失敗しました",
     );
+  });
+});
+
+describe("getArtworkUrl", () => {
+  it("保存してある URL を返す。無い曲・曲が見つからないときは null", async () => {
+    const { sb, c } = client({ tables: { songs: { data: { artwork_url: "https://a/b.jpg" } } } });
+    expect(await getArtworkUrl(c, "s1")).toBe("https://a/b.jpg");
+    expect(sb.argsOf("songs", "select")).toEqual([["artwork_url"]]);
+    expect(sb.argsOf("songs", "eq")).toEqual([["id", "s1"]]);
+    expect(
+      await getArtworkUrl(client({ tables: { songs: { data: { artwork_url: null } } } }).c, "s1"),
+    ).toBeNull();
+    expect(await getArtworkUrl(client({}).c, "s1")).toBeNull();
   });
 });
 

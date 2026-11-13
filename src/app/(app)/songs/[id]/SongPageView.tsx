@@ -10,6 +10,8 @@ import styles from "./song-page.module.css";
 
 type Props = {
   song: SongRow;
+  /** ジャケット画像の URL（無い曲は null） */
+  artworkUrl?: string | null;
   sing: SingState;
   today: string;
   allTags: TagOption[];
@@ -22,6 +24,7 @@ type Props = {
 /** スマホ向けの曲詳細ページ。PC では一覧の右パネルで同じ表示をする */
 export function SongPageView({
   song,
+  artworkUrl = null,
   sing,
   today,
   allTags,
@@ -52,6 +55,7 @@ export function SongPageView({
         <SongDetail
           key={song.id}
           song={song}
+          artworkUrl={artworkUrl}
           groups={groups}
           allTags={allTags}
           fields={fields}

@@ -15,7 +15,7 @@ create table songs (
   artist           text not null,
   album            text,
   genre            text,
-  artwork_url      text,                        -- 文字列のみ保存。MVPでは表示しない
+  artwork_url      text,                        -- 文字列のみ保存。曲の詳細でだけ表示する
   duration_ms      integer,
   release_date     date,
   apple_url        text,

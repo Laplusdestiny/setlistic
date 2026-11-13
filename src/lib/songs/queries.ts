@@ -124,6 +124,20 @@ export async function getSong(supabase: Client, id: string): Promise<SongRow | n
   return data ? toSongRow(data as unknown as RawSong) : null;
 }
 
+/**
+ * 曲のジャケット画像の URL（登録時に保存した文字列）。曲の詳細でしか使わないので、
+ * 一覧（search_songs）には載せず、詳細を開いたときにだけ読む。出せるかどうかは songArtwork で決める。
+ */
+export async function getArtworkUrl(supabase: Client, songId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("songs")
+    .select("artwork_url")
+    .eq("id", songId)
+    .maybeSingle();
+  const url = (data as { artwork_url?: unknown } | null)?.artwork_url;
+  return typeof url === "string" ? url : null;
+}
+
 /** 歌唱記録（新しい順）と、DB のトリガーが更新した集計値 */
 export async function getSingState(supabase: Client, songId: string): Promise<SingState> {
   const [logs, song] = await Promise.all([

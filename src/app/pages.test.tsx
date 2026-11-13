@@ -298,7 +298,15 @@ describe("SongPage", () => {
     setup({
       tables: {
         songs: {
-          data: { id: SONG, title: "t", artist: "a", sung_count: 1, tags: [], field_values: [] },
+          data: {
+            id: SONG,
+            title: "t",
+            artist: "a",
+            sung_count: 1,
+            tags: [],
+            field_values: [],
+            artwork_url: "https://is1-ssl.mzstatic.com/a.jpg",
+          },
         },
         tag_groups: groups,
         tags: tagRows,
@@ -307,6 +315,7 @@ describe("SongPage", () => {
     const props = await load(SongPage({ params: params({ id: SONG }), searchParams: params({}) }));
     expect(props).toMatchObject({
       song: { id: SONG, title: "t" },
+      artworkUrl: "https://is1-ssl.mzstatic.com/a.jpg",
       today: "2026-10-12",
       allTags: [{ id: T1, name: "十八番", groupId: "g1", aliases: ["b", "a"] }],
       groups: [{ id: "g1", name: "ジャンル" }],
