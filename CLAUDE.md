@@ -32,6 +32,7 @@ Setlistic は、カラオケで歌える曲を自分で登録・タグ付けし�
 | 曲情報 | iTunes Lookup / Search API。Spotify・YouTube Music の共有URLは、取得元の情報から iTunes Search で Apple Music の表記にそろえる |
 | テスト | Vitest（＋Testing Library、画面は jsdom）。DB・RLS は使い捨て Postgres で統合テスト |
 | CI | GitHub Actions（lint・typecheck・format:check・test:coverage・build）、Codecov |
+| アクセス解析 | Vercel Web Analytics（`@vercel/analytics`、Cookie なし）。送る URL からクエリと ID を落とす（`src/lib/analytics.ts`）。手順は `docs/operations.md` |
 
 ランニングコストは月0円が目標。有料サービスや有料プランが必要になる設計は提案前に相談すること。
 

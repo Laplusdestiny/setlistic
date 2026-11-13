@@ -23,6 +23,17 @@ Setlistic を運用するときの手順と、確認の仕方。月0円の構成
 - 万一停止したら：Supabase ダッシュボードの `setlistic` プロジェクトで「Restore project」。停止から一定期間内なら、データはそのまま戻る。復旧までアプリは開けない
 - Vercel Hobby の Cron は1日1回までの制限があるが、週1回なので問題ない
 
+## アクセス解析（Vercel Web Analytics）
+
+ページの表示回数を Vercel Web Analytics で集計する。Cookie は使わない。
+
+- 有効化：Vercel ダッシュボード → Project → Analytics で **Enable** を押す（初回だけ。押したあとの次のデプロイから集計が始まる）。結果も同じ画面で見る
+- コード：`src/components/WebAnalytics.tsx`（ルートレイアウトに置いている）。送信は本番のデプロイだけで、開発中（`npm run dev`）は送らない
+- 送る URL からは、クエリ・`#` 以降・パス中の ID を落とす（`src/lib/analytics.ts`。`/add?url=` の曲の URL や `/auth/callback?code=` を送らないため）。新しく ID や個人の情報が入るパスを作ったら、ここで伏せる
+- 費用：Hobby は月5万イベントまで無料。超えると3日の猶予のあと、次の請求期間まで集計が止まるだけで、課金はされない
+- カスタムイベント（`track()`）は Pro 以上の機能なので使わない
+- 集める内容を変えたら、プライバシーポリシー（`src/app/(legal)/privacy/page.tsx`）も直す
+
 ## エラーの確認（監視の最低限）
 
 専用の監視サービスは使わない。Vercel のログで足りる。

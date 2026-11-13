@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Klee_One, Zen_Kaku_Gothic_New } from "next/font/google";
+import { WebAnalytics } from "@/components/WebAnalytics";
 import { SITE_ORIGIN } from "@/lib/site";
 import "./globals.css";
 
@@ -56,7 +57,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" className={`${zenKaku.variable} ${klee.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <WebAnalytics />
+      </body>
     </html>
   );
 }
