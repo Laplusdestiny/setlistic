@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { todayJst } from "@/lib/format";
-import { getSingState, getSong, listCustomFields, listTagsWithCount } from "@/lib/songs/queries";
+import {
+  getArtworkUrl,
+  getSingState,
+  getSong,
+  listCustomFields,
+  listTagsWithCount,
+} from "@/lib/songs/queries";
 import { UUID_PATTERN } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
 import { SongPageView } from "./SongPageView";
@@ -35,8 +41,9 @@ async function SongLoader({ params, searchParams }: { params: Params; searchPara
   const song = await getSong(supabase, id);
   if (!song) notFound();
 
-  const [sing, tags, groups, fields] = await Promise.all([
+  const [sing, artworkUrl, tags, groups, fields] = await Promise.all([
     getSingState(supabase, id),
+    getArtworkUrl(supabase, id),
     listTagsWithCount(supabase),
     supabase.from("tag_groups").select("id, name").order("sort_order"),
     listCustomFields(supabase),
@@ -45,6 +52,7 @@ async function SongLoader({ params, searchParams }: { params: Params; searchPara
   return (
     <SongPageView
       song={song}
+      artworkUrl={artworkUrl}
       sing={sing}
       today={todayJst()}
       allTags={tags.map(({ id, name, groupId, aliases }) => ({ id, name, groupId, aliases }))}

@@ -11,19 +11,26 @@ vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
 }));
 vi.mock("@/app/(app)/search/actions", () => ({ saveSearchAction: vi.fn() }));
-vi.mock("@/app/(app)/songs/actions", () => ({ loadSingStateAction: vi.fn() }));
+vi.mock("@/app/(app)/songs/actions", () => ({
+  loadSingStateAction: vi.fn(),
+  loadArtworkUrlAction: vi.fn(async () => null),
+}));
 vi.mock("@/app/login/actions", () => ({ signOut: vi.fn() }));
 // SongPanel のテストでは、中身の SongDetail は受け取った値の確認だけにする
 vi.mock("./SongDetail", () => ({
-  SongDetail: (p: { song: SongRow; initialSing: { sungCount: number } }) => (
-    <p>
+  SongDetail: (p: {
+    song: SongRow;
+    artworkUrl: string | null;
+    initialSing: { sungCount: number };
+  }) => (
+    <p data-artwork={p.artworkUrl ?? "なし"}>
       詳細:{p.song.title}:{p.initialSing.sungCount}
     </p>
   ),
 }));
 
 import { saveSearchAction } from "@/app/(app)/search/actions";
-import { loadSingStateAction } from "@/app/(app)/songs/actions";
+import { loadArtworkUrlAction, loadSingStateAction } from "@/app/(app)/songs/actions";
 import { SavedSearchList } from "./SavedSearchList";
 import { SaveSearchForm } from "./SaveSearchForm";
 import { Sidebar, SidebarSkeleton } from "./Sidebar";
@@ -225,6 +232,22 @@ describe("SongPanel", () => {
     await act(async () => resolve({ logs: [], sungCount: 4, lastSungAt: null }));
     expect(screen.getByText("詳細:夜に駆ける:4")).toBeInTheDocument();
     expect(loadSingStateAction).toHaveBeenCalledWith("s1");
+  });
+
+  it("ジャケット画像の URL を詳細に渡す。読めなくても詳細は出す", async () => {
+    const state = { logs: [], sungCount: 1, lastSungAt: null };
+    vi.mocked(loadSingStateAction).mockResolvedValue(state);
+    vi.mocked(loadArtworkUrlAction).mockResolvedValueOnce("https://is1-ssl.mzstatic.com/a.jpg");
+    const { unmount } = render(<SongPanel song={song} {...props} />);
+    expect(await screen.findByText("詳細:夜に駆ける:1")).toHaveAttribute(
+      "data-artwork",
+      "https://is1-ssl.mzstatic.com/a.jpg",
+    );
+    expect(loadArtworkUrlAction).toHaveBeenCalledWith("s1");
+    unmount();
+    vi.mocked(loadArtworkUrlAction).mockRejectedValueOnce(new Error("x"));
+    render(<SongPanel song={song} {...props} />);
+    expect(await screen.findByText("詳細:夜に駆ける:1")).toHaveAttribute("data-artwork", "なし");
   });
 
   it("null や例外なら読み込み失敗を出す", async () => {

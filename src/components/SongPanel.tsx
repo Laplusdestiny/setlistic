@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadSingStateAction } from "@/app/(app)/songs/actions";
+import { loadArtworkUrlAction, loadSingStateAction } from "@/app/(app)/songs/actions";
 import type { CustomField } from "@/lib/custom-fields";
 import type { SingState, SongRow } from "@/lib/songs/queries";
 import type { GroupOption, TagOption } from "@/lib/tags/types";
@@ -24,15 +24,19 @@ export function SongPanel(props: Props) {
 
 function Loaded({ song, groups, allTags, fields, today, onDeleted }: Props) {
   const [sing, setSing] = useState<SingState | null>(null);
+  const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    loadSingStateAction(song.id)
-      .then((s) => {
+    // ジャケット画像は飾りなので、読めなくても詳細は出す
+    Promise.all([loadSingStateAction(song.id), loadArtworkUrlAction(song.id).catch(() => null)])
+      .then(([s, art]) => {
         if (!alive) return;
-        if (s) setSing(s);
-        else setFailed(true);
+        if (s) {
+          setArtworkUrl(art);
+          setSing(s);
+        } else setFailed(true);
       })
       .catch(() => alive && setFailed(true));
     return () => {
@@ -46,6 +50,7 @@ function Loaded({ song, groups, allTags, fields, today, onDeleted }: Props) {
   return (
     <SongDetail
       song={song}
+      artworkUrl={artworkUrl}
       groups={groups}
       allTags={allTags}
       fields={fields}

@@ -47,6 +47,11 @@ export default function PrivacyPage() {
           Apple（曲の情報の取得。曲を登録するとき、貼り付けたURLに含まれる曲ID、または入力した検索語を送信します。メールアドレスなどの個人情報は送りません）
         </li>
         <li>
+          Apple（ジャケット画像の表示。曲の画面を開くと、お使いの端末が Apple
+          のサーバーから画像を直接読み込みます。このとき、IPアドレスなどの接続情報が Apple
+          に送られます。本サービスは画像を保存しません）
+        </li>
+        <li>
           Spotify・Google（YouTube）（曲の情報の取得。Spotify・YouTube Music
           の共有URLから登録するとき、URLに含まれる曲ID・動画IDを送信します。メールアドレスなどの個人情報は送りません）
         </li>

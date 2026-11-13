@@ -24,6 +24,38 @@
   transform: rotate(-3deg);
 }
 
+/* ジャケット画像と Apple Music バッジ。バッジは画像のすぐ下に置く */
+.artwork {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.jacket {
+  display: block;
+  width: 144px;
+  height: 144px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-paper);
+  object-fit: contain;
+}
+
+/* タップ領域は 44px。余白はバッジのまわりの空き（高さの 1/10 以上）も兼ねる */
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 5px 8px;
+}
+
+.badge img {
+  display: block;
+  width: auto;
+  height: 34px;
+}
+
 .title {
   margin: 6px 0 0;
   font-size: 28px;

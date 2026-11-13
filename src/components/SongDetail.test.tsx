@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CustomField } from "@/lib/custom-fields";
@@ -124,6 +124,59 @@ describe("SongDetail: 表示", () => {
     expect(screen.queryByRole("list", { name: "タグ" })).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByText("メモ")).toBeNull();
+  });
+});
+
+describe("SongDetail: ジャケット画像", () => {
+  const ART = "https://is1-ssl.mzstatic.com/image/thumb/x/1.jpg/100x100bb.jpg";
+
+  it("画像と Apple Music のバッジを出し、同じ曲を開く文字のリンクは出さない", () => {
+    setup({ artworkUrl: ART });
+    const jacket = screen.getByRole("img", { name: "ジャケット画像" });
+    expect(jacket).toHaveAttribute(
+      "src",
+      "https://is1-ssl.mzstatic.com/image/thumb/x/1.jpg/300x300bb.jpg",
+    );
+    expect(jacket).toHaveAttribute("referrerpolicy", "no-referrer");
+    const badge = screen.getByRole("link", { name: "Apple Musicで聴く" });
+    expect(badge).toHaveAttribute("href", "https://music.apple.com/jp/song/1");
+    expect(badge).toHaveAttribute("target", "_blank");
+    expect(within(badge).getByRole("img")).toHaveAttribute(
+      "src",
+      "/badges/listen-on-apple-music-ja.svg",
+    );
+    expect(screen.queryByRole("link", { name: "Apple Musicで開く" })).toBeNull();
+  });
+
+  it("Spotify から登録した曲は、バッジに加えて登録元で開くリンクも出す", () => {
+    setup({
+      artworkUrl: ART,
+      song: {
+        ...song,
+        sourceService: "spotify",
+        sourceUrl: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
+      },
+    });
+    expect(screen.getByRole("link", { name: "Apple Musicで聴く" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Spotifyで開く" })).toBeInTheDocument();
+  });
+
+  it("画像が読み込めなければ画像とバッジを引っ込め、文字のリンクに戻す", () => {
+    setup({ artworkUrl: ART });
+    fireEvent.error(screen.getByRole("img", { name: "ジャケット画像" }));
+    expect(screen.queryByRole("img", { name: "ジャケット画像" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Apple Musicで聴く" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Apple Musicで開く" })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["画像の URL が無い", null, song.appleUrl],
+    ["Apple の画像サーバーでない", "https://example.com/a.jpg", song.appleUrl],
+    ["Apple Music の曲 URL が無い", ART, null],
+  ])("%sときは画像もバッジも出さない", (_, artworkUrl, appleUrl) => {
+    setup({ artworkUrl, song: { ...song, appleUrl, sourceService: "manual", sourceUrl: null } });
+    expect(screen.queryByRole("img", { name: "ジャケット画像" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Apple Musicで聴く" })).toBeNull();
   });
 });
 

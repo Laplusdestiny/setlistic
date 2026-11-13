@@ -10,6 +10,7 @@ import {
 } from "@/app/(app)/songs/actions";
 import { formatFieldValue, visibleFields, type CustomField } from "@/lib/custom-fields";
 import { formatDateJa } from "@/lib/format";
+import { opensSameTrack, songArtwork } from "@/lib/songs/artwork";
 import { formatKey } from "@/lib/songs/key";
 import { songLink } from "@/lib/songs/link";
 import { supportedServicesText } from "@/lib/songs/services";
@@ -23,6 +24,8 @@ import styles from "./song-detail.module.css";
 
 type Props = {
   song: SongRow;
+  /** ジャケット画像の URL（DB に保存した文字列）。出せるかどうかは songArtwork で決める */
+  artworkUrl?: string | null;
   groups: GroupOption[];
   allTags: TagOption[];
   /** カスタム項目の定義（非表示のものも含めて渡す。表示側で絞る） */
@@ -40,6 +43,7 @@ const EASE_LABELS = ["余裕", "歌いやすい", "ふつう", "やや辛い", "
 
 export function SongDetail({
   song,
+  artworkUrl = null,
   groups,
   allTags,
   fields,
@@ -64,6 +68,12 @@ export function SongDetail({
   const shownFields = visibleFields(fields);
   const link = songLink(song);
   const [linkUrl, setLinkUrl] = useState(link?.href ?? "");
+  // ジャケット画像。読み込めなかったら（URL 切れなど）画像とバッジを引っ込め、文字のリンクに戻す
+  const [artworkFailed, setArtworkFailed] = useState(false);
+  const found = songArtwork({ artworkUrl, appleUrl: song.appleUrl });
+  const artwork = artworkFailed ? null : found;
+  // バッジと同じ曲を開くリンクは、バッジと重ねて出さない
+  const textLink = link && artwork && opensSameTrack(link.href, artwork) ? null : link;
   const currentFieldValues = () =>
     Object.fromEntries(shownFields.map((f) => [f.id, song.fields[f.id] ?? null]));
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
@@ -280,6 +290,37 @@ export function SongDetail({
     <div className={styles.root}>
       <div className={styles.head}>
         <span className={styles.pill}>SET LIST</span>
+        {artwork && (
+          <div className={styles.artwork}>
+            {/* 画像を自分のサーバーに複製しないよう、next/image の最適化を通さず Apple の URL を直接読む。
+                切り抜きや重ね書きはしない */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className={styles.jacket}
+              src={artwork.src}
+              alt="ジャケット画像"
+              width={144}
+              height={144}
+              referrerPolicy="no-referrer"
+              onError={() => setArtworkFailed(true)}
+            />
+            {/* Apple 配布のバッジをそのまま使う（色・形を変えない）。画像のすぐ下に置き、画像より小さくする */}
+            <a
+              className={styles.badge}
+              href={artwork.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/badges/listen-on-apple-music-ja.svg"
+                alt="Apple Musicで聴く"
+                width={119}
+                height={34}
+              />
+            </a>
+          </div>
+        )}
         <h1 className={styles.title}>{song.title}</h1>
         <p className={styles.artist}>{song.artist}</p>
         {song.tags.length > 0 && (
@@ -410,14 +451,14 @@ export function SongDetail({
         <button type="button" className={styles.secondary} onClick={startEdit}>
           編集
         </button>
-        {link && (
+        {textLink && (
           <a
             className={styles.secondary}
-            href={link.href}
+            href={textLink.href}
             target="_blank"
             rel="noopener noreferrer"
           >
-            {link.label}
+            {textLink.label}
           </a>
         )}
       </div>

@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/supabase/user";
 import {
   deleteSingLogAction,
   deleteSongAction,
+  loadArtworkUrlAction,
   loadSingStateAction,
   recordSingAction,
   updateSongAction,
@@ -155,6 +156,18 @@ describe("loadSingStateAction", () => {
       sungCount: 3,
       lastSungAt: "2026-10-12",
     });
+  });
+});
+
+describe("loadArtworkUrlAction", () => {
+  it("不正な ID は null", async () => {
+    expect(await loadArtworkUrlAction("../etc")).toBeNull();
+  });
+
+  it("保存してある画像の URL を返す", async () => {
+    setup({ tables: { songs: { data: { artwork_url: "https://is1-ssl.mzstatic.com/a.jpg" } } } });
+    expect(await loadArtworkUrlAction(SONG)).toBe("https://is1-ssl.mzstatic.com/a.jpg");
+    expect(sb.argsOf("songs", "eq")).toEqual([["id", SONG]]);
   });
 });
 
