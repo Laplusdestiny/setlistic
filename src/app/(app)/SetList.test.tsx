@@ -203,6 +203,50 @@ describe("SetList: 絞り込み", () => {
     rerender(<SetList {...props} conditions={{ ...EMPTY_CONDITIONS, q: "群青" }} />);
     expect(screen.getByLabelText("曲を検索")).toHaveValue("群青");
   });
+
+  it("入力を続けている間に前の検索結果が届いても、入力欄を戻さない（#50）", async () => {
+    vi.useFakeTimers();
+    const { rerender, props } = setup({ conditions: { ...EMPTY_CONDITIONS, q: "夜に" } });
+    const input = screen.getByLabelText("曲を検索");
+    // 一度検索した語を消す → URL「/」への検索が走る
+    fireEvent.change(input, { target: { value: "" } });
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(router.replace).toHaveBeenLastCalledWith("/", { scroll: false });
+    // 結果が届く前に再入力を始める
+    fireEvent.change(input, { target: { value: "ぐ" } });
+    // 消したときの検索結果（条件なし）が遅れて届く
+    rerender(<SetList {...props} conditions={EMPTY_CONDITIONS} />);
+    expect(input).toHaveValue("ぐ");
+    fireEvent.change(input, { target: { value: "ぐん" } });
+    expect(input).toHaveValue("ぐん");
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(router.replace).toHaveBeenLastCalledWith(`/?q=${encodeURIComponent("ぐん")}`, {
+      scroll: false,
+    });
+  });
+
+  it("末尾の空白で止まっても、空白を消さない（#50）", async () => {
+    vi.useFakeTimers();
+    const { rerender, props } = setup();
+    const input = screen.getByLabelText("曲を検索");
+    fireEvent.change(input, { target: { value: "夜に " } });
+    await act(async () => vi.advanceTimersByTime(300));
+    // サーバーは前後の空白を落とした条件を返す
+    rerender(<SetList {...props} conditions={{ ...EMPTY_CONDITIONS, q: "夜に" }} />);
+    expect(input).toHaveValue("夜に ");
+  });
+
+  it("自分の検索が反映されたあとに URL が外から変わったら、入力欄を合わせる", async () => {
+    vi.useFakeTimers();
+    const { rerender, props } = setup();
+    const input = screen.getByLabelText("曲を検索");
+    fireEvent.change(input, { target: { value: "夜に" } });
+    await act(async () => vi.advanceTimersByTime(300));
+    rerender(<SetList {...props} conditions={{ ...EMPTY_CONDITIONS, q: "夜に" }} />);
+    // 戻るボタンで条件なしに戻る
+    rerender(<SetList {...props} conditions={EMPTY_CONDITIONS} />);
+    expect(input).toHaveValue("");
+  });
 });
 
 describe("SetList: 並び替え", () => {
