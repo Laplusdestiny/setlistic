@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.11.0",
+    date: "2026-11-13",
+    changes: [
+      {
+        kind: "feature",
+        text: "曲の画面に、ジャケット画像を表示するようにしました。画像の下の「Apple Musicで聴く」のバッジから、その曲を Apple Music で開けます（手入力で登録した曲など、画像が無い曲には出ません）",
+      },
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-11-08",
     changes: [
