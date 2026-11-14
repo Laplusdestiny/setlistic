@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.11.1",
+    date: "2026-11-13",
+    changes: [
+      {
+        kind: "fix",
+        text: "セトリの検索欄で、一度検索した語を消して入力し直すときなどに、入力中の文字が消えたり変換が途中で切れたりしていたのを直しました",
+      },
+    ],
+  },
+  {
     version: "0.11.0",
     date: "2026-11-13",
     changes: [

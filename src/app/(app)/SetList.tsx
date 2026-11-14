@@ -13,6 +13,7 @@ import {
   describeConditions,
   EMPTY_CONDITIONS,
   hasConditions,
+  normalizeConditions,
   type SearchConditions,
 } from "@/lib/search/conditions";
 import { suggestSearchName, type SavedSearch } from "@/lib/search/saved";
@@ -73,16 +74,20 @@ export function SetList({
   const selected = songs.find((s) => s.id === selectedId) ?? songs[0];
 
   // 入力欄の状態（draft）。URL（サーバーの条件）への反映は少し遅らせる。
-  // 戻るボタンや保存した条件の呼び出しなど、こちら以外が URL を変えたときは draft を合わせる。
+  // 戻るボタンなど、こちら以外が URL を変えたときは draft を合わせる。
+  // sent は入力から送った（送る予定の）URL で、末尾が最新。最新が反映されるまでに
+  // 途中の URL の結果が遅れて届いても、自分の検索の結果なので入力欄は戻さない（#50）
   const propHref = conditionsToHref(conditions);
   const [draft, setDraft] = useState(conditions);
-  const [applied, setApplied] = useState(propHref);
+  const [sent, setSent] = useState([propHref]);
   const [seen, setSeen] = useState(propHref);
   if (propHref !== seen) {
     setSeen(propHref);
-    if (propHref !== applied) {
+    if (propHref === sent[sent.length - 1]) {
+      setSent([propHref]);
+    } else if (!sent.includes(propHref)) {
       setDraft(conditions);
-      setApplied(propHref);
+      setSent([propHref]);
     }
   }
 
@@ -91,7 +96,8 @@ export function SetList({
     (next: SearchConditions, prev: SearchConditions) => {
       setDraft(next);
       const href = conditionsToHref(next);
-      setApplied(href);
+      // 照らし合わせはサーバーと同じ規則で整えた URL で行う（前後の空白などで別の条件とみなさない）
+      setSent((s) => [...s, conditionsToHref(normalizeConditions(next))]);
       if (timer.current) clearTimeout(timer.current);
       const go = () => startNav(() => router.replace(href, { scroll: false }));
       if (isTextChange(prev, next)) timer.current = setTimeout(go, DEBOUNCE_MS);
