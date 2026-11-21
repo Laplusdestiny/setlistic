@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CustomField } from "@/lib/custom-fields";
 import { EMPTY_CONDITIONS, type SearchConditions } from "@/lib/search/conditions";
 import type { SongRow, TagWithCount } from "@/lib/songs/queries";
+import { songReturnHref } from "@/lib/songs/return-to";
 import { setViewportWidth } from "@/test/media";
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }));
@@ -108,6 +109,17 @@ describe("SetList: 一覧", () => {
     expect(rows[0]).toHaveTextContent("音域 高");
     expect(within(rows[0]).getByRole("link")).toHaveAttribute("href", "/songs/s1");
     expect(screen.getByRole("heading", { name: "SET LIST" })).toBeInTheDocument();
+  });
+
+  it("スマホで曲を開くとき、いまの一覧の URL を覚える（曲の画面の「戻る」で検索結果に戻すため）", () => {
+    window.history.replaceState(null, "", "/?q=yoru");
+    setup();
+    const row = within(screen.getByRole("region", { name: "SET LIST" })).getAllByRole("link")[0];
+    // jsdom はページ遷移できないので、遷移だけ止める
+    row.addEventListener("click", (e) => e.preventDefault(), { once: true });
+    fireEvent.click(row);
+    expect(songReturnHref("s1")).toBe("/?q=yoru");
+    window.history.replaceState(null, "", "/");
   });
 
   it("ヘッダーから振り返りを開ける（曲がなくても出す）", () => {
@@ -269,6 +281,7 @@ describe("SetList: ランダム・キーボード", () => {
     await userEvent.click(screen.getByText("タップでスキップ"));
     await userEvent.click(screen.getByRole("button", { name: "これにする" }));
     expect(router.push).toHaveBeenCalledWith("/songs/s2");
+    expect(songReturnHref("s2")).toBe("/");
     vi.mocked(Math.random).mockRestore();
   });
 

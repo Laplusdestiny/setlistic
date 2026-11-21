@@ -18,6 +18,7 @@ import {
 } from "@/lib/search/conditions";
 import { suggestSearchName, type SavedSearch } from "@/lib/search/saved";
 import { formatKey } from "@/lib/songs/key";
+import { rememberSongReturn } from "@/lib/songs/return-to";
 import type { SongRow, TagWithCount } from "@/lib/songs/queries";
 import { SORT_KEYS, SORT_LABELS } from "@/lib/songs/sort";
 import type { SortKey } from "@/lib/songs/sort";
@@ -51,6 +52,10 @@ const DEBOUNCE_MS = 300;
 
 const isTextChange = (a: SearchConditions, b: SearchConditions) =>
   a.q !== b.q || a.artist !== b.artist || a.genre !== b.genre;
+
+/** スマホで曲の画面へ移る前に、いまの一覧（検索・絞り込みの条件つき）の URL を覚える。曲の画面の「戻る」で使う */
+const rememberListReturn = (id: string) =>
+  rememberSongReturn(id, window.location.pathname + window.location.search);
 
 export function SetList({
   songs,
@@ -155,7 +160,7 @@ export function SetList({
     if (window.matchMedia(WIDE).matches) {
       e.preventDefault();
       setSelectedId(id);
-    }
+    } else rememberListReturn(id);
   }, []);
 
   // ランダム：当選曲を先に決めてから演出のダイアログを開く
@@ -169,7 +174,10 @@ export function SetList({
     if (wide) {
       setSelectedId(id);
       document.getElementById(`song-${id}`)?.scrollIntoView({ block: "center" });
-    } else router.push(`/songs/${id}`);
+    } else {
+      rememberListReturn(id);
+      router.push(`/songs/${id}`);
+    }
   }
 
   const reset = () => change({ ...EMPTY_CONDITIONS, sort: draft.sort });
