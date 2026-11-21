@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.12.1",
+    date: "2026-11-22",
+    changes: [
+      {
+        kind: "fix",
+        text: "「ランダムに1曲」で、最初の1回だけ外側に青い枠が出ていたのを直しました。あわせて、PC で「もう一回」を押したあと、Enter キーで演出を飛ばせなかったのも直しました",
+      },
+    ],
+  },
+  {
     version: "0.12.0",
     date: "2026-11-21",
     changes: [

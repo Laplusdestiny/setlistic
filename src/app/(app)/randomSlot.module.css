@@ -9,6 +9,13 @@
   color: var(--color-ink);
 }
 
+/* ダイアログ自体は押す対象ではないので、フォーカスリングを出さない（Issue #59）。
+   演出中はキー操作のためにダイアログへフォーカスを置くが、1回目だけ外枠が青くなっていた。
+   結果が出たあとのボタンには、いつもどおりリングが出る */
+.dialog:focus-visible {
+  outline: none;
+}
+
 .dialog::backdrop {
   background: rgb(30 28 24 / 0.45);
 }
