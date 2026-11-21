@@ -149,22 +149,31 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
     setEditing(edit);
   }
 
-  function fetchSong() {
+  function fetchSong(target = url) {
     setMessage(null);
     start(async () => {
-      const res = await lookupFromUrl(url);
+      const res = await lookupFromUrl(target);
       if (res.status === "ok") begin(res.draft, "url", res.duplicate, res.external ?? null);
       else setLookupError({ reason: res.reason, service: res.service });
     });
   }
 
+  /**
+   * クリップボードから貼る。曲の URL として読めたら、そのまま曲情報を取得する
+   * （iPhone のショートカットで URL をコピーして開いたとき、「＋」→「ペースト」だけで進めるように）
+   */
   async function paste() {
+    let text: string;
     try {
-      const text = await navigator.clipboard.readText();
-      if (text) setUrl(text);
+      text = await navigator.clipboard.readText();
     } catch {
       // 許可されていない・非対応の端末では何もしない（手で貼り付けてもらう）
+      return;
     }
+    if (!text) return;
+    setUrl(text);
+    setLookupError(null);
+    if (parseMusicUrl(text).ok) fetchSong(text);
   }
 
   function reset(note: string | null) {
@@ -390,7 +399,7 @@ export function AddSong({ initialUrl, groups, tags, defaultTagIds, fields, quota
                     type="button"
                     className={styles.primary}
                     disabled={pending || !url.trim()}
-                    onClick={fetchSong}
+                    onClick={() => fetchSong()}
                   >
                     {pending && !draft ? "取得中…" : "曲情報を取得"}
                   </button>

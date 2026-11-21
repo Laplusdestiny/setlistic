@@ -119,14 +119,28 @@ describe("AddSong: URL から", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("ペーストボタンでクリップボードから貼る（使えない端末では何もしない）", async () => {
+  it("ペーストボタンで曲の URL を貼ると、そのまま曲情報を取得する", async () => {
     setup();
-    const readText = vi.fn().mockResolvedValueOnce(URL1).mockRejectedValueOnce(new Error("denied"));
+    vi.mocked(lookupFromUrl).mockResolvedValue({ status: "ok", draft: draft(), duplicate: null });
+    const readText = vi.fn().mockResolvedValue(`この曲を聴く ${URL1}`);
     Object.defineProperty(navigator, "clipboard", { value: { readText }, configurable: true });
     await userEvent.click(screen.getByRole("button", { name: "ペースト" }));
-    expect(screen.getByLabelText("共有URL")).toHaveValue(URL1);
+    expect(lookupFromUrl).toHaveBeenCalledWith(`この曲を聴く ${URL1}`);
+    expect(await screen.findByRole("heading", { name: "内容を確認" })).toBeInTheDocument();
+  });
+
+  it("ペーストした中に曲の URL が無ければ、貼るだけで取得しない（使えない端末では何もしない）", async () => {
+    setup();
+    const readText = vi
+      .fn()
+      .mockResolvedValueOnce("夜に駆ける")
+      .mockRejectedValueOnce(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", { value: { readText }, configurable: true });
     await userEvent.click(screen.getByRole("button", { name: "ペースト" }));
-    expect(screen.getByLabelText("共有URL")).toHaveValue(URL1);
+    expect(screen.getByLabelText("共有URL")).toHaveValue("夜に駆ける");
+    await userEvent.click(screen.getByRole("button", { name: "ペースト" }));
+    expect(screen.getByLabelText("共有URL")).toHaveValue("夜に駆ける");
+    expect(lookupFromUrl).not.toHaveBeenCalled();
   });
 
   it("登録済みの曲は警告を出し、保存できない", async () => {
