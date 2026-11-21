@@ -26,6 +26,20 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.12.0",
+    date: "2026-11-21",
+    changes: [
+      {
+        kind: "change",
+        text: "検索した結果から曲を開いたとき、「戻る」で検索結果に戻るようにしました",
+      },
+      {
+        kind: "change",
+        text: "iPhone のホーム画面から開くたびに出ていた「コピーしたURLから登録」の帯をやめました。ショートカットで開いたときは、「＋」の登録画面で「ペースト」を押すと、そのまま曲の情報を読み込みます",
+      },
+    ],
+  },
+  {
     version: "0.11.1",
     date: "2026-11-13",
     changes: [
