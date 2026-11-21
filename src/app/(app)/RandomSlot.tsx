@@ -60,6 +60,10 @@ export function RandomSlot({ target, onDecide, onRetry, onClose }: Props) {
     if (!el) return;
     if (target && !el.open) el.showModal();
     else if (!target && el.open) el.close();
+    // 演出中は押せるボタンが無い。1回目は開いたときにダイアログ自体へフォーカスが乗るが、
+    // 「もう一回」では押したボタンが消えて本文へ外れてしまうので、回すたびにダイアログへ置き直す
+    // （Enter・Space でのスキップを効かせ、見た目もそろえる。演出なしで結果が出たときは「これにする」のまま）
+    if (target && target.seq.length > 1) el.focus();
   }, [target]);
 
   // 次の候補へ。止まったら短く振動させる（対応端末だけ）
@@ -95,6 +99,7 @@ export function RandomSlot({ target, onDecide, onRetry, onClose }: Props) {
     <dialog
       ref={dialog}
       className={styles.dialog}
+      tabIndex={-1}
       aria-labelledby={headingId}
       onClose={onClose}
       onCancel={(e) => {

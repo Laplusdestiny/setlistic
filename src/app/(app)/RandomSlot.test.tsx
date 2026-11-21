@@ -134,6 +134,18 @@ describe("RandomSlot", () => {
     expect(screen.getByRole("button", { name: "これにする" })).toBeInTheDocument();
   });
 
+  it("回すたびにフォーカスをダイアログに置く（1回目と「もう一回」で、見た目もキー操作もそろえる）", () => {
+    render(<Harness rng={() => 0.5} />);
+    fireEvent.click(screen.getByRole("button", { name: "開く" }));
+    expect(document.activeElement).toBe(dialog());
+    finishAll();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "これにする" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "もう一回" }));
+    // 押した「もう一回」は消えるので、そのままだとフォーカスが本文に外れ、Enter でスキップできない
+    expect(document.activeElement).toBe(dialog());
+  });
+
   it("「もう一回」で抽選し直す", () => {
     let r = 0;
     render(<Harness rng={() => r} />);
