@@ -358,7 +358,8 @@
   align-items: center;
 }
 
-.tabbar a {
+.tabbar a,
+.tabbar button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -370,7 +371,17 @@
   text-decoration: none;
 }
 
-.tabbar a[aria-current="page"] {
+/* スクロール中の「上へ」（SetlistTab）。同じ「セトリ」の枠なので、いまいるタブと同じ見た目にそろえる */
+.tabbar button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tabbar a[aria-current="page"],
+.tabbar button {
   color: var(--color-primary);
   font-weight: 700;
 }

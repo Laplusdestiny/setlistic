@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.13.0",
+    date: "2026-11-23",
+    changes: [
+      {
+        kind: "feature",
+        text: "スマホのセトリで下へスクロールしているあいだ、下のタブバーの「セトリ」が「上へ」に替わり、押すといちばん上へ戻れるようにしました",
+      },
+    ],
+  },
+  {
     version: "0.12.1",
     date: "2026-11-22",
     changes: [
