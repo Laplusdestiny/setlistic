@@ -11,13 +11,7 @@ import type { ExternalMatch } from "@/lib/songs/resolve";
 import { resolveExternal } from "@/lib/songs/resolve";
 import { SourceError } from "@/lib/songs/source-fetch";
 import { requireUser } from "@/lib/supabase/user";
-import {
-  lookupFromUrl,
-  lookupManyAction,
-  saveManyAction,
-  saveSongAction,
-  searchSongsAction,
-} from "./actions";
+import { lookupFromUrl, saveBulkItemAction, saveSongAction, searchSongsAction } from "./actions";
 
 const draft = (trackId: number, title = `曲${trackId}`): SongDraft => ({
   appleTrackId: trackId,
@@ -188,15 +182,6 @@ describe("lookupFromUrl: Spotify / YouTube Music", () => {
     vi.mocked(resolveExternal).mockRejectedValue(new TypeError("bug"));
     await expect(lookupFromUrl(SPOTIFY)).rejects.toThrow("bug");
   });
-
-  it("まとめて登録でも、同じ曲の URL（追跡パラメータ違い）は2回目を取得しない", async () => {
-    vi.mocked(resolveExternal).mockResolvedValue(
-      match({ confidence: "confident", best: draft(7) }),
-    );
-    const r = await lookupManyAction([SPOTIFY, `${SPOTIFY}?si=zzz`]);
-    expect(r.map((x) => x.repeated ?? false)).toEqual([false, true]);
-    expect(resolveExternal).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("searchSongsAction", () => {
@@ -260,62 +245,35 @@ describe("saveSongAction", () => {
   });
 });
 
-describe("lookupManyAction", () => {
-  it("空行を捨て、同じ曲の2回目は API を呼ばずに repeated を付ける", async () => {
-    vi.mocked(lookupTrack).mockImplementation(async (id) => draft(id));
-    const r = await lookupManyAction([url(1), "  ", url(2), url(1), "not a url"]);
-    expect(r.map((x) => [x.input, x.result.status, x.repeated ?? false])).toEqual([
-      [url(1), "ok", false],
-      [url(2), "ok", false],
-      [url(1), "error", true],
-      ["not a url", "error", false],
-    ]);
-    expect(lookupTrack).toHaveBeenCalledTimes(2);
-  });
+describe("saveBulkItemAction", () => {
+  const tag = "44444444-4444-4444-8444-444444444444";
 
-  it("配列以外は空、21件目以降は捨てる", async () => {
-    expect(await lookupManyAction("x" as never)).toEqual([]);
-    vi.mocked(lookupTrack).mockImplementation(async (id) => draft(id));
-    const many = Array.from({ length: 25 }, (_, i) => url(i + 1));
-    expect(await lookupManyAction(many)).toHaveLength(20);
-  });
-});
-
-describe("saveManyAction", () => {
-  it("全曲に同じタグを付けて登録し、結果を曲ごとに返す", async () => {
-    setup({
-      rpc: {
-        register_song: [
-          { data: "id-1" },
-          { error: { code: "23505" } },
-          { error: { code: "XX000" } },
-        ],
-      },
+  it("選んだタグを付けて1曲登録し、結果を返す", async () => {
+    setup({ rpc: { register_song: { data: "id-1" } } });
+    expect(await saveBulkItemAction(draft(1, "A"), [tag], [{ name: "新規" }])).toEqual({
+      title: "A",
+      status: "ok",
+      id: "id-1",
     });
-    const tag = "44444444-4444-4444-8444-444444444444";
-    const r = await saveManyAction(
-      [draft(1, "A"), draft(2, "B"), draft(3, "C")],
-      [tag],
-      [{ name: "新規" }],
-    );
-    expect(r).toEqual([
-      { title: "A", status: "ok", id: "id-1" },
-      { title: "B", status: "duplicate" },
-      { title: "C", status: "error" },
-    ]);
-    for (const c of sb.rpcCalls)
-      expect(c.args).toMatchObject({ p_tag_ids: [tag], p_new_tags: [{ name: "新規" }] });
+    expect(sb.rpcCalls[0].args).toMatchObject({
+      p_song: { apple_track_id: 1, song_key: 0, memo: null },
+      p_tag_ids: [tag],
+      p_new_tags: [{ name: "新規" }],
+    });
   });
 
-  it("上限に達したら残りは試さない", async () => {
-    setup({ rpc: { register_song: [{ data: "id-1" }, { error: { code: "53400" } }] } });
-    const r = await saveManyAction([draft(1), draft(2), draft(3)]);
-    expect(r.map((x) => x.status)).toEqual(["ok", "limit"]);
-    expect(sb.rpcCalls).toHaveLength(2);
+  it.each([
+    ["23505", "duplicate"],
+    ["53400", "limit"],
+    ["XX000", "error"],
+  ])("エラーコード %s は %s", async (code, status) => {
+    setup({ rpc: { register_song: { error: { code } } } });
+    expect(await saveBulkItemAction(draft(2, "B"))).toEqual({ title: "B", status });
   });
 
-  it("曲名が文字列でなければ空にし、配列以外は何もしない", async () => {
-    expect(await saveManyAction([{ title: 1 }])).toEqual([{ title: "", status: "error" }]);
-    expect(await saveManyAction(null as never)).toEqual([]);
+  it("曲名が文字列でなければ空にし、検証エラーは DB を呼ばない", async () => {
+    expect(await saveBulkItemAction({ title: 1 })).toEqual({ title: "", status: "error" });
+    expect(await saveBulkItemAction(null)).toEqual({ title: "", status: "error" });
+    expect(sb.rpcCalls).toEqual([]);
   });
 });

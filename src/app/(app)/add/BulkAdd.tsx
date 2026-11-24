@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { TagPicker } from "@/components/TagPicker";
+import { sameSongKey } from "@/lib/songs/bulk";
+import type { SongDraft } from "@/lib/songs/types";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
-import { lookupManyAction, saveManyAction } from "./actions";
+import { lookupFromUrl, saveBulkItemAction } from "./actions";
 import { lookupErrorMessage, SERVICE_NAMES } from "./messages";
 import type { BulkItem, BulkSaveItem, LookupResult } from "./types";
 import styles from "./add.module.css";
@@ -35,6 +37,47 @@ function externalNote(r: LookupResult): string | null {
   }
 }
 
+/** 1曲の取得。通信の失敗などで例外になっても、その曲だけ失敗にして残りを続ける */
+async function lookupOne(input: string): Promise<LookupResult> {
+  try {
+    return await lookupFromUrl(input);
+  } catch {
+    return { status: "error", reason: "network" };
+  }
+}
+
+async function saveOne(
+  draft: SongDraft,
+  tagIds: string[],
+  newTags: NewTag[],
+): Promise<BulkSaveItem> {
+  try {
+    return await saveBulkItemAction(draft, tagIds, newTags);
+  } catch {
+    return { title: draft.title, status: "error" };
+  }
+}
+
+/** 取得・保存の進み具合。1曲ずつサーバーを呼び、終わるたびに進める */
+type Progress = { kind: "lookup" | "save"; done: number; total: number };
+
+const PROGRESS_LABELS = {
+  lookup: { name: "曲情報の取得", text: "曲情報を取得中…" },
+  save: { name: "セトリへの追加", text: "セトリに追加中…" },
+} as const;
+
+function ProgressBar({ kind, done, total }: Progress) {
+  const label = PROGRESS_LABELS[kind];
+  return (
+    <div className={styles.progress}>
+      <progress max={total} value={done} aria-label={label.name} />
+      <p aria-live="polite">
+        {label.text} {done} / {total}
+      </p>
+    </div>
+  );
+}
+
 type Props = {
   groups: GroupOption[];
   tags: TagOption[];
@@ -51,30 +94,54 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
   // 取り込む曲すべてに付けるタグ（最初は「登録時に付けるタグ」）
   const [tagIds, setTagIds] = useState<Set<string>>(new Set(defaultTagIds));
   const [newTags, setNewTags] = useState<NewTag[]>([]);
-  const [pending, start] = useTransition();
+  // 1曲ずつ順に呼ぶ長い処理なので useTransition は使わない（途中の進み具合をすぐ画面に出すため）
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const busy = progress !== null;
 
   const overLimit = remaining !== null && checked.size > remaining;
   const urls = text.match(/https?:\/\/[^\s<>"']+/g) ?? [];
 
-  function fetchAll() {
+  /** 1曲ずつ取得する（iTunes API の目安は約20回/分なので、まとめて投げずに順に呼ぶ） */
+  async function fetchAll() {
     setSaved(null);
-    start(async () => {
-      const res = await lookupManyAction(urls.slice(0, MAX));
-      setItems(res);
-      setChecked(new Set(res.flatMap((r, i) => (preselect(r.result) ? [i] : []))));
-    });
+    const list = urls.slice(0, MAX);
+    const out: BulkItem[] = [];
+    const seen = new Set<string>();
+    setProgress({ kind: "lookup", done: 0, total: list.length });
+    for (const input of list) {
+      const key = sameSongKey(input);
+      // 同じ貼り付けの中の同じ曲は、取得せずに印だけ付ける
+      if (key && seen.has(key)) {
+        out.push({ input, result: { status: "error", reason: "not_found" }, repeated: true });
+      } else {
+        if (key) seen.add(key);
+        out.push({ input, result: await lookupOne(input) });
+      }
+      setProgress({ kind: "lookup", done: out.length, total: list.length });
+    }
+    setProgress(null);
+    setItems(out);
+    setChecked(new Set(out.flatMap((r, i) => (preselect(r.result) ? [i] : []))));
   }
 
-  function saveChecked() {
+  async function saveChecked() {
     if (!items) return;
     const drafts = items.flatMap((r, i) =>
       checked.has(i) && r.result.status === "ok" ? [r.result.draft] : [],
     );
-    start(async () => {
-      setSaved(await saveManyAction(drafts, [...tagIds], newTags));
-      setItems(null);
-      setText("");
-    });
+    const out: BulkSaveItem[] = [];
+    setProgress({ kind: "save", done: 0, total: drafts.length });
+    for (const draft of drafts) {
+      const res = await saveOne(draft, [...tagIds], newTags);
+      out.push(res);
+      setProgress({ kind: "save", done: out.length, total: drafts.length });
+      // 上限に達したら、残りは試さずに止める
+      if (res.status === "limit") break;
+    }
+    setProgress(null);
+    setSaved(out);
+    setItems(null);
+    setText("");
   }
 
   return (
@@ -99,11 +166,12 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
       <button
         type="button"
         className={styles.primary}
-        disabled={pending || urls.length === 0}
+        disabled={busy || urls.length === 0}
         onClick={fetchAll}
       >
-        {pending && !items ? "取得中…" : `${Math.min(urls.length, MAX)}件の曲情報を取得`}
+        {progress?.kind === "lookup" ? "取得中…" : `${Math.min(urls.length, MAX)}件の曲情報を取得`}
       </button>
+      {progress?.kind === "lookup" && <ProgressBar {...progress} />}
       {urls.length > MAX && (
         <p className={styles.hint}>
           {MAX}件を超えた分は取得しません。残りは次の回に貼り付けてください。
@@ -189,11 +257,12 @@ export function BulkAdd({ groups, tags, defaultTagIds, remaining }: Props) {
           <button
             type="button"
             className={styles.primary}
-            disabled={pending || checked.size === 0 || overLimit}
+            disabled={busy || checked.size === 0 || overLimit}
             onClick={saveChecked}
           >
-            {pending ? "保存中…" : `選んだ${checked.size}曲をセトリに追加`}
+            {progress?.kind === "save" ? "保存中…" : `選んだ${checked.size}曲をセトリに追加`}
           </button>
+          {progress?.kind === "save" && <ProgressBar {...progress} />}
         </>
       )}
 

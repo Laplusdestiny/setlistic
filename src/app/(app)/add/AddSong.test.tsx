@@ -11,17 +11,10 @@ vi.mock("./actions", () => ({
   lookupFromUrl: vi.fn(),
   saveSongAction: vi.fn(),
   searchSongsAction: vi.fn(),
-  lookupManyAction: vi.fn(),
-  saveManyAction: vi.fn(),
+  saveBulkItemAction: vi.fn(),
 }));
 
-import {
-  lookupFromUrl,
-  lookupManyAction,
-  saveManyAction,
-  saveSongAction,
-  searchSongsAction,
-} from "./actions";
+import { lookupFromUrl, saveBulkItemAction, saveSongAction, searchSongsAction } from "./actions";
 import { AddSong } from "./AddSong";
 import { BulkAdd } from "./BulkAdd";
 import { SearchPanel } from "./SearchPanel";
@@ -369,18 +362,30 @@ describe("SearchPanel", () => {
 });
 
 describe("BulkAdd", () => {
+  const apple = (id: number, cc = "jp") => `https://music.apple.com/${cc}/song/x/${id}`;
   const ok = (
     id: number,
     title: string,
     duplicate = null as { id: string; title: string } | null,
-  ) => ({
-    input: `https://music.apple.com/jp/song/x/${id}`,
-    result: { status: "ok" as const, draft: draft({ appleTrackId: id, title }), duplicate },
+  ): LookupResult => ({
+    status: "ok",
+    draft: draft({ appleTrackId: id, title }),
+    duplicate,
   });
+  /** URL ごとの取得結果を決める */
+  const lookups = (map: Record<string, LookupResult>) =>
+    vi.mocked(lookupFromUrl).mockImplementation(async (input) => map[input]);
+
+  /** あとから1つずつ返せる結果（進み具合を途中で確かめる） */
+  function deferred<T>() {
+    let resolve!: (v: T) => void;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+  }
 
   beforeEach(() => {
-    vi.mocked(lookupManyAction).mockReset();
-    vi.mocked(saveManyAction).mockReset();
+    vi.mocked(lookupFromUrl).mockReset();
+    vi.mocked(saveBulkItemAction).mockReset();
   });
 
   function setupBulk(remaining: number | null = null) {
@@ -388,30 +393,28 @@ describe("BulkAdd", () => {
     return screen.getByLabelText("共有URL（改行区切り）");
   }
 
-  it("貼り付けた URL を取得し、取り込める曲だけ最初から選ぶ", async () => {
-    vi.mocked(lookupManyAction).mockResolvedValue([
-      ok(1, "A"),
-      ok(2, "B", { id: "s", title: "B" }),
-      {
-        input: "https://open.spotify.com/track/x",
-        result: { status: "error", reason: "unsupported_service", service: "spotify" },
-      },
-      {
-        input: "https://music.apple.com/jp/song/x/1",
-        result: { status: "error", reason: "not_found" },
-        repeated: true,
-      },
-    ]);
-    vi.mocked(saveManyAction).mockResolvedValue([{ title: "A", status: "ok", id: "new-a" }]);
+  it("貼り付けた URL を1曲ずつ取得し、取り込める曲だけ最初から選ぶ", async () => {
+    const spotify = "https://open.spotify.com/track/x";
+    lookups({
+      [apple(1)]: ok(1, "A"),
+      [apple(2)]: ok(2, "B", { id: "s", title: "B" }),
+      [spotify]: { status: "error", reason: "not_song", service: "spotify" },
+    });
+    vi.mocked(saveBulkItemAction).mockResolvedValue({ title: "A", status: "ok", id: "new-a" });
     const area = setupBulk();
     expect(screen.getByRole("button", { name: "0件の曲情報を取得" })).toBeDisabled();
+    // 国だけ違う同じ曲（4つ目）は取得せず、重複の印を付ける
     fireEvent.change(area, {
-      target: { value: "メモ https://a.example/1\nhttps://a.example/2 x" },
+      target: { value: `メモ ${apple(1)}\n${apple(2)} x\n${spotify}\n${apple(1, "us")}` },
     });
-    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
-    expect(lookupManyAction).toHaveBeenCalledWith(["https://a.example/1", "https://a.example/2"]);
+    await userEvent.click(screen.getByRole("button", { name: "4件の曲情報を取得" }));
 
     const boxes = await screen.findAllByRole("checkbox");
+    expect(vi.mocked(lookupFromUrl).mock.calls.map(([u]) => u)).toEqual([
+      apple(1),
+      apple(2),
+      spotify,
+    ]);
     expect(
       boxes.map((b) => [(b as HTMLInputElement).checked, (b as HTMLInputElement).disabled]),
     ).toEqual([
@@ -421,7 +424,6 @@ describe("BulkAdd", () => {
       [false, true],
     ]);
     expect(screen.getByText(/登録済みのためスキップ/)).toBeInTheDocument();
-    expect(screen.getByText(/Spotify のURL/)).toBeInTheDocument();
     expect(screen.getByText("同じ曲が上にあるためスキップ")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "#十八番" }));
@@ -429,12 +431,12 @@ describe("BulkAdd", () => {
     await userEvent.type(screen.getByLabelText("新しいタグ"), "十八番{Enter}新{Enter}消{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "#消（新規タグ）を外す" }));
     await userEvent.click(screen.getByRole("button", { name: "選んだ1曲をセトリに追加" }));
-    expect(saveManyAction).toHaveBeenCalledWith(
-      [draft({ appleTrackId: 1, title: "A" })],
+    const status = await screen.findByRole("status");
+    expect(saveBulkItemAction).toHaveBeenCalledWith(
+      draft({ appleTrackId: 1, title: "A" }),
       ["t2", "t1"],
       [{ name: "新" }],
     );
-    const status = await screen.findByRole("status");
     expect(status).toHaveTextContent("1曲を追加しました。");
     expect(
       within(status).getByRole("link", { name: "登録した曲のタグをまとめて変更" }),
@@ -442,10 +444,70 @@ describe("BulkAdd", () => {
     expect(area).toHaveValue("");
   });
 
+  it("取得中は、何曲目まで進んだかをバーで出す", async () => {
+    const first = deferred<LookupResult>();
+    const second = deferred<LookupResult>();
+    vi.mocked(lookupFromUrl).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const area = setupBulk();
+    fireEvent.change(area, { target: { value: `${apple(1)}\n${apple(2)}` } });
+    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
+
+    const bar = screen.getByRole("progressbar", { name: "曲情報の取得" });
+    expect(bar).toHaveAttribute("max", "2");
+    expect(bar).toHaveAttribute("value", "0");
+    expect(screen.getByText("曲情報を取得中… 0 / 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取得中…" })).toBeDisabled();
+
+    await act(async () => first.resolve(ok(1, "A")));
+    expect(bar).toHaveAttribute("value", "1");
+    expect(screen.getByText("曲情報を取得中… 1 / 2")).toBeInTheDocument();
+
+    await act(async () => second.resolve(ok(2, "B")));
+    expect(await screen.findAllByRole("checkbox")).toHaveLength(2);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("保存中も、何曲目まで追加したかをバーで出す", async () => {
+    lookups({ [apple(1)]: ok(1, "A"), [apple(2)]: ok(2, "B") });
+    const first = deferred<{ title: string; status: "ok"; id: string }>();
+    vi.mocked(saveBulkItemAction)
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce({ title: "B", status: "ok", id: "id-b" });
+    const area = setupBulk();
+    fireEvent.change(area, { target: { value: `${apple(1)} ${apple(2)}` } });
+    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
+    await userEvent.click(await screen.findByRole("button", { name: "選んだ2曲をセトリに追加" }));
+
+    const bar = screen.getByRole("progressbar", { name: "セトリへの追加" });
+    expect(bar).toHaveAttribute("value", "0");
+    expect(screen.getByText("セトリに追加中… 0 / 2")).toBeInTheDocument();
+    await act(async () => first.resolve({ title: "A", status: "ok", id: "id-a" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("2曲を追加しました。");
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("1曲の取得・保存に失敗しても、残りは続ける", async () => {
+    vi.mocked(lookupFromUrl)
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(ok(2, "B"));
+    vi.mocked(saveBulkItemAction).mockRejectedValueOnce(new Error("offline"));
+    const area = setupBulk();
+    fireEvent.change(area, { target: { value: `${apple(1)} ${apple(2)}` } });
+    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
+    const boxes = await screen.findAllByRole("checkbox");
+    expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([false, true]);
+    expect(screen.getByText(/通信/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "選んだ1曲をセトリに追加" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "0曲を追加しました。（1曲は登録済み、または保存できませんでした）",
+    );
+  });
+
   it("チェックを外すと保存できず、上限を超える選択は止める", async () => {
-    vi.mocked(lookupManyAction).mockResolvedValue([ok(1, "A"), ok(2, "B")]);
+    lookups({ [apple(1)]: ok(1, "A"), [apple(2)]: ok(2, "B") });
     const area = setupBulk(1);
-    fireEvent.change(area, { target: { value: "https://a.example/1 https://a.example/2" } });
+    fireEvent.change(area, { target: { value: `${apple(1)} ${apple(2)}` } });
     await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("あと1曲です");
     expect(screen.getByRole("button", { name: "選んだ2曲をセトリに追加" })).toBeDisabled();
@@ -464,17 +526,17 @@ describe("BulkAdd", () => {
     expect(screen.getByText(/20件を超えた分は取得しません/)).toBeInTheDocument();
   });
 
-  it("保存できなかった曲・上限で止まった曲を伝える", async () => {
-    vi.mocked(lookupManyAction).mockResolvedValue([ok(1, "A"), ok(2, "B")]);
-    vi.mocked(saveManyAction).mockResolvedValue([
-      { title: "A", status: "duplicate" },
-      { title: "B", status: "limit" },
-    ]);
+  it("保存できなかった曲を伝え、上限に達したら残りは試さない", async () => {
+    lookups({ [apple(1)]: ok(1, "A"), [apple(2)]: ok(2, "B"), [apple(3)]: ok(3, "C") });
+    vi.mocked(saveBulkItemAction)
+      .mockResolvedValueOnce({ title: "A", status: "duplicate" })
+      .mockResolvedValueOnce({ title: "B", status: "limit" });
     const area = setupBulk();
-    fireEvent.change(area, { target: { value: "https://a.example/1 https://a.example/2" } });
-    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
-    await userEvent.click(await screen.findByRole("button", { name: "選んだ2曲をセトリに追加" }));
+    fireEvent.change(area, { target: { value: `${apple(1)} ${apple(2)} ${apple(3)}` } });
+    await userEvent.click(screen.getByRole("button", { name: "3件の曲情報を取得" }));
+    await userEvent.click(await screen.findByRole("button", { name: "選んだ3曲をセトリに追加" }));
     const status = await screen.findByRole("status");
+    expect(saveBulkItemAction).toHaveBeenCalledTimes(2);
     expect(status).toHaveTextContent(
       "0曲を追加しました。（2曲は登録済み、または保存できませんでした）",
     );
