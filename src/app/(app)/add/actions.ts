@@ -3,14 +3,13 @@
 import { sanitizeFieldValues } from "@/lib/custom-fields";
 import { lookupTrack, searchTracks } from "@/lib/songs/itunes";
 import { listCustomFields } from "@/lib/songs/queries";
-import { parseMusicUrl, type ExternalParsed, type ParseResult } from "@/lib/songs/apple-url";
+import { parseMusicUrl, type ExternalParsed } from "@/lib/songs/apple-url";
 import { resolveExternal } from "@/lib/songs/resolve";
 import { SourceError } from "@/lib/songs/source-fetch";
 import type { SongDraft } from "@/lib/songs/types";
 import { toRegisterPayload } from "@/lib/songs/validate";
 import { requireUser } from "@/lib/supabase/user";
 import type {
-  BulkItem,
   BulkSaveItem,
   Candidate,
   DuplicateInfo,
@@ -19,7 +18,6 @@ import type {
   SearchResult,
 } from "./types";
 
-const MAX_BULK = 20;
 const UNIQUE_VIOLATION = "23505";
 /** 曲数の上限（DB の enforce_song_limit トリガー）：SQLSTATE 53400 */
 const LIMIT_EXCEEDED = "53400";
@@ -187,68 +185,25 @@ export async function saveSongAction(raw: unknown): Promise<SaveResult> {
   return register(supabase, raw);
 }
 
-/** まとめて登録：複数URLを順に取得する（上限あり。iTunes API の目安は約20回/分） */
-export async function lookupManyAction(inputs: string[]): Promise<BulkItem[]> {
-  const { supabase } = await requireUser();
-  const list = (Array.isArray(inputs) ? inputs : [])
-    .map((s) => String(s).trim())
-    .filter(Boolean)
-    .slice(0, MAX_BULK);
-
-  const out: BulkItem[] = [];
-  const seen = new Set<string>();
-  for (const input of list) {
-    const parsed = parseMusicUrl(input);
-    const key = sameSongKey(parsed);
-    // 同じ貼り付けの中の重複は、APIを呼ばずに印だけ付ける
-    if (key && seen.has(key)) {
-      out.push({ input, result: { status: "error", reason: "not_found" }, repeated: true });
-      continue;
-    }
-    if (key) seen.add(key);
-    out.push({ input, result: await lookupOne(supabase, input) });
-  }
-  return out;
-}
-
-/** 同じ貼り付けの中で同じ曲かを見るキー（Apple Music は国違いも同じ曲） */
-function sameSongKey(parsed: ParseResult): string | null {
-  if (!parsed.ok) return null;
-  return parsed.service === "apple_music" ? `apple:${parsed.trackId}` : parsed.canonicalUrl;
-}
-
 /**
- * まとめて登録の保存。全曲に、画面で選んだタグ（既存タグIDと新規タグ名）を付ける。
- * 検証は toRegisterPayload が曲ごとに行う（UUIDでないID・長すぎるタグ名などは捨てる）。
+ * まとめて登録の保存（1曲分）。画面から1曲ずつ呼び、進み具合を出す。
+ * 全曲に、画面で選んだタグ（既存タグIDと新規タグ名）を付ける。検証は toRegisterPayload が行う
+ * （UUIDでないID・長すぎるタグ名などは捨てる）。上限（limit）が返ったら、画面は残りを試さずに止める
  */
-export async function saveManyAction(
-  drafts: unknown[],
+export async function saveBulkItemAction(
+  draft: unknown,
   tagIds: unknown = [],
   newTags: unknown = [],
-): Promise<BulkSaveItem[]> {
+): Promise<BulkSaveItem> {
   const { supabase } = await requireUser();
-
-  const out: BulkSaveItem[] = [];
-  for (const draft of (Array.isArray(drafts) ? drafts : []).slice(0, MAX_BULK)) {
-    const title =
-      typeof (draft as { title?: unknown })?.title === "string"
-        ? (draft as { title: string }).title
-        : "";
-    const res = await register(supabase, { draft, songKey: 0, memo: "", tagIds, newTags });
-    out.push({
-      title,
-      status:
-        res.status === "ok"
-          ? "ok"
-          : res.status === "duplicate"
-            ? "duplicate"
-            : res.status === "limit"
-              ? "limit"
-              : "error",
-      ...(res.status === "ok" ? { id: res.id } : {}),
-    });
-    // 上限に達したら、残りは試さずに止める
-    if (res.status === "limit") break;
-  }
-  return out;
+  const title =
+    typeof (draft as { title?: unknown } | null)?.title === "string"
+      ? (draft as { title: string }).title
+      : "";
+  const res = await register(supabase, { draft, songKey: 0, memo: "", tagIds, newTags });
+  if (res.status === "ok") return { title, status: "ok", id: res.id };
+  return {
+    title,
+    status: res.status === "duplicate" || res.status === "limit" ? res.status : "error",
+  };
 }

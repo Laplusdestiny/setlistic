@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.14.0",
+    date: "2026-11-24",
+    changes: [
+      {
+        kind: "change",
+        text: "まとめて登録で、曲の情報の取得とセトリへの追加の進み具合を、バーで表示するようにしました",
+      },
+    ],
+  },
+  {
     version: "0.13.0",
     date: "2026-11-23",
     changes: [

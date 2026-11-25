@@ -11,11 +11,10 @@ vi.mock("./actions", () => ({
   lookupFromUrl: vi.fn(),
   saveSongAction: vi.fn(),
   searchSongsAction: vi.fn(),
-  lookupManyAction: vi.fn(),
-  saveManyAction: vi.fn(),
+  saveBulkItemAction: vi.fn(),
 }));
 
-import { lookupFromUrl, lookupManyAction, saveSongAction } from "./actions";
+import { lookupFromUrl, saveSongAction } from "./actions";
 import { AddSong } from "./AddSong";
 import { BulkAdd } from "./BulkAdd";
 import type { Candidate, ExternalInfo, LookupResult } from "./types";
@@ -257,24 +256,29 @@ describe("AddSong: Spotify / YouTube Music", () => {
 });
 
 describe("BulkAdd: Spotify / YouTube Music", () => {
-  const item = (input: string, result: LookupResult) => ({ input, result });
-
   it("確実に見つかった曲だけ最初から選び、要確認・見つからない曲には注記を付ける", async () => {
     const best = apple(1, "ピースサイン", "J-Pop");
     const yt = { ...sourceDraft, title: "Space Sonic", artist: "ELLEGARDEN" };
     const unknown = { ...sourceDraft, title: "名無しの曲", artist: " " };
-    vi.mocked(lookupManyAction).mockResolvedValue([
-      item("a", ok(best, external({ confidence: "confident" }))),
-      item("b", ok(best, external({ confidence: "needs_confirmation", candidates: [cand(best)] }))),
-      item("c", ok(yt, external({ service: "youtube_music", confidence: "not_found" }))),
-      item("d", ok(unknown, external({ confidence: "not_found" }))),
-      item("e", ok(best, external({ confidence: "needs_confirmation" }), { id: "s", title: "x" })),
-    ]);
+    vi.mocked(lookupFromUrl)
+      .mockResolvedValueOnce(ok(best, external({ confidence: "confident" })))
+      .mockResolvedValueOnce(
+        ok(best, external({ confidence: "needs_confirmation", candidates: [cand(best)] })),
+      )
+      .mockResolvedValueOnce(
+        ok(yt, external({ service: "youtube_music", confidence: "not_found" })),
+      )
+      .mockResolvedValueOnce(ok(unknown, external({ confidence: "not_found" })))
+      .mockResolvedValueOnce(
+        ok(best, external({ confidence: "needs_confirmation" }), { id: "s", title: "x" }),
+      );
     render(<BulkAdd groups={[]} tags={[]} defaultTagIds={[]} remaining={null} />);
+    // 別々の曲として取得させる（同じ URL だと2回目以降は重複の印になる）
+    const urls = ["a", "b", "c", "d", "e"].map((x) => `${YOUTUBE.slice(0, -1)}${x}`);
     fireEvent.change(screen.getByLabelText("共有URL（改行区切り）"), {
-      target: { value: `${SPOTIFY}\n${YOUTUBE}` },
+      target: { value: `${SPOTIFY}\n${urls.slice(1).join("\n")}` },
     });
-    await userEvent.click(screen.getByRole("button", { name: "2件の曲情報を取得" }));
+    await userEvent.click(screen.getByRole("button", { name: "5件の曲情報を取得" }));
 
     const rows = await screen.findAllByRole("listitem");
     const box = (i: number) => within(rows[i]).getByRole("checkbox") as HTMLInputElement;
