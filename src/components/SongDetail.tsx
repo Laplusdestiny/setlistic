@@ -65,6 +65,8 @@ export function SongDetail({
   // 記録したあと、練習中・歌いたいの曲なら「歌える」に付け替えるかを聞く（Issue #65）
   const [promote, setPromote] = useState<SingablePlan | null>(null);
   const [promoteError, setPromoteError] = useState<string | null>(null);
+  // 記録の処理（pending）が終わりきる前にダイアログが出るので、付け替えの処理中は別に持つ
+  const [promoting, startPromote] = useTransition();
   const promoteDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = promoteDialog.current;
@@ -157,7 +159,7 @@ export function SongDetail({
     if (!promote) return;
     const { remove, add } = promote;
     setPromoteError(null);
-    start(async () => {
+    startPromote(async () => {
       const res = await bulkEditTagsAction({
         songIds: [song.id],
         addTagIds: "tagId" in add ? [add.tagId] : [],
@@ -584,10 +586,10 @@ export function SongDetail({
               <button
                 type="button"
                 className={styles.primary}
-                disabled={pending}
+                disabled={promoting}
                 onClick={promoteToSingable}
               >
-                {pending ? "変更中…" : `${SINGABLE_TAG}に変える`}
+                {promoting ? "変更中…" : `${SINGABLE_TAG}に変える`}
               </button>
             </div>
           </div>
