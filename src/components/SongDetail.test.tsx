@@ -7,6 +7,7 @@ import type { SingState, SongRow } from "@/lib/songs/queries";
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("@/app/(app)/bulk/actions", () => ({ bulkEditTagsAction: vi.fn() }));
 vi.mock("@/app/(app)/songs/actions", () => ({
   deleteSingLogAction: vi.fn(),
   deleteSongAction: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock("@/app/(app)/songs/actions", () => ({
   updateSongAction: vi.fn(),
 }));
 
+import { bulkEditTagsAction } from "@/app/(app)/bulk/actions";
 import {
   deleteSingLogAction,
   deleteSongAction,
@@ -204,6 +206,109 @@ describe("SongDetail: 歌唱記録", () => {
     expect(await screen.findByText("3回")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "今日歌った！を記録" })).toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
+  });
+
+  describe("練習中・歌いたいの曲は、記録のあと歌えるに付け替えるかを聞く", () => {
+    const practicing = {
+      ...song,
+      tags: [
+        { id: "t3", name: "練習中" },
+        { id: "t4", name: "歌いたい" },
+      ],
+    };
+    const allTags = [
+      { id: "t1", name: "十八番", groupId: "g1" },
+      { id: "t2", name: "歌える", groupId: "g1" },
+      { id: "t3", name: "練習中", groupId: "g1" },
+      { id: "t4", name: "歌いたい", groupId: "g1" },
+    ];
+
+    async function record(over: Partial<Parameters<typeof SongDetail>[0]> = {}) {
+      vi.mocked(recordSingAction).mockResolvedValue({ status: "ok", state: newState });
+      setup({ song: practicing, allTags, ...over });
+      await userEvent.click(screen.getByRole("button", { name: "今日歌った！を記録" }));
+      await userEvent.click(screen.getByRole("button", { name: "記録する" }));
+      return screen.findByRole("dialog", { name: "歌えるようになりましたか？" });
+    }
+
+    beforeEach(() => vi.mocked(bulkEditTagsAction).mockReset());
+
+    it("「歌えるに変える」で、付いているタグを外して歌えるを付ける", async () => {
+      vi.mocked(bulkEditTagsAction).mockResolvedValue({ status: "ok", count: 1 });
+      const dialog = await record();
+      expect(dialog).toHaveAttribute("open");
+      expect(dialog).toHaveTextContent("#練習中・#歌いたい を外して、#歌える を付けます");
+      await userEvent.click(within(dialog).getByRole("button", { name: "歌えるに変える" }));
+      expect(bulkEditTagsAction).toHaveBeenCalledWith({
+        songIds: ["s1"],
+        addTagIds: ["t2"],
+        newTags: [],
+        removeTagIds: ["t3", "t4"],
+      });
+      await vi.waitFor(() =>
+        expect(screen.queryByRole("dialog", { name: "歌えるようになりましたか？" })).toBeNull(),
+      );
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it("「まだ練習中のまま」なら何も変えずに閉じる", async () => {
+      const dialog = await record();
+      await userEvent.click(within(dialog).getByRole("button", { name: "まだ練習中のまま" }));
+      expect(screen.queryByRole("dialog", { name: "歌えるようになりましたか？" })).toBeNull();
+      expect(bulkEditTagsAction).not.toHaveBeenCalled();
+    });
+
+    it("Esc で閉じても何も変えない", async () => {
+      const dialog = await record();
+      fireEvent(dialog, new Event("close"));
+      expect(screen.queryByRole("dialog", { name: "歌えるようになりましたか？" })).toBeNull();
+      expect(bulkEditTagsAction).not.toHaveBeenCalled();
+    });
+
+    it("背景のタップで閉じる。中身のタップでは閉じない", async () => {
+      const dialog = await record();
+      fireEvent.click(within(dialog).getByText(/を外して/));
+      expect(dialog).toHaveAttribute("open");
+      fireEvent.click(dialog);
+      expect(screen.queryByRole("dialog", { name: "歌えるようになりましたか？" })).toBeNull();
+      expect(bulkEditTagsAction).not.toHaveBeenCalled();
+    });
+
+    it("「歌える」が消されていたら、歌える度グループに作り直して付ける", async () => {
+      vi.mocked(bulkEditTagsAction).mockResolvedValue({ status: "ok", count: 1 });
+      const dialog = await record({
+        song: { ...song, tags: [{ id: "t3", name: "練習中" }] },
+        allTags: allTags.filter((t) => t.name !== "歌える"),
+      });
+      expect(dialog).toHaveTextContent("#練習中 を外して、#歌える を付けます");
+      await userEvent.click(within(dialog).getByRole("button", { name: "歌えるに変える" }));
+      expect(bulkEditTagsAction).toHaveBeenCalledWith({
+        songIds: ["s1"],
+        addTagIds: [],
+        newTags: [{ name: "歌える", group: "歌える度" }],
+        removeTagIds: ["t3"],
+      });
+    });
+
+    it("失敗したらダイアログの中に理由を出し、開いたまま", async () => {
+      vi.mocked(bulkEditTagsAction).mockResolvedValue({
+        status: "error",
+        message: "変更できませんでした。もう一度お試しください。",
+      });
+      const dialog = await record();
+      await userEvent.click(within(dialog).getByRole("button", { name: "歌えるに変える" }));
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("変更できませんでした");
+      expect(dialog).toHaveAttribute("open");
+    });
+
+    it("練習中も歌いたいも付いていない曲では聞かない", async () => {
+      vi.mocked(recordSingAction).mockResolvedValue({ status: "ok", state: newState });
+      setup({ allTags });
+      await userEvent.click(screen.getByRole("button", { name: "今日歌った！を記録" }));
+      await userEvent.click(screen.getByRole("button", { name: "記録する" }));
+      expect(await screen.findByText("3回")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "歌えるようになりましたか？" })).toBeNull();
+    });
   });
 
   it("同じ歌いやすさをもう一度押すと外れる。やめるで閉じる", async () => {

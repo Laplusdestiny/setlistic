@@ -99,6 +99,19 @@ describe("toRegisterPayload", () => {
       { name: "盛り上げ", normalized: "盛り上げ", group: undefined },
     ]);
   });
+  it("「歌える度」には、消された「歌える」を作り直すときだけ入れられる", () => {
+    const r = toRegisterPayload({
+      ...base,
+      newTags: [
+        { name: "歌える", group: "歌える度" },
+        { name: "十八番", group: "歌える度" },
+      ],
+    });
+    expect(r.ok && r.value.newTags).toEqual([
+      { name: "歌える", normalized: "歌える", group: "歌える度" },
+      { name: "十八番", normalized: "十八番", group: undefined },
+    ]);
+  });
   it("長すぎるタグは捨てる／タグ数が多すぎるとエラー", () => {
     const long = toRegisterPayload({ ...base, newTags: [{ name: "あ".repeat(40) }] });
     expect(long.ok && long.value.newTags).toEqual([]);
