@@ -361,6 +361,8 @@
 
 .promoteBody {
   padding: 20px;
+  /* 見出し・本文・エラーの文章は中央揃え（ボタンは横いっぱいに並べる） */
+  text-align: center;
 }
 
 .fieldList {
