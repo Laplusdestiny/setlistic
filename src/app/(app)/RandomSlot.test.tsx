@@ -3,9 +3,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SongRow } from "@/lib/songs/queries";
-import { drawSlot, RandomSlot, type SlotDraw } from "./RandomSlot";
+import { drawSlot, RandomSlot, type SlotDraw, type SlotResult } from "./RandomSlot";
 
-const song = (id: string, title: string): SongRow => ({
+const TODAY = "2026-11-28";
+const song = (id: string, title: string, lastSungAt: string | null = null): SongRow => ({
   id,
   title,
   artist: "YOASOBI",
@@ -14,7 +15,7 @@ const song = (id: string, title: string): SongRow => ({
   appleUrl: null,
   sourceService: null,
   sourceUrl: null,
-  lastSungAt: null,
+  lastSungAt,
   sungCount: 0,
   tags: [],
   fields: {},
@@ -22,9 +23,9 @@ const song = (id: string, title: string): SongRow => ({
 const songs = [song("s1", "夜に駆ける"), song("s2", "群青"), song("s3", "アイドル")];
 
 /** 親（SetList）と同じ使い方をする小さな入れ物 */
-function Harness(p: { onDecide?: (id: string) => void; rng?: () => number }) {
-  const [draw, setDraw] = useState<SlotDraw | null>(null);
-  const open = () => setDraw(drawSlot(songs, p.rng));
+function Harness(p: { onDecide?: (id: string) => void; rng?: () => number; list?: SongRow[] }) {
+  const [draw, setDraw] = useState<SlotResult | null>(null);
+  const open = () => setDraw(drawSlot(p.list ?? songs, TODAY, p.rng));
   return (
     <>
       <button type="button" onClick={open}>
@@ -60,11 +61,28 @@ afterEach(() => {
 
 describe("drawSlot", () => {
   it("候補が無ければ null", () => {
-    expect(drawSlot([])).toBeNull();
+    expect(drawSlot([], TODAY)).toBeNull();
+  });
+
+  it("今日歌った曲は、当選曲にも流れる曲名にも出さない", () => {
+    const list = [
+      song("s1", "夜に駆ける", TODAY),
+      song("s2", "群青", "2026-11-27"),
+      song("s3", "アイドル"),
+    ];
+    for (const r of [0, 0.4, 0.99]) {
+      const d = drawSlot(list, TODAY, () => r) as SlotDraw;
+      expect(d.song.id).not.toBe("s1");
+      expect(d.seq.map((x) => x.id)).not.toContain("s1");
+    }
+  });
+
+  it("表示している曲を今日すべて歌っていたら exhausted（曲は選ばない）", () => {
+    expect(drawSlot([song("s1", "夜に駆ける", TODAY)], TODAY)).toEqual({ exhausted: true });
   });
 
   it("当選曲で終わる16個の候補と、15個の間隔を作る", () => {
-    const d = drawSlot(songs, () => 0.5)!;
+    const d = drawSlot(songs, TODAY, () => 0.5) as SlotDraw;
     expect(d.song.id).toBe("s2");
     expect(d.seq).toHaveLength(16);
     expect(d.seq.at(-1)).toBe(d.song);
@@ -76,7 +94,7 @@ describe("drawSlot", () => {
     vi.spyOn(window, "matchMedia").mockImplementation((q) =>
       q.includes("reduced-motion") ? ({ matches: true } as MediaQueryList) : mm(q),
     );
-    const d = drawSlot(songs, () => 0)!;
+    const d = drawSlot(songs, TODAY, () => 0) as SlotDraw;
     expect(d.seq).toEqual([d.song]);
     expect(d.gaps).toEqual([]);
   });
@@ -144,6 +162,20 @@ describe("RandomSlot", () => {
     fireEvent.click(screen.getByRole("button", { name: "もう一回" }));
     // 押した「もう一回」は消えるので、そのままだとフォーカスが本文に外れ、Enter でスキップできない
     expect(document.activeElement).toBe(dialog());
+  });
+
+  it("今日すべて歌っていたら、そう知らせて曲は選ばない。閉じるで閉じる", () => {
+    const onDecide = vi.fn();
+    render(<Harness list={[song("s1", "夜に駆ける", TODAY)]} onDecide={onDecide} />);
+    fireEvent.click(screen.getByRole("button", { name: "開く" }));
+    expect(dialog()).toHaveAttribute("open");
+    expect(dialog()).toHaveTextContent("今日は、いま表示している曲をすべて歌いました");
+    expect(screen.queryByText("タップでスキップ")).toBeNull();
+    expect(screen.queryByRole("button", { name: "もう一回" })).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    expect(dialog()).not.toHaveAttribute("open");
+    expect(onDecide).not.toHaveBeenCalled();
   });
 
   it("「もう一回」で抽選し直す", () => {

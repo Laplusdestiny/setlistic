@@ -113,6 +113,13 @@
       "when": 1793939444597,
       "tag": "0015_update_song_source",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795869476725,
+      "tag": "0016_sing_stats_range",
+      "breakpoints": true
     }
   ]
 }

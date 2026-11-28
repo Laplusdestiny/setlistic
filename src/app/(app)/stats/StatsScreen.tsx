@@ -4,20 +4,26 @@ import {
   buildChart,
   PERIOD_LABELS,
   PERIODS,
+  rangeHref,
+  rangeLabel,
   type ChartPoint,
   type SingStats,
-  type StatsPeriod,
+  type StatsRange,
   type StatsSong,
 } from "@/lib/stats/sing-stats";
 import styles from "./stats.module.css";
 
-type Props = { period: StatsPeriod; today: string; stats: SingStats };
+type Props = { range: StatsRange; today: string; stats: SingStats };
 
-/** 振り返り：歌唱記録の集計（Issue #1）。期間の切り替えはリンクなので、画面に JS は要らない */
-export function StatsScreen({ period, today, stats }: Props) {
+/**
+ * 振り返り：歌唱記録の集計（Issue #1）。期間の切り替えはリンク、期間の指定は GET のフォームなので、
+ * 画面に JS は要らない（Issue #68）
+ */
+export function StatsScreen({ range, today, stats }: Props) {
   const { summary } = stats;
-  const chart = buildChart(stats.monthly, period, today);
-  const label = PERIOD_LABELS[period];
+  const { period } = range;
+  const chart = buildChart(stats.monthly, range, today);
+  const label = rangeLabel(range, today);
 
   return (
     <div className={styles.page}>
@@ -43,7 +49,7 @@ export function StatsScreen({ period, today, stats }: Props) {
         {PERIODS.map((p) => (
           <Link
             key={p}
-            href={p === "year" ? "/stats" : `/stats?period=${p}`}
+            href={rangeHref(p, today)}
             className={styles.period}
             aria-current={p === period ? "page" : undefined}
           >
@@ -51,6 +57,22 @@ export function StatsScreen({ period, today, stats }: Props) {
           </Link>
         ))}
       </nav>
+
+      {period === "custom" && range.from && (
+        <form action="/stats" method="get" className={styles.rangeForm} aria-label="集計する期間">
+          <input type="hidden" name="period" value="custom" />
+          <label>
+            <span>開始日</span>
+            <input type="date" name="from" defaultValue={range.from} max={today} required />
+          </label>
+          <span aria-hidden="true">〜</span>
+          <label>
+            <span>終了日</span>
+            <input type="date" name="to" defaultValue={range.to} max={today} required />
+          </label>
+          <button type="submit">集計する</button>
+        </form>
+      )}
 
       <div className={styles.layout}>
         <section className={styles.summary} aria-label={`${label}のまとめ`}>

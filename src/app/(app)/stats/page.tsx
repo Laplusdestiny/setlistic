@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { todayJst } from "@/lib/format";
-import { getSingStats, parsePeriod } from "@/lib/stats/sing-stats";
+import { getSingStats, parseRange } from "@/lib/stats/sing-stats";
 import { requireUser } from "@/lib/supabase/user";
 import { StatsScreen } from "./StatsScreen";
 
@@ -18,9 +18,11 @@ export default function StatsPage({ searchParams }: { searchParams: Search }) {
 }
 
 async function StatsLoader({ searchParams }: { searchParams: Search }) {
-  const period = parsePeriod((await searchParams).period);
+  // 先に searchParams を読んで、リクエスト時の描画にする（現在時刻を事前描画の中で使わない）
+  const params = await searchParams;
   const today = todayJst();
+  const range = parseRange(params, today);
   const { supabase } = await requireUser();
-  const stats = await getSingStats(supabase, period, today);
-  return <StatsScreen period={period} today={today} stats={stats} />;
+  const stats = await getSingStats(supabase, range, today);
+  return <StatsScreen range={range} today={today} stats={stats} />;
 }

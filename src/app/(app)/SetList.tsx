@@ -25,7 +25,7 @@ import type { SortKey } from "@/lib/songs/sort";
 import type { GroupOption } from "@/lib/tags/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { HomeTabBar } from "./HomeTabBar";
-import { drawSlot, RandomSlot, type SlotDraw } from "./RandomSlot";
+import { drawSlot, RandomSlot, type SlotResult } from "./RandomSlot";
 import { deleteSavedSearchAction } from "./search/actions";
 import styles from "./home.module.css";
 
@@ -164,9 +164,10 @@ export function SetList({
   }, []);
 
   // ランダム：当選曲を先に決めてから演出のダイアログを開く
-  const [draw, setDraw] = useState<SlotDraw | null>(null);
+  const [draw, setDraw] = useState<SlotResult | null>(null);
   function random() {
-    const d = drawSlot(songs);
+    // 今日歌った曲は選ばない（全部歌っていたら、ダイアログでそう知らせる。Issue #67）
+    const d = drawSlot(songs, today);
     if (d) setDraw(d);
   }
   function decide(id: string) {

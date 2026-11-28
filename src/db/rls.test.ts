@@ -1514,6 +1514,29 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
       ]);
     });
 
+    const ranged = (from: string | null, to: string) =>
+      as(Y, async (tx) => (await tx`select sing_stats(${from}, ${to}, '2026-10-24') as s`)[0].s);
+
+    it("期間を指定：終わりの日（p_to）までで区切る。ご無沙汰の曲は今日（p_today）基準のまま", async () => {
+      const s = await ranged("2025-12-01", "2026-02-28");
+      expect(s.summary).toEqual({ logs: 2, songs: 1, days: 2, firstTimes: 1 });
+      expect(s.monthly).toEqual([
+        { month: "2025-12", logs: 1 },
+        { month: "2026-02", logs: 1 },
+      ]);
+      expect(s.dormant.map((d: { title: string }) => d.title)).toEqual(["丸の内サディスティック"]);
+    });
+
+    it("今日だけ（始まりと終わりが同じ日）", async () => {
+      const s = await ranged("2026-10-03", "2026-10-03");
+      expect(s.summary).toEqual({ logs: 2, songs: 2, days: 1, firstTimes: 1 });
+    });
+
+    it("2引数の関数は、終わり＝今日の3引数と同じ結果（デプロイ前のアプリ向け）", async () => {
+      expect(await stats(Y, "2026-01-01")).toEqual(await ranged("2026-01-01", "2026-10-24"));
+      expect(await stats(Y, null)).toEqual(await ranged(null, "2026-10-24"));
+    });
+
     it("記録のない人は0と空、ログインしていなければ呼べない", async () => {
       const s = await stats(B, null);
       expect(s).toEqual({
@@ -1525,6 +1548,7 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
         artists: [],
       });
       await as(null, (tx) => rejects(tx`select sing_stats(null, '2026-10-24')`));
+      await as(null, (tx) => rejects(tx`select sing_stats(null, '2026-10-24', '2026-10-24')`));
     });
   });
 

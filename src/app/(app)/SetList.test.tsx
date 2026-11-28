@@ -285,6 +285,17 @@ describe("SetList: ランダム・キーボード", () => {
     vi.mocked(Math.random).mockRestore();
   });
 
+  it("今日歌った曲はランダムで選ばない", async () => {
+    // 先頭（s1）を引く乱数でも、今日歌った s1 は候補にないので s2 になる
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    setup({ songs: [{ ...songs[0], lastSungAt: "2026-10-12" }, songs[1]] });
+    await userEvent.click(screen.getByRole("button", { name: /ランダム/ }));
+    await userEvent.click(screen.getByText("タップでスキップ"));
+    await userEvent.click(screen.getByRole("button", { name: "これにする" }));
+    expect(router.push).toHaveBeenCalledWith("/songs/s2");
+    vi.mocked(Math.random).mockRestore();
+  });
+
   it("PC ではランダムに選んだ曲を「これにする」で右パネルに出す", async () => {
     setViewportWidth(1000);
     vi.spyOn(Math, "random").mockReturnValue(0.99);

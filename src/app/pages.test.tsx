@@ -250,16 +250,28 @@ describe("SearchPage", () => {
 });
 
 describe("StatsPage", () => {
-  it("?period= の期間と今日（日本時間）で集計して渡す。既定は今年", async () => {
+  it("?period=（と ?from= ?to=）の期間と今日（日本時間）で集計して渡す。既定は今年", async () => {
     setup({ rpc: { sing_stats: { data: { summary: { logs: 3 } } } } });
     const props = await load(StatsPage({ searchParams: params({ period: "all" }) }));
-    expect(props).toMatchObject({ period: "all", today: "2026-10-12" });
+    expect(props).toMatchObject({
+      range: { period: "all", from: null, to: "2026-10-12" },
+      today: "2026-10-12",
+    });
     expect((props.stats as { summary: { logs: number } }).summary.logs).toBe(3);
     expect(sb.client.rpc).toHaveBeenCalledWith("sing_stats", {
       p_from: null,
+      p_to: "2026-10-12",
       p_today: "2026-10-12",
     });
-    expect((await load(StatsPage({ searchParams: params({ period: "x" }) }))).period).toBe("year");
+    const custom = await load(
+      StatsPage({
+        searchParams: params({ period: "custom", from: "2026-03-01", to: "2026-04-15" }),
+      }),
+    );
+    expect(custom.range).toEqual({ period: "custom", from: "2026-03-01", to: "2026-04-15" });
+    expect((await load(StatsPage({ searchParams: params({ period: "x" }) }))).range).toMatchObject({
+      period: "year",
+    });
   });
 });
 

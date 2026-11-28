@@ -32,15 +32,19 @@
 /* ───────── 期間 ───────── */
 .periods {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 4px 20px 14px;
 }
 
+/* 5つ（今日〜期間を指定）を 375px 幅の1行に収めるため、横の余白は詰める。収まらない幅では折り返す */
 .period {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-width: 44px;
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-chip);
   background: var(--color-paper);
@@ -59,6 +63,57 @@
   background: var(--color-ink);
   border-color: var(--color-ink);
   color: var(--color-on-primary);
+}
+
+/* 期間を指定（Issue #68）。開始日〜終了日と「集計する」。狭い画面では折り返す */
+.rangeForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 20px 14px;
+}
+
+.rangeForm label {
+  display: flex;
+  flex: 1 1 128px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.rangeForm input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: var(--color-ink);
+  font: inherit;
+  /* iPhone で入力時に拡大されないよう 16px 以上 */
+  font-size: 16px;
+}
+
+.rangeForm > span {
+  align-self: center;
+  padding-top: 16px;
+  color: var(--color-ink-muted);
+}
+
+.rangeForm button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* ───────── 並び ───────── */

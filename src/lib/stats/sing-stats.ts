@@ -4,25 +4,76 @@ type Client = Awaited<ReturnType<typeof createClient>>;
 
 // 振り返りページ（Issue #1）の期間・集計結果・グラフの並び。集計そのものは DB 関数 sing_stats が行う
 
-export const PERIODS = ["month", "year", "all"] as const;
+export const PERIODS = ["today", "month", "year", "all", "custom"] as const;
 export type StatsPeriod = (typeof PERIODS)[number];
 
 export const PERIOD_LABELS: Record<StatsPeriod, string> = {
+  today: "今日",
   month: "今月",
   year: "今年",
   all: "全期間",
+  custom: "期間を指定",
 };
 
-/** URL の ?period= を読む。知らない値・未指定は「今年」 */
-export function parsePeriod(raw: unknown): StatsPeriod {
-  return PERIODS.includes(raw as StatsPeriod) ? (raw as StatsPeriod) : "year";
+/** 集計する期間（YYYY-MM-DD）。from が null なら始まりなし（全期間）。to は終わりの日（その日を含む） */
+export type StatsRange = { period: StatsPeriod; from: string | null; to: string };
+
+type Params = Record<string, string | string[] | undefined>;
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** 実在する日付（YYYY-MM-DD）か。2月30日などは通さない */
+const isDate = (v: unknown): v is string =>
+  typeof v === "string" &&
+  DATE.test(v) &&
+  new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+
+const monthStart = (today: string) => `${today.slice(0, 7)}-01`;
+
+/**
+ * URL の ?period=（と期間を指定のときの ?from= ?to=）を読む。知らない値・未指定・読めない日付は「今年」。
+ * 期間を指定：開始日が終了日より後なら入れ替え、未来の日は今日にそろえる（Issue #68）。today は日本時間の今日
+ */
+export function parseRange(params: Params, today: string): StatsRange {
+  const p = params.period;
+  switch (p) {
+    case "today":
+      return { period: "today", from: today, to: today };
+    case "month":
+      return { period: "month", from: monthStart(today), to: today };
+    case "all":
+      return { period: "all", from: null, to: today };
+    case "custom": {
+      const { from, to } = params;
+      if (!isDate(from) || !isDate(to)) break;
+      const [a, b] = [from, to].map((d) => (d > today ? today : d)).sort();
+      return { period: "custom", from: a, to: b };
+    }
+  }
+  return { period: "year", from: `${today.slice(0, 4)}-01-01`, to: today };
 }
 
-/** 期間の始まり（YYYY-MM-DD）。全期間は null。today は日本時間の今日 */
-export function periodStart(period: StatsPeriod, today: string): string | null {
-  if (period === "month") return `${today.slice(0, 7)}-01`;
-  if (period === "year") return `${today.slice(0, 4)}-01-01`;
-  return null;
+/** 「3月1日」。年が今年（today の年）でなければ「2025年3月1日」 */
+function formatDay(d: string, withYear: boolean): string {
+  const [y, m, day] = d.split("-").map(Number);
+  return `${withYear ? `${y}年` : ""}${m}月${day}日`;
+}
+
+/** 見出し・案内に使う期間の名前。期間を指定したときは「3月1日〜4月15日」（年をまたぐ・今年でなければ年も付ける） */
+export function rangeLabel(range: StatsRange, today: string): string {
+  if (range.period !== "custom" || !range.from) return PERIOD_LABELS[range.period];
+  const { from, to } = range;
+  const thisYear = today.slice(0, 4);
+  const spans = from.slice(0, 4) !== to.slice(0, 4);
+  const first = formatDay(from, spans || from.slice(0, 4) !== thisYear);
+  if (from === to) return first;
+  return `${first}〜${formatDay(to, spans)}`;
+}
+
+/** 期間の切り替えのリンク。今年は ?period= なし。期間を指定は、今月1日〜今日から始める */
+export function rangeHref(period: StatsPeriod, today: string): string {
+  if (period === "year") return "/stats";
+  if (period === "custom") return `/stats?period=custom&from=${monthStart(today)}&to=${today}`;
+  return `/stats?period=${period}`;
 }
 
 export type StatsSong = {
@@ -101,11 +152,12 @@ export function parseSingStats(data: unknown): SingStats {
 /** 集計を取得する。失敗したときは空の集計（画面は「記録がありません」になる） */
 export async function getSingStats(
   supabase: Client,
-  period: StatsPeriod,
+  range: StatsRange,
   today: string,
 ): Promise<SingStats> {
   const { data, error } = await supabase.rpc("sing_stats", {
-    p_from: periodStart(period, today),
+    p_from: range.from,
+    p_to: range.to,
     p_today: today,
   });
   return error ? EMPTY_STATS : parseSingStats(data);
@@ -135,22 +187,30 @@ const addMonth = (ym: string) => {
  * グラフの棒の並び。記録のない月も 0 で埋める。
  * - 今年：1月〜今月
  * - 全期間：最初に記録した月〜今月（24か月を超えたら年ごと）
- * - 今月：棒は1本だけになるのでグラフは出さない（null）
+ * - 期間を指定：開始月〜終了月
+ * - 今日・今月、1か月に収まる期間：棒は1本だけになるのでグラフは出さない（null）
  */
 export function buildChart(
   monthly: SingStats["monthly"],
-  period: StatsPeriod,
+  range: StatsRange,
   today: string,
 ): { unit: "month" | "year"; points: ChartPoint[] } | null {
-  if (period === "month") return null;
-  const thisMonth = today.slice(0, 7);
+  const { period } = range;
+  if (period === "today" || period === "month") return null;
+  const last = period === "custom" ? range.to.slice(0, 7) : today.slice(0, 7);
   const counts = new Map(monthly.map((m) => [m.month, m.logs]));
   const first =
-    period === "year" ? `${today.slice(0, 4)}-01` : monthly.map((m) => m.month).sort()[0];
-  if (!first || first > thisMonth) return null;
+    period === "year"
+      ? `${today.slice(0, 4)}-01`
+      : period === "custom"
+        ? range.from?.slice(0, 7)
+        : monthly.map((m) => m.month).sort()[0];
+  if (!first || first > last || (period === "custom" && first === last)) return null;
+  // 年の区切り（「2026」）は、全期間と、年をまたぐ指定の期間に付ける
+  const markYears = period === "all" || first.slice(0, 4) !== last.slice(0, 4);
 
   const months: string[] = [];
-  for (let ym = first; ym <= thisMonth; ym = addMonth(ym)) months.push(ym);
+  for (let ym = first; ym <= last; ym = addMonth(ym)) months.push(ym);
 
   if (months.length > MAX_MONTH_BARS) {
     const years = new Map<string, number>();
@@ -174,7 +234,7 @@ export function buildChart(
         name: `${y}年${m}月`,
         count: counts.get(ym) ?? 0,
       };
-      if (period === "all" && (i === 0 || m === 1)) point.year = y;
+      if (markYears && (i === 0 || m === 1)) point.year = y;
       return point;
     }),
   };
