@@ -180,3 +180,11 @@
     animation: none;
   }
 }
+
+/* 表示している曲を今日すべて歌っていて、選べないとき（Issue #67） */
+.exhausted {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+}
