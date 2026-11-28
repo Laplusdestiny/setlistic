@@ -26,6 +26,20 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.16.0",
+    date: "2026-11-28",
+    changes: [
+      {
+        kind: "feature",
+        text: "振り返りで、「今日」や、開始日と終了日を指定した期間で集計できるようにしました",
+      },
+      {
+        kind: "change",
+        text: "「ランダムに1曲」で、今日すでに歌った曲は選ばないようにしました",
+      },
+    ],
+  },
+  {
     version: "0.15.0",
     date: "2026-11-26",
     changes: [
