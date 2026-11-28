@@ -2,6 +2,7 @@ import { parseMusicUrl } from "./apple-url";
 import { clampKey } from "./key";
 import { supportedServicesText } from "./services";
 import { dedupeTagNames, normalizeTagName, MAX_TAG_LENGTH } from "../tags/normalize";
+import { SINGABLE_GROUP, SINGABLE_TAG } from "../tags/singable";
 import type { SongDraft } from "./types";
 
 export const LIMITS = { title: 200, artist: 200, album: 200, memo: 2000, tags: 30 } as const;
@@ -17,6 +18,13 @@ const SERVICES = [
 ] as const;
 /** 登録時に新規タグを入れてよいグループ（Apple Music のジャンルを入れる先） */
 const ALLOWED_GROUPS = ["ジャンル"] as const;
+
+/** 新規タグに付けてよいグループ。「歌える度」は、消された「歌える」を作り直すときだけ（Issue #65） */
+function allowedGroup(group: unknown, name: string): string | undefined {
+  const g = ALLOWED_GROUPS.find((x) => x === group);
+  if (g) return g;
+  return group === SINGABLE_GROUP && normalizeTagName(name) === SINGABLE_TAG ? group : undefined;
+}
 
 export type SaveSongInput = {
   draft: SongDraft;
@@ -147,9 +155,9 @@ export function parseTags(rawIds: unknown, rawNew: unknown): Result<ParsedTags> 
   for (const t of list) {
     if (!obj(t) || typeof t.name !== "string") continue;
     if ([...t.name].length > MAX_TAG_LENGTH + 1) continue; // 長すぎるものは捨てる
-    const group = ALLOWED_GROUPS.find((g) => g === t.group);
     names.push(t.name);
     const key = normalizeTagName(t.name.replace(/^\s*[#＃]+/, ""));
+    const group = allowedGroup(t.group, key);
     // 同じタグが重複して届いたとき、先に指定されたグループを消さない
     if (!groupOf.get(key)) groupOf.set(key, group);
   }

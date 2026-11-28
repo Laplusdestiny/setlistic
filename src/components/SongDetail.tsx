@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { bulkEditTagsAction } from "@/app/(app)/bulk/actions";
 import {
   deleteSingLogAction,
   deleteSongAction,
@@ -15,6 +16,7 @@ import { formatKey } from "@/lib/songs/key";
 import { songLink } from "@/lib/songs/link";
 import { supportedServicesText } from "@/lib/songs/services";
 import type { SingState, SongRow } from "@/lib/songs/queries";
+import { planSingable, SINGABLE_TAG, type SingablePlan } from "@/lib/tags/singable";
 import type { GroupOption, NewTag, TagOption } from "@/lib/tags/types";
 import { FieldInputs } from "./FieldInputs";
 import { KeyStepper } from "./KeyStepper";
@@ -59,6 +61,17 @@ export function SongDetail({
   const [sing, setSing] = useState(initialSing);
   const [error, setError] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+
+  // 記録したあと、練習中・歌いたいの曲なら「歌える」に付け替えるかを聞く（Issue #65）
+  const [promote, setPromote] = useState<SingablePlan | null>(null);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+  // 記録の処理（pending）が終わりきる前にダイアログが出るので、付け替えの処理中は別に持つ
+  const [promoting, startPromote] = useTransition();
+  const promoteDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const el = promoteDialog.current;
+    if (promote && el && !el.open) el.showModal();
+  }, [promote]);
 
   // 編集フォーム
   const [title, setTitle] = useState(song.title);
@@ -133,7 +146,30 @@ export function SongDetail({
         setNote("");
         setSungAt(today);
         router.refresh();
+        const plan = planSingable(song.tags, allTags);
+        if (plan) {
+          setPromoteError(null);
+          setPromote(plan);
+        }
       } else setError(res.message);
+    });
+  }
+
+  function promoteToSingable() {
+    if (!promote) return;
+    const { remove, add } = promote;
+    setPromoteError(null);
+    startPromote(async () => {
+      const res = await bulkEditTagsAction({
+        songIds: [song.id],
+        addTagIds: "tagId" in add ? [add.tagId] : [],
+        newTags: "newTag" in add ? [add.newTag] : [],
+        removeTagIds: remove.map((t) => t.id),
+      });
+      if (res.status === "ok") {
+        promoteDialog.current?.close();
+        router.refresh();
+      } else setPromoteError(res.message);
     });
   }
 
@@ -516,6 +552,49 @@ export function SongDetail({
           </button>
         </div>
       </dialog>
+
+      {promote && (
+        <dialog
+          ref={promoteDialog}
+          className={`${styles.dialog} ${styles.promote}`}
+          aria-labelledby={`pt-${song.id}`}
+          onClose={() => setPromote(null)}
+          onClick={(e) => {
+            // 背景のタップで閉じる（中身は .promoteBody に入れて、余白のタップでは閉じない）
+            if (e.target === e.currentTarget) e.currentTarget.close();
+          }}
+        >
+          <div className={styles.promoteBody}>
+            <h2 id={`pt-${song.id}`}>歌えるようになりましたか？</h2>
+            <p>
+              {promote.remove.map((t) => `#${t.name}`).join("・")} を外して、#{SINGABLE_TAG}{" "}
+              を付けます
+            </p>
+            {promoteError && (
+              <p role="alert" className={styles.error}>
+                {promoteError}
+              </p>
+            )}
+            <div className={styles.buttons}>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => promoteDialog.current?.close()}
+              >
+                まだ練習中のまま
+              </button>
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={promoting}
+                onClick={promoteToSingable}
+              >
+                {promoting ? "変更中…" : `${SINGABLE_TAG}に変える`}
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }

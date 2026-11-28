@@ -1200,6 +1200,17 @@ describe.skipIf(!url)("RLS・招待制フック・初期データ（実DB）", (
       });
     });
 
+    it("記録のあとの付け替え：消された「歌える」を「歌える度」グループに作り直し、練習中を外す", async () => {
+      await as(W, async (tx) => {
+        await tx`delete from tags where id = ${tg["歌える"]}`;
+        await tx`select bulk_edit_song_tags(${[ids[0]]}::uuid[], '{}'::uuid[], ${j([{ name: "歌える", normalized: "歌える", group: "歌える度" }])}, ${[tg["練習中"]]}::uuid[])`;
+        expect(await tagsOf(tx, ids[0])).toEqual(["歌える"]);
+        const [row] =
+          await tx`select g.name from tags t join tag_groups g on g.id = t.group_id where t.name = '歌える'`;
+        expect(row.name).toBe("歌える度");
+      });
+    });
+
     it("同じ操作を繰り返しても重複しない・タグも増えない", async () => {
       await as(W, async (tx) => {
         await tx`select bulk_edit_song_tags(${ids}::uuid[], ${[tg["歌える"]]}::uuid[], ${j([{ name: "ＭＡＭＡ", normalized: "mama" }])})`;

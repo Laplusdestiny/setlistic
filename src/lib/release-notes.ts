@@ -26,6 +26,16 @@ const KIND_ORDER: ReleaseChangeKind[] = ["feature", "change", "fix"];
 
 export const RELEASES: Release[] = [
   {
+    version: "0.15.0",
+    date: "2026-11-26",
+    changes: [
+      {
+        kind: "feature",
+        text: "「今日歌った！」を記録したとき、その曲に「練習中」「歌いたい」のタグが付いていれば、「歌える」に付け替えるかを聞くようにしました",
+      },
+    ],
+  },
+  {
     version: "0.14.0",
     date: "2026-11-24",
     changes: [

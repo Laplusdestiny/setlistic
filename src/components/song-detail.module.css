@@ -354,6 +354,17 @@
   line-height: 1.7;
 }
 
+/* 「歌えるに変える？」（記録のあと）。背景のタップで閉じるので、余白は中身の側に持たせる */
+.promote {
+  padding: 0;
+}
+
+.promoteBody {
+  padding: 20px;
+  /* 見出し・本文・エラーの文章は中央揃え（ボタンは横いっぱいに並べる） */
+  text-align: center;
+}
+
 .fieldList {
   display: flex;
   flex-direction: column;
