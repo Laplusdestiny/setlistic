@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { EMPTY_STATS, type SingStats } from "@/lib/stats/sing-stats";
+import { EMPTY_STATS, parseRange, type SingStats } from "@/lib/stats/sing-stats";
 import { StatsScreen } from "./StatsScreen";
 
 const TODAY = "2026-10-24";
+const r = (period: string, extra: Record<string, string> = {}) =>
+  parseRange({ period, ...extra }, TODAY);
 
 const stats: SingStats = {
   summary: { logs: 1234, songs: 2, days: 2, firstTimes: 1 },
@@ -31,7 +33,7 @@ const stats: SingStats = {
 
 describe("StatsScreen", () => {
   it("期間のまとめ・月ごとのグラフ・よく歌った曲・ご無沙汰の曲を出す", () => {
-    render(<StatsScreen period="year" today={TODAY} stats={stats} />);
+    render(<StatsScreen range={r("year")} today={TODAY} stats={stats} />);
     const summary = screen.getByRole("region", { name: "今年のまとめ" });
     expect(summary).toHaveTextContent("歌った回数1,234回");
     expect(summary).toHaveTextContent("カラオケに行った日2日");
@@ -58,23 +60,62 @@ describe("StatsScreen", () => {
   });
 
   it("今いる期間に印を付け、今年は ?period= なしのリンク", () => {
-    render(<StatsScreen period="month" today={TODAY} stats={stats} />);
+    render(<StatsScreen range={r("month")} today={TODAY} stats={stats} />);
     const nav = screen.getByRole("navigation", { name: "期間" });
     const links = within(nav).getAllByRole("link");
     expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["今日", "/stats?period=today"],
       ["今月", "/stats?period=month"],
       ["今年", "/stats"],
       ["全期間", "/stats?period=all"],
+      ["期間を指定", "/stats?period=custom&from=2026-10-01&to=2026-10-24"],
     ]);
     expect(within(nav).getByRole("link", { current: "page" })).toHaveTextContent("今月");
     // 今月は棒が1本になるのでグラフを出さない
     expect(screen.queryByRole("region", { name: /歌った回数$/ })).toBeNull();
   });
 
+  it("今日はグラフを出さず、見出しは「今日」。期間の指定欄は出さない", () => {
+    render(<StatsScreen range={r("today")} today={TODAY} stats={stats} />);
+    expect(screen.getByRole("region", { name: "今日のまとめ" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /歌った回数$/ })).toBeNull();
+    expect(screen.queryByLabelText("開始日")).toBeNull();
+  });
+
+  it("期間を指定：開始日・終了日の欄（今日より先は選べない）と、日付の見出し・その範囲のグラフ", () => {
+    render(
+      <StatsScreen
+        range={r("custom", { from: "2026-02-10", to: "2026-04-15" })}
+        today={TODAY}
+        stats={stats}
+      />,
+    );
+    const form = screen.getByRole("form", { name: "集計する期間" });
+    expect(form).toHaveAttribute("action", "/stats");
+    expect(form).toHaveAttribute("method", "get");
+    expect(within(form).getByLabelText("開始日")).toHaveValue("2026-02-10");
+    expect(within(form).getByLabelText("終了日")).toHaveValue("2026-04-15");
+    expect(within(form).getByLabelText("終了日")).toHaveAttribute("max", TODAY);
+    expect(form.querySelector('input[type="hidden"][name="period"]')).toHaveValue("custom");
+    expect(within(form).getByRole("button", { name: "集計する" })).toBeInTheDocument();
+
+    expect(screen.getByRole("region", { name: "2月10日〜4月15日のまとめ" })).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "期間" });
+    expect(within(nav).getByRole("link", { current: "page" })).toHaveTextContent("期間を指定");
+    const rows = within(screen.getByRole("region", { name: "月ごとの歌った回数" })).getAllByRole(
+      "row",
+    );
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "2026年2月1回",
+      "2026年3月0回",
+      "2026年4月0回",
+    ]);
+  });
+
   it("全期間が長ければ年ごとのグラフ。13本以上なら棒の上の数は出さない", () => {
     const { unmount } = render(
       <StatsScreen
-        period="all"
+        range={r("all")}
         today={TODAY}
         stats={{ ...stats, monthly: [{ month: "2020-01", logs: 5 }] }}
       />,
@@ -86,7 +127,7 @@ describe("StatsScreen", () => {
 
     render(
       <StatsScreen
-        period="all"
+        range={r("all")}
         today={TODAY}
         stats={{ ...stats, monthly: [{ month: "2025-06", logs: 5 }] }}
       />,
@@ -100,7 +141,7 @@ describe("StatsScreen", () => {
   });
 
   it("タグ別・アーティスト別は「詳しく見る」を開いたときに見える", () => {
-    render(<StatsScreen period="year" today={TODAY} stats={stats} />);
+    render(<StatsScreen range={r("year")} today={TODAY} stats={stats} />);
     const more = screen.getByText("タグ別・アーティスト別に詳しく見る").closest("details")!;
     expect(more.open).toBe(false);
     expect(within(more).getByRole("region", { name: "タグ別" })).toHaveTextContent(
@@ -112,7 +153,7 @@ describe("StatsScreen", () => {
   });
 
   it("記録がなければ案内を出し、グラフ・よく歌った曲・詳しく見るは出さない", () => {
-    render(<StatsScreen period="year" today={TODAY} stats={EMPTY_STATS} />);
+    render(<StatsScreen range={r("year")} today={TODAY} stats={EMPTY_STATS} />);
     expect(screen.getByText(/今年の歌唱記録はまだありません/)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "月ごとの歌った回数" })).toBeNull();
     expect(screen.queryByRole("region", { name: "よく歌った曲" })).toBeNull();
@@ -123,7 +164,7 @@ describe("StatsScreen", () => {
   });
 
   it("片方だけ集計があれば、もう片方は「ありません」", () => {
-    render(<StatsScreen period="year" today={TODAY} stats={{ ...stats, tags: [] }} />);
+    render(<StatsScreen range={r("year")} today={TODAY} stats={{ ...stats, tags: [] }} />);
     expect(screen.getByRole("region", { name: "タグ別" })).toHaveTextContent("ありません。");
   });
 });

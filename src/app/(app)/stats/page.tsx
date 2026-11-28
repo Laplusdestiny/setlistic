@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { todayJst } from "@/lib/format";
-import { getSingStats, parsePeriod } from "@/lib/stats/sing-stats";
+import { getSingStats, parseRange } from "@/lib/stats/sing-stats";
 import { requireUser } from "@/lib/supabase/user";
 import { StatsScreen } from "./StatsScreen";
 
@@ -18,9 +18,9 @@ export default function StatsPage({ searchParams }: { searchParams: Search }) {
 }
 
 async function StatsLoader({ searchParams }: { searchParams: Search }) {
-  const period = parsePeriod((await searchParams).period);
   const today = todayJst();
+  const range = parseRange(await searchParams, today);
   const { supabase } = await requireUser();
-  const stats = await getSingStats(supabase, period, today);
-  return <StatsScreen period={period} today={today} stats={stats} />;
+  const stats = await getSingStats(supabase, range, today);
+  return <StatsScreen range={range} today={today} stats={stats} />;
 }
